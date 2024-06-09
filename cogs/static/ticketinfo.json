@@ -1,0 +1,156 @@
+
+[
+    {
+        "name": "main",
+        "guild id": 899108709450543115,
+        "archive id": 940940140350677002,
+        "staff id": 1107712723262902403,
+        "tickets": [
+            {
+                "channel id": 1108175114496921600,
+                "custom id": "helpdesk",
+                "cooldown": 60,
+                "emoji": "<a:Lumi_heart_float:924048498477891614>",
+                "embed 1": {
+                    "image": {
+                        "url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "proxy_url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "width": 800,
+                        "height": 212
+                    },
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "> __ __\u273f__ __\u2740__ __ **Please open a ticket to**...\n\u00a0\u00a0\u00a0   \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027  \u2574 \u2027  \u2574 \u2027  \u2574\u2027  \u2574 \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027\n> \u30fbReport a user/server/blacklist\n> \u30fbReport a copycat\n> \u30fbClaim booster perks\n> \u30fbClaim GW & event prizes\n> \u30fbAdresss a concern\n> \u30fbAsk a question in private\n\u00a0\u00a0\u00a0   \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027  \u2574 \u2027  \u2574 \u2027  \u2574\u2027  \u2574 \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027",
+                    "title": "\u2661\ufe52\ufe52Open a Ticket! \u273f\u2740"
+                },
+                "embed 2": {
+                    "image": {
+                        "url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "proxy_url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "width": 800,
+                        "height": 212
+                    },
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "> __ __\u273f__ __\u2740__ __ Tysm for opening a ticket!\n\u00a0\u00a0\u00a0   \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027  \u2574 \u2027  \u2574 \u2027  \u2574\u2027  \u2574 \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027\n> \u2661\ufe52\ufe52If you're here for something specific, please type the corresponding command listed below for more info. If you just want to ask a question or address a concern, don't worry about typing a command; let us know what's on your mind! \u273f\u2740\n\u00a0\u00a0\u00a0   \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027  \u2574 \u2027  \u2574 \u2027  \u2574\u2027  \u2574 \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027\n> \u30fb*`.perks` - claim booster perks*\n> \u30fb*`.claim` - claim event prizes*\n> \u30fb*`.report` - report an issue*\n\u00a0\u00a0\u00a0   \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027  \u2574 \u2027  \u2574 \u2027  \u2574\u2027  \u2574 \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027"
+                }
+            }
+        ]
+    },
+
+    {
+        "name": "decor",
+        "guild id": 1041468894487003176,
+        "archive id": 1041468895279718473,
+        "staff id": 1041476832605782047,
+        "tickets": [
+            {
+                "channel id": 1123422399648497696,
+                "custom id": "verify yourself",
+                "cooldown": 1209600,
+                "cooldown message": "♡﹒﹒**Psst!** Please slow down a bit; you can only apply for being a **Verified Artist** once every __2 weeks__. This isn't to be mean, this is to prevent spam, especially after an application was denied. Please check back (time thingy) in order to apply again! <a:Lumi_heart_bounce:917958025195696169> __ __✿__ __❀__ __",
+                "embed 1": {
+                    "image": {
+                        "height": 212,
+                        "proxy_url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "width": 800
+                    },
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "﹕･  ̟<a:Lumi_star_spin_purple:936447853562327110> ˚ Open this ticket to apply for being a verified artist! ✿❀",
+                    "title": "♡﹒﹒Verify Yourself! ✿❀"
+                },
+                "embed 2": {
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "> ♡﹒﹒If you're here, you're likely wanting to apply for a shop. Please type `.verify` and follow the given instructions! ✿❀",
+                    "title": "__ __✿__ __❀__ __ Tysm for opening a ticket!"
+                }
+            },
+            {
+                "channel id": 1069863123504341132,
+                "custom id": "make a shop",
+                "emoji": "<a:LCM_Bongo_love:1094144990638247998>",
+                "required role id": 1094138209576951849,
+                "missing role message": "♡﹒﹒**Psst!** You can only open this ticket once you've gained the __Loyal Seller__ role. Please check <#1069863003115237376> for information regarding how to gain this role. <a:LCD_lots_of_love:1127846544792621066> __ __✿__ __❀__ __",
+                "initial wait message": "♡﹒﹒**Psst!** You can only open this ticket after __2 weeks__ of gaining the __Loyal Seller__ role; this cooldown is to prevent potential abuse to our application system. Please check back (time thingy) so you can proceed to open a ticket. <a:LCD_cute_hearts:1127849485289136138> __ __✿__ __❀__ __",
+                "cooldown": 1209600,
+                "cooldown message": "♡﹒﹒**Psst!** Please slow down a bit; you can only apply for being a **Shop Owner** once every __2 weeks__. This isn't to be mean, this is to prevent spam, especially after an application was denied. Please check back (time thingy) in order to apply again! <a:Lumi_heart_bounce:917958025195696169> __ __✿__ __❀__ __",
+                "embed 1": {
+                    "image": {
+                        "height": 212,
+                        "proxy_url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "width": 800
+                    },
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "\ufe55\uff65  \u031f<a:Lumi_star_spin_purple:936447853562327110> \u02da Open this ticket to apply for your own forum shop! \u273f\u2740",
+                    "title": "\u2661\ufe52\ufe52Apply for a Shop! \u273f\u2740"
+                },
+                "embed 2": {
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "> ♡﹒﹒If you're here, you're likely wanting to apply for a shop. Please type `.apply` and follow the given instructions! ✿❀",
+                    "title": "__ __✿__ __❀__ __ Tysm for opening a ticket!"
+                }   
+            },
+            {
+                "channel id": 1069863003115237376,
+                "custom id": "become loyal",
+                "emoji": "<a:LCM_neko_MWAH:1094146048252969010>",
+                "required role id": 1123383918096302191,
+                "missing role message": "♡﹒﹒**Psst!** You can only open this ticket once you've gained the __Verified Artist__ role. Please check <#1123422399648497696> for information regarding how to gain this role. <a:LCD_lots_of_love:1127846544792621066> __ __✿__ __❀__ __",
+                "initial wait message": "♡﹒﹒**Psst!** You can only open this ticket after __2 weeks__ of gaining the __Verified Artist__ role; this cooldown is to prevent potential abuse to our application system. Please check back (time thingy) so you can proceed to open a ticket. <a:LCD_cute_hearts:1127849485289136138> __ __✿__ __❀__ __",
+                "cooldown": 1209600,
+                "cooldown message": "♡﹒﹒**Psst!** Please slow down a bit; you can only apply for being a **Loyal Seller** once every __2 weeks__. This isn't to be mean, this is to prevent spam, especially after an application was denied. Please check back (time thingy) in order to apply again! <a:Lumi_heart_bounce:917958025195696169> __ __✿__ __❀__ __",
+                "embed 1": {
+                    "image": {
+                        "url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "proxy_url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "width": 800,
+                        "height": 212
+                    },
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "\ufe55\uff65  \u031f<a:Lumi_star_spin:900485200398680094> \u02da Open this ticket to apply for being a trusted seller! \u273f\u2740",
+                    "title": "\u2661\ufe52\ufe52Apply for Loyal! \u273f\u2740"
+                },
+                "embed 2": {
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "Thank you for contacting support.\nPlease describe your issue and await a response.",
+                    "title": "\u2661\ufe52\ufe52Apply for Loyal! \u273f\u2740"
+                }
+            },
+            {
+                "channel id": 1041475241345548318,
+                "custom id": "help",
+                "emoji": "<a:LCM_moon_outline:1094146083401244722>",
+                "cooldown": 60,
+                "embed 1": {
+                    "image": {
+                        "height": 212,
+                        "proxy_url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "url": "https://media.discordapp.net/attachments/756681784099471420/1084012412161765407/oie_118551fYA3bmtB.gif",
+                        "width": 800
+                    },
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "\ufe55\uff65  \u031f<:Lumi_lilac_blossom:971208600162816021> \u02da Open this ticket to contact staff for __perks__, **reports**, __questions__, and **more**! \u273f\u2740",
+                    "title": "\u2661\ufe52\ufe52Open a Ticket! \u273f\u2740"
+                },
+                "embed 2": {
+                    "color": 13285375,
+                    "type": "rich",
+                    "description": "Thank you for contacting support.\nPlease describe your issue and await a response.",
+                    "title": "\u2661\ufe52\ufe52Open a Ticket! \u273f\u2740"
+                }
+            }
+        ]
+    }
+
+
+]
+

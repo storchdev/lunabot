@@ -1,0 +1,57 @@
+-- temporary deletion 
+-- rename arthof to art_hof if exists 
+ALTER TABLE IF EXISTS arthof RENAME TO art_hof;
+
+CREATE TABLE IF NOT EXISTS embeds (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE, 
+    embed JSON,
+    creator_id BIGINT
+);
+--DROP TABLE IF EXISTS layouts; 
+CREATE TABLE IF NOT EXISTS layouts (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE, 
+    content TEXT,
+    embeds TEXT,
+    creator_id BIGINT
+);
+--DROP TABLE IF EXISTS auto_responders;
+CREATE TABLE IF NOT EXISTS auto_responders (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE,
+    trigger TEXT,
+    detection TEXT,
+    actions TEXT,
+    restrictions TEXT,
+    cooldown TEXT,
+    author_id BIGINT
+);
+--DROP TABLE IF EXISTS code_responders;
+CREATE TABLE IF NOT EXISTS code_responders (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE,
+    trigger TEXT,
+    detection TEXT,
+    code TEXT,
+    cooldown TEXT,
+    author_id BIGINT
+);
+
+--DROP TABLE IF EXISTS auto_messages;
+CREATE TABLE IF NOT EXISTS auto_messages (
+    name TEXT UNIQUE,
+    channel_id BIGINT,
+    layout JSON,
+    interval INTEGER,
+    lastsent INTEGER
+);
+
+--DROP TABLE IF EXISTS sticky_messages;
+CREATE TABLE IF NOT EXISTS sticky_messages (
+    id SERIAL PRIMARY KEY,
+    channel_id BIGINT UNIQUE,
+    layout JSON,
+    last_message_id BIGINT DEFAULT NULL
+);
+

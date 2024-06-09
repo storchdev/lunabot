@@ -1,0 +1,23 @@
+import asyncpg 
+from config import DB_LOGIN 
+
+
+class DB:
+    def __init__(self, bot):
+        self.bot = bot 
+
+    async def connect(self):
+        self.bot.db = await asyncpg.create_pool(
+            user='lunabot',
+            database='lunabot',
+            password=DB_LOGIN,
+            host='localhost',
+            port='5432'
+        )
+        with open('schema.sql') as f:
+            await self.bot.db.execute(f.read())
+
+
+async def setup(bot):
+    db = DB(bot)
+    await db.connect()

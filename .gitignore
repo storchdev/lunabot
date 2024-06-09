@@ -1,0 +1,9 @@
+webhooks.json
+settings.json
+main.sqlite 
+*.sql
+!schema.sql
+config.py
+embed_editor/
+.vscode/
+__pycache__/
