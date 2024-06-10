@@ -34,9 +34,9 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
             
             rm_time = time.time() + 7
 
-            query = 'INSERT INTO rmroles (user_id, guild_id, role_id, rm_time) VALUES (?,?,?,?) ON CONFLICT(user_id, role_id) DO UPDATE SET rm_time = ?'
-            await self.bot.db.execute(query, member.id, member.guild.id, bday_role.id, rm_time, rm_time)
-            row = await self.bot.db.fetchrow('SELECT user_id, guild_id, role_id, rm_time, id FROM rmroles WHERE user_id = ? AND role_id = ?', member.id, bday_role.id)
+            query = 'INSERT INTO rmroles (user_id, guild_id, role_id, rm_time) VALUES ($1,$2,$3,$4) ON CONFLICT(user_id, role_id) DO UPDATE SET rm_time = $4'
+            await self.bot.db.execute(query, member.id, member.guild.id, bday_role.id, rm_time)
+            row = await self.bot.db.fetchrow('SELECT user_id, guild_id, role_id, rm_time, id FROM rmroles WHERE user_id = $1 AND role_id = $2', member.id, bday_role.id)
             task = self.bot.loop.create_task(self.rm_role(row))
             self.rm_role_tasks[row[4]] = task
 
@@ -66,7 +66,7 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
     @commands.Cog.listener()
     async def on_member_join(self, member):
 
-        query = 'SELECT role_id FROM rmroles WHERE user_id = ?'
+        query = 'SELECT role_id FROM rmroles WHERE user_id = $1'
         row = await self.bot.db.fetchrow(query, member.id)
         if row:
             role = member.guild.get_role(row[0])
@@ -154,7 +154,7 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
     @app_commands.default_permissions()
     async def setembed(self, ctx, event: Literal['welcome', 'goodbye', 'boost', 'birthday'], channel: discord.TextChannel, *, name: str):
         """Sets an embed for welcome/leave/boost/birthday messages."""
-        query = 'SELECT embed FROM embeds WHERE name = ? AND creator_id = ?'
+        query = 'SELECT embed FROM embeds WHERE name = $1 AND creator_id = $2'
         x = await self.bot.db.fetchrow(query, name.lower(), ctx.author.id)
         
         if not x:

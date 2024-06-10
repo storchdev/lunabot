@@ -23,11 +23,19 @@ class View(discord.ui.View):
         if bot:
             bot.views.add(self)
 
-    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Any]) -> None:
-        if interaction.response.is_done():
-            await interaction.followup.send(f"Sorry! something went wrong....", ephemeral=True)
+    # async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Any]) -> None:
+        # if interaction.response.is_done():
+        #     await interaction.followup.send(f"Sorry! something went wrong....", ephemeral=True)
+        # else:
+        #     await interaction.response.send_message(f"Sorry! something went wrong....", ephemeral=True)
+
+    async def cancel_smoothly(self, interaction):
+        if self.message:
+            await interaction.response.defer()
+            await self.message.delete()
         else:
-            await interaction.response.send_message(f"Sorry! something went wrong....", ephemeral=True)
+            await interaction.response.edit_message(view=None, embed=None, content='Cancelled!')
+        self.stop()
 
     def stop(self) -> None:
         if self.bot:

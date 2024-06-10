@@ -358,7 +358,7 @@ class BaseModal(discord.ui.Modal):
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, /) -> None:
         if isinstance(error, InvalidModalField):
-            self.parent_view.update_buttons()
+            # self.parent_view.update_buttons()
             await interaction.response.edit_message(embed=self.parent_view.embed, view=self.parent_view)
             await interaction.followup.send(str(error), ephemeral=True)
             return
@@ -408,6 +408,7 @@ class LayoutChooserOrEditor(View):
 
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red, row=2)
     async def cancel(self, interaction, button):
+        self.final_interaction = interaction
         await interaction.delete_original_response() 
         self.stop()
 

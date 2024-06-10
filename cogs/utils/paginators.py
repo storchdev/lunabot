@@ -132,7 +132,7 @@ class ViewMenuPages(discord.ui.View):
             pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user and interaction.user.id in (self.ctx.bot.owner_id, self.ctx.user.id):
+        if interaction.user and interaction.user.id in (self.ctx.bot.owner_id, self.ctx.author.id):
             return True
         # defer 
         await interaction.response.defer()
@@ -150,11 +150,11 @@ class ViewMenuPages(discord.ui.View):
         self.ctx.bot.views.discard(self)
         super().stop()
 
-    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Self], /) -> None:
-        if interaction.response.is_done():
-            await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
-        else:
-            await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+    # async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Self], /) -> None:
+    #     if interaction.response.is_done():
+    #         await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+    #     else:
+    #         await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
 
     async def start(self, edit_interaction: bool = False) -> None:
         if self.check_embeds and not self.ctx.channel.permissions_for(self.ctx.guild.me).embed_links:  # type: ignore

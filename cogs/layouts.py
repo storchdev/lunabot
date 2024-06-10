@@ -3,6 +3,7 @@ import asyncio
 import discord 
 from discord import app_commands 
 from .utils import Layout, SimplePages, LayoutEditor
+from .utils import InvalidURL
 import json 
 
 
@@ -30,7 +31,7 @@ class Layouts(commands.Cog):
         """Creates a layout with LunaBot"""
         name = name.lower()
         view = LayoutEditor(self.bot, ctx.author)
-        await ctx.send(view=view, ephemeral=True)
+        view.message = await ctx.send(view=view, ephemeral=True)
         await view.wait()
         if view.cancelled:
             return 
@@ -69,7 +70,7 @@ class Layouts(commands.Cog):
 
         layout = self.bot.layouts[name]  
         view = LayoutEditor(self.bot, ctx.author, text=layout.text, embed=layout.embed_names)
-        await ctx.send(layout.text, embeds=layout.embeds, view=view, ephemeral=True)
+        view.message = await ctx.send(layout.text, embeds=layout.embeds, view=view, ephemeral=True)
         await view.wait()
         if view.cancelled:
             return 

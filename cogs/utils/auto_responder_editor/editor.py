@@ -22,11 +22,11 @@ __all__ = (
 )
 
 class AutoResponderEditor(View):
-    def __init__(self, bot, owner, *, ar: Optional[AutoResponder] = None, timeout: float = 600):
+    def __init__(self, bot, owner, *, default_trigger: Optional[str] = None, ar: Optional[AutoResponder] = None, timeout: float = 600):
         self.bot = bot
         self.owner: discord.Member = owner 
 
-        self.trigger = None 
+        self.trigger = default_trigger
         self.detection = None 
         self.actions = [] 
         self.restrictions = {}
@@ -43,6 +43,7 @@ class AutoResponderEditor(View):
         self.final_interaction: discord.Interaction = None
         self.type = 'AutoResponderEditor'
         super().__init__(timeout=timeout, bot=bot)
+        self.update()
 
     async def interaction_check(self, interaction):
         if interaction.user == self.owner:
@@ -58,12 +59,7 @@ class AutoResponderEditor(View):
         else:
             strs = []
             for i, action in enumerate(self.actions):
-                kwargs = []
-                for k, v in action.kwargs.items():
-                    if isinstance(v, list):
-                        v = ', '.join(v)
-                    kwargs.append(f'{k}: {v}')
-                strs.append(f'{i+1}. {action.name}\n{kwargs}')
+                strs.append(f'{i+1}. {action.type}')
 
             desc = '\n\n'.join(strs) 
             desc = f'**Actions:**\n\n{desc}'
@@ -73,6 +69,13 @@ class AutoResponderEditor(View):
             description=desc,
             color=self.bot.DEFAULT_EMBED_COLOR
         )
+        # trigger
+        if self.trigger:
+            embed.add_field(name='Trigger', value=self.trigger, inline=False)
+        # detection
+        if self.detection:
+            embed.add_field(name='Detection', value=self.detection, inline=False)
+
         # restrictions 
         if len(self.restrictions) > 0:
             strs = []
@@ -101,10 +104,23 @@ class AutoResponderEditor(View):
         return embed
     
     def jsonify_actions(self) -> str:
-        return json.dumps([a.kwargs for a in self.actions], indent=4)
+        actions_list = []
+        for a in self.actions:
+            action_dict = {}
+            action_dict['type'] = a.type 
+            action_dict['kwargs'] = a.kwargs
+            actions_list.append(action_dict)
+
+        return json.dumps(actions_list, indent=4)
     
     def jsonify_restrictions(self) -> str:
         return json.dumps(self.restrictions, indent=4)
+
+    def jsonify_cooldown(self) -> str:
+        if self.cooldown is None:
+            return None
+        else:
+            return self.cooldown.jsonify()
 
     def update(self):
         ok = True
@@ -118,19 +134,19 @@ class AutoResponderEditor(View):
 
         if self.detection is not None:
             self.detection_status.label = 'Detection set' 
-            self.trigger_status.emoji = '\N{WHITE HEAVY CHECK MARK}'
+            self.detection_status.emoji = '\N{WHITE HEAVY CHECK MARK}'
         else:
             ok = False
             self.detection_status.label = 'Detection not set' 
-            self.trigger_status.emoji = '\N{WARNING SIGN}'
+            self.detection_status.emoji = '\N{WARNING SIGN}'
 
         if len(self.actions) > 0:
             self.action_status.label = 'Action set' 
-            self.trigger_status.emoji = '\N{WHITE HEAVY CHECK MARK}'
+            self.action_status.emoji = '\N{WHITE HEAVY CHECK MARK}'
         else:
             ok = False
             self.action_status.label = 'Action not set' 
-            self.trigger_status.emoji = '\N{WARNING SIGN}'
+            self.action_status.emoji = '\N{WARNING SIGN}'
 
         self.submit.disabled = not ok
 
@@ -174,12 +190,12 @@ class AutoResponderEditor(View):
     @ui.button(label='Submit', style=ButtonStyle.green, row=3, disabled=True)
     async def submit(self, interaction, button):
         self.final_interaction = interaction
+        self.cancelled = False
         self.stop()
     
     @ui.button(label='Cancel', style=ButtonStyle.red, row=3)
     async def cancel(self, interaction, button):
-        self.final_interaction = interaction
-        self.stop()
+        await self.cancel_smoothly(interaction)
 
     @ui.button(label='Trigger not set', emoji='\N{WARNING SIGN}', style=ButtonStyle.grey, row=4, disabled=True)
     async def trigger_status(self, interaction, button):
@@ -211,7 +227,7 @@ class AddActionView(View):
         discord.SelectOption(label='Add Reactions', value='add_reactions'),
         discord.SelectOption(label='Delete Trigger', value='delete_trigger_message'),
         discord.SelectOption(label='Sleep', value='sleep'),
-    ], row=2)
+    ], row=0)
     async def set_action(self, interaction, select):
         action_type = select.values[0]
         if action_type == 'send_message':
@@ -239,6 +255,10 @@ class AddActionView(View):
             await interaction.response.send_modal(modal)
         else:
             raise ValueError('Invalid action')
+    
+    @ui.button(label='Cancel', style=ButtonStyle.red, row=1)
+    async def cancel(self, interaction, button):
+        await interaction.response.edit_message(view=self.parent_view)
 
         
 class SendMessageEditor(View):
@@ -258,20 +278,54 @@ class SendMessageEditor(View):
         self.add_items()
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.owner:
+        if interaction.user == self.parent_view.parent_view.owner:
             return True
         # defer 
         await interaction.response.defer()
         return False
+
+    def add_user_select(self):
+        select = ui.UserSelect(row=1, placeholder='Select user (nothing = same)', min_values=0)
+
+        async def callback(interaction):
+            if not self.interaction_check(interaction):
+                return 
+
+            if len(select.values) == 0:
+                self.user = None 
+            else:
+                self.user = select.values[0]
+            self.update()
+            await interaction.response.edit_message(view=self, content=self.layout.content, embeds=self.layout.embeds)
+        
+        select.callback = callback 
+        self.add_item(select)
+
+    def add_channel_select(self):
+        select = ui.ChannelSelect(row=1, placeholder='Select channel (nothing = same)', min_values=0)
+
+        async def callback(interaction):
+            if not self.interaction_check(interaction):
+                return 
+
+            if len(select.values) == 0:
+                self.channel = None 
+            else:
+                self.channel = select.values[0]
+            self.update()
+            await interaction.response.edit_message(view=self, content=self.layout.content, embeds=self.layout.embeds)
+
+        select.callback = callback 
+        self.add_item(select) 
 
     def add_items(self):
         self.add_item(self.enter_layout)
         self.add_item(self.no_layout)
         self.add_item(self.dm_btn)
         if self.is_dm:
-            self.add_item(self.select_user)
+            self.add_user_select()
         else:
-            self.add_item(self.select_channel)
+            self.add_channel_select()
         self.add_item(self.delete_after_btn)
 
         self.add_item(self.reply_btn)
@@ -279,10 +333,6 @@ class SendMessageEditor(View):
             self.add_item(self.ping_on_reply_btn)
 
         self.add_item(self.layout_status)
-        if self.is_dm:
-            self.add_item(self.user_status)
-        else:
-            self.add_item(self.channel_status)
 
         self.add_item(self.submit_btn)
 
@@ -290,12 +340,14 @@ class SendMessageEditor(View):
         ok = True 
 
         if self.is_dm:
-            self.dm.label = 'DM: Yes'
+            self.dm_btn.label = 'DM: Yes'
         else:
-            self.dm.label = 'DM: No'
+            self.dm_btn.label = 'DM: No'
         
         if self.ping_on_reply:
             self.ping_on_reply_btn.label = 'Ping on reply: Yes'
+        else:
+            self.ping_on_reply_btn.label = 'Ping on reply: No'
 
         if self.reply:
             self.reply_btn.label = 'Reply: Yes'
@@ -314,24 +366,6 @@ class SendMessageEditor(View):
             self.layout_status.label = 'Layout not set' 
             self.layout_status.emoji = '\N{WARNING SIGN}'
             ok = False
-
-        if self.user is None:
-            self.user_status.label = 'User not set' 
-            self.user_status.emoji = '\N{WARNING SIGN}'
-            if self.is_dm:
-                ok = False
-        else:
-            self.user_status.label = 'User set' 
-            self.user_status.emoji = '\N{WHITE HEAVY CHECK MARK}'
-
-        if self.channel is None:
-            self.channel_status.label = 'Channel not set' 
-            self.channel_status.emoji = '\N{WARNING SIGN}'
-            if not self.is_dm:
-                ok = False
-        else:
-            self.channel_status.label = 'Channel set' 
-            self.channel_status.emoji = '\N{WHITE HEAVY CHECK MARK}'
 
         self.submit_btn.disabled = not ok 
         self.clear_items()
@@ -353,23 +387,6 @@ class SendMessageEditor(View):
         self.update()
         await interaction.response.edit_message(view=self, content=self.layout.content, embeds=self.layout.embeds)
 
-    @ui.select(cls=ui.ChannelSelect, placeholder='Select channel (nothing = same)', row=3, min_values=0)
-    async def select_channel(self, interaction, select):
-        if len(select.values) == 0:
-            self.channel = None
-        else:
-            self.channel = select.values[0]
-        self.update()
-        await interaction.response.edit_message(view=self, content=self.layout.content, embeds=self.layout.embeds)
-    
-    @ui.select(cls=ui.UserSelect, placeholder='Select user (nothing = same)', row=3, min_values=0)
-    async def select_user(self, interaction, select):
-        if len(select.values) == 0:
-            self.user = None
-        else:
-            self.user = select.values[0]
-        self.update()
-        await interaction.response.edit_message(view=self, content=self.layout.content, embeds=self.layout.embeds)
 
     @ui.button(label='Delete After: No', style=ButtonStyle.blurple, row=3)
     async def delete_after_btn(self, interaction, button):
@@ -393,19 +410,11 @@ class SendMessageEditor(View):
     async def layout_status(self, interaction, button):
         pass 
 
-    @ui.button(label='Channel not set', emoji='\N{WARNING SIGN}', style=ButtonStyle.gray, disabled=True, row=4)
-    async def channel_status(self, interaction, button):
-        pass
-
-    @ui.button(label='User not set', emoji='\N{WARNING SIGN}', style=ButtonStyle.gray, disabled=True, row=4)
-    async def user_status(self, interaction, button):
-        pass
-
-    @ui.button(label='Submit', style=ButtonStyle.green, disabled=True)
+    @ui.button(label='Submit', style=ButtonStyle.green, disabled=True, row=4)
     async def submit_btn(self, interaction, button):
         action = AutoResponderAction(
-            name='send_message',
-            layout=self.layout.to_json(),
+            'send_message',
+            layout=self.layout.to_dict(),
             is_dm=self.is_dm,
             channel=self.channel,
             user=self.user,
@@ -418,10 +427,14 @@ class SendMessageEditor(View):
         original_view.update()
         await interaction.response.edit_message(view=original_view, embed=original_view.embed)
 
-    async def on_timeout(self):
-        if self.message:
-            await self.message.delete()
-        self.stop()
+    @ui.button(label='Cancel', style=ButtonStyle.red, row=4)
+    async def cancel_btn(self, interaction, button):
+        await interaction.response.edit_message(view=self.parent_view)
+
+    # async def on_timeout(self):
+    #     if self.message:
+    #         await self.message.delete()
+    #     self.stop()
 
 class AddRolesView(View):
     def __init__(self, parent_view: AddActionView, *, timeout: float = 600):
@@ -429,7 +442,7 @@ class AddRolesView(View):
         super().__init__(timeout=timeout, bot=parent_view.bot)
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.owner:
+        if interaction.user == self.parent_view.parent_view.owner:
             return True
         # defer 
         await interaction.response.defer()
@@ -452,7 +465,7 @@ class RemoveRolesView(View):
         super().__init__(timeout=timeout, bot=parent_view.bot)
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.owner:
+        if interaction.user == self.parent_view.parent_view.owner:
             return True
         # defer 
         await interaction.response.defer()
@@ -476,7 +489,7 @@ class AddReactionView(View):
         super().__init__(timeout=timeout, bot=parent_view.bot)
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.owner:
+        if interaction.user == self.parent_view.parent_view.owner:
             return True
         # defer 
         await interaction.response.defer()
@@ -544,21 +557,37 @@ class RestrictionsView(View):
         await interaction.response.edit_message(view=self.parent_view)
 
 
-class ObjSelect:
+
+class UserSelect(ui.UserSelect):
     def __init__(self, parent_view: RestrictionsView):
         self.parent_view = parent_view
+        super().__init__(max_values=25)
 
     async def callback(self, interaction: discord.Interaction):
         original_view = self.parent_view.parent_view
-        original_view.restrictions[self.parent_view.setting] = [obj.id for obj in interaction.values]
+        original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
+        original_view.update()
+        await interaction.response.edit_message(view=original_view, embed=original_view.embed)
+    
+
+class ChannelSelect(ui.ChannelSelect):
+    def __init__(self, parent_view: RestrictionsView):
+        self.parent_view = parent_view
+        super().__init__(max_values=25)
+
+    async def callback(self, interaction: discord.Interaction):
+        original_view = self.parent_view.parent_view
+        original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
         original_view.update()
         await interaction.response.edit_message(view=original_view, embed=original_view.embed)
 
-class ChannelSelect(ObjSelect, ui.ChannelSelect):
-    ...
+class RoleSelect(ui.RoleSelect):
+    def __init__(self, parent_view: RestrictionsView):
+        self.parent_view = parent_view
+        super().__init__(max_values=25)
 
-class RoleSelect(ObjSelect, ui.RoleSelect):
-    ...
-
-class UserSelect(ObjSelect, ui.UserSelect):
-    ...
+    async def callback(self, interaction: discord.Interaction):
+        original_view = self.parent_view.parent_view
+        original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
+        original_view.update()
+        await interaction.response.edit_message(view=original_view, embed=original_view.embed)

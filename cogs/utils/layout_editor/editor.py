@@ -55,17 +55,14 @@ class LayoutEditor(View):
 
     @discord.ui.button(label='Submit', row=1, style=ButtonStyle.red, disabled=True)
     async def send(self, interaction, button):
-        await interaction.response.edit_message(content=None, view=None)
+        await interaction.response.edit_message(view=None)
         self.final_interaction = interaction
         self.cancelled = False
         self.stop()
     
     @discord.ui.button(label='Cancel', row=1, style=ButtonStyle.red)
     async def cancel(self, interaction, button):
-        self.final_interaction = interaction
-        if self.message:
-            await self.message.delete()
-        self.stop()
+        await self.cancel_smoothly(interaction)
     
     @discord.ui.button(label='0/10 Total Embeds', row=2, style=ButtonStyle.grey, disabled=True)
     async def embed_count(self, interaction, button):

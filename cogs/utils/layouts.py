@@ -40,7 +40,7 @@ class Layout:
         self.embed_names = embed_names if embed_names else []
 
     def __bool__(self):
-        return self.content or self.embed_names 
+        return bool(self.content) or bool(self.embed_names)
 
     @staticmethod
     def fill_text_one(text, key, value):
@@ -92,13 +92,21 @@ class Layout:
         for name in self.embed_names:
             embeds.append(self.bot.get_embed(name))
         return embeds
-    
-    def to_json(self):
-        return json.dumps({
-            'name': self.name,
-            'content': self.content,
-            'embeds': self.embed_names
-        }, indent=4)
+
+    def to_dict(self):
+        if self.name is None:
+            return {
+                'name': None,
+                'content': self.content,
+                'embeds': self.embed_names
+            }
+        else:
+            return {
+                'name': self.name,
+            }
+
+    def to_json(self, *, indent=4):
+        return json.dumps(self.to_dict(), indent=indent)
     
     async def send(self, msgble, ctx=None, **kwargs) -> Optional[discord.Message]:
         send_func = msgble.send
@@ -106,7 +114,7 @@ class Layout:
         if isinstance(msgble, discord.Message):
             if ctx is None:
                 ctx = await self.bot.get_context(msgble)
-            if 'reply' in kwargs and kwargs.pop('reply'):
+            if 'reply' in kwargs and kwargs['reply']:
                 send_func = msgble.reply
             else:
                 send_func = msgble.channel.send
@@ -129,6 +137,8 @@ class Layout:
         embeds = []
         for embed in self.embeds:
             embeds.append(self.fill_embed(ctx, embed))
-        
-        return await send_func(content=content, embeds=embeds, **kwargs)
+
+        return await send_func(content=content, embeds=embeds, 
+                               mention_author=kwargs.get('mention_author', False), 
+                               delete_after=kwargs.get('delete_after', None))
         

@@ -455,19 +455,23 @@ class CodeResponders(commands.Cog):
         lower = message.content.lower()
 
         for item in self.code_responders:
-            if item.detection == 'full':
+            if item.detection == 'matches':
                 if lower == item.name:
                     respond = True
                     break
-            elif item.detection == 'word':
+            elif item.detection == 'contains_word':
                 if item.name in lower.split():
                     respond = True
                     break
-            elif item.detection == 'start':
+            elif item.detection == 'contains':
+                if item.name in lower:
+                    respond = True
+                    break
+            elif item.detection == 'starts':
                 if lower.startswith(item.name):
                     respond = True
                     break
-            elif item.detection == 'end':
+            elif item.detection == 'ends':
                 if lower.endswith(item.name):
                     respond = True
                     break
@@ -481,10 +485,9 @@ class CodeResponders(commands.Cog):
             if resp['status'] == 'ok':
                 return
 
-            tb = format_err(resp['error'])            
-            short_err = str(resp['error'])
-
             if resp['status'] == 'runtime_error':
+                tb = format_err(resp['error'])            
+                short_err = str(resp['error'])
                 if not item.ignore_errors:
                     await message.channel.send(f'Code encountered a runtime error!\n`{short_err}`')
                 storch = self.bot.get_user(self.bot.STORCH_ID)

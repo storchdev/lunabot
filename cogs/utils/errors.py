@@ -5,3 +5,6 @@ class InvalidModalField(Exception):
 
 class GuildOnly(commands.CheckFailure):
     ...
+
+class InvalidURL(Exception):
+    ...

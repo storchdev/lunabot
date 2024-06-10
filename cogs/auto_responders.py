@@ -86,18 +86,18 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
         ar = await self.ar_check(msg)
         if ar:
             for action in ar.actions:
-                await action.execute(self.bot, msg)
+                await action.execute(msg)
 
 
-    @commands.hybrid_group(name='autoresponder', alises=['ar'], invoke_without_command=True)
+    @commands.hybrid_group(name='autoresponder', aliases=['ar'], invoke_without_command=True)
     @app_commands.default_permissions()
     async def autoresponder(self, ctx):
-        embed = discord.Embed(title='Autoresponder commands', color=self.bot.DEFAULT_COLOR)
+        embed = discord.Embed(title='Autoresponder commands', color=self.bot.DEFAULT_EMBED_COLOR)
         for cmd in ctx.command.commands:
             embed.add_field(name=cmd.name, value=cmd.help, inline=False)
         await ctx.send(embed=embed)
 
-    @autoresponder.command(name='add', alises=['create'])
+    @autoresponder.command(name='add', aliases=['create'])
     @app_commands.default_permissions()
     async def add_autoresponder(self, ctx, *, name):
         """Adds an auto-responder."""
@@ -105,8 +105,8 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
         if name in self.name_lookup:
             return await ctx.send('Autoresponder with that name already exists.', ephemeral=True)
 
-        editor = AutoResponderEditor(self.bot, ctx.author)
-        editor.message = await ctx.send(view=editor)
+        editor = AutoResponderEditor(self.bot, ctx.author, default_trigger=name)
+        editor.message = await ctx.send(embed=editor.embed, view=editor)
         await editor.wait()
 
         if editor.cancelled:
@@ -130,7 +130,7 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
             editor.detection, 
             editor.jsonify_actions(),
             editor.jsonify_restrictions(),
-            editor.cooldown.jsonify(),
+            editor.jsonify_cooldown(),
             ctx.author.id
         )
         ar = AutoResponder(
@@ -173,8 +173,8 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
         if name not in self.name_lookup:
             return await ctx.send('Autoresponder with that name does not exist.', ephemeral=True)
 
-        editor = AutoResponderEditor(self.bot, ctx.author, self.name_lookup[name])
-        editor.message = await ctx.send(view=editor)
+        editor = AutoResponderEditor(self.bot, ctx.author, ar=self.name_lookup[name])
+        editor.message = await ctx.send(embed=editor.embed, view=editor)
         await editor.wait()
 
         if editor.cancelled:
@@ -194,7 +194,7 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
             editor.detection, 
             editor.jsonify_actions(),
             editor.jsonify_restrictions(),
-            editor.cooldown.jsonify()
+            editor.jsonify_cooldown()
         )
         ar = AutoResponder(
             name, 

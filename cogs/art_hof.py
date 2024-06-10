@@ -55,7 +55,7 @@ class ArtHof(commands.Cog):
 
         query = 'SELECT * FROM art_hof WHERE original_id = $1' 
         row = await self.bot.db.fetchrow(query, payload.message_id)
-        stars = len(u async for u in reaction.users() if u.id not in [self.bot.user.id, message.author.id])
+        stars = len([u async for u in reaction.users() if u.id not in [self.bot.user.id, message.author.id]])
 
         if row is not None:
             hof_channel = self.bot.get_channel(row['hof_channel_id'])
@@ -96,7 +96,7 @@ class ArtHof(commands.Cog):
         if message.author.id == payload.user_id:
             return
         reaction = discord.utils.get(message.reactions, emoji=payload.emoji)
-        stars = len(u async for u in reaction.users() if u.id not in [self.bot.user.id, message.author.id])
+        stars = len([u async for u in reaction.users() if u.id not in [self.bot.user.id, message.author.id]])
 
         query = 'SELECT * FROM art_hof WHERE original_id = $1' 
         row = await self.bot.db.fetchrow(query, payload.message_id)

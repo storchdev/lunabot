@@ -37,22 +37,53 @@ async def setup(bot):
                 indent=4
             )
         else:   
-            actions = json.dumps(
-                [   
+            actions = [   
                     {
                         'type': 'send_message',
                         'kwargs': {
                             'is_dm': False,
+                            'channel': None,
                             'layout': {
                                 'name': None,
                                 'content': data.get('text'),
-                                'embeds': [data['embed']] if data['embed'] else []   
+                                'embeds': [data['embed']] if data['embed'] else [],
+                                'delete_after': data.get('delete_response_after'),
+                                'reply': False,
+                                'mention_author': None
                             }
                         }
                     }
-                ],
-                indent=4
-            )
+                ] 
+            
+            if data.get('delete_trigger'):
+                actions.append(
+                    {
+                        'type': 'delete_trigger_message',
+                        'kwargs': {}
+                    }
+                )   
+            
+            if data.get('give_roles'):
+                actions.append(
+                    {
+                        'type': 'add_roles',
+                        'kwargs': {
+                            'roles': data['give_roles']
+                        }
+                    }
+                )
+
+            if data.get('remove_roles'):
+                actions.append(
+                    {
+                        'type': 'remove_roles',
+                        'kwargs': {
+                            'roles': data['remove_roles']
+                        }
+                    }
+                )
+
+            actions = json.dumps(actions, indent=4)
         restrictions = {}
         for key in ['wlusers', 'blusers', 'wlchannels', 'blchannels', 'wlroles', 'blroles']:
             if key in data:
@@ -87,6 +118,7 @@ async def setup(bot):
         await db.execute(query, phrase, phrase, detection_map[detection], actions, json.dumps(restrictions, indent=4), cooldown, 496225545529327616)
 
 
+    return
     # code responders
     names = set()
     old_crs = await db.fetch('select * from crs')
@@ -151,6 +183,17 @@ async def setup(bot):
             '''
         await db.execute(query, channel.id, json.dumps(layout, indent=4), last_message_id)
     
+# async def setup(bot):
+#     rows = await bot.db.fetch('select * from auto_responders')
+#     for row in rows:
+#         a = json.loads(row['actions'])[0]
+#         if a['type'] == 'send_message':
+#             a['kwargs']['channel'] = 'this'
+#         query = '''UPDATE auto_responders
+#                    SET actions = $1
+#                    WHERE name = $2
+#                 '''
+#         await bot.db.execute(query, json.dumps([a], indent=4), row['name'])
 
 # async def setup(bot):
 #     # copy to auto_responders

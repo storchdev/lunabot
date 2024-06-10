@@ -9,16 +9,16 @@ from .helpers import Cooldown
 
 
 class AutoResponderAction:
+    bot = None 
+
     def __init__(self, action_type, **kwargs):
-        self.bot = None
         self.type = action_type
         self.kwargs = kwargs
 
     async def send_message(self, msg: discord.Message): 
-        
-        if self.kwargs.pop('is_dm'):
-            value = self.kwargs.pop('user')
-            if value == 'this':
+        if self.kwargs['is_dm']:
+            value = self.kwargs.get('user')
+            if value is None:
                 user = msg.author
             else:
                 user = self.bot.get_user(value)
@@ -27,8 +27,8 @@ class AutoResponderAction:
 
             msgble = user
         else:
-            value = self.kwargs.pop('channel')
-            if value == 'this':
+            value = self.kwargs.get('channel')
+            if value is None:
                 channel = msg.channel
             else:
                 channel = msg.guild.get_channel(value)
@@ -38,11 +38,11 @@ class AutoResponderAction:
             
             msgble = channel
 
-        layout = self.bot.get_layout_from_json(self.kwargs.pop('layout'))
+        layout = self.bot.get_layout_from_json(self.kwargs['layout'])
         await layout.send(msgble, **self.kwargs)
 
     async def add_roles(self, msg: discord.Message):
-        role_ids = self.kwargs.pop('roles')
+        role_ids = self.kwargs['roles']
         status = []
         for role_id in role_ids:
             role = msg.guild.get_role(role_id)
@@ -55,7 +55,7 @@ class AutoResponderAction:
             await msg.channel.send('\n'.join(status))
 
     async def remove_roles(self, msg: discord.Message):
-        role_ids = self.kwargs.pop('roles')
+        role_ids = self.kwargs['roles']
         status = []
         for role_id in role_ids:
             role = msg.guild.get_role(role_id)
@@ -68,7 +68,7 @@ class AutoResponderAction:
             await msg.channel.send('\n'.join(status))
         
     async def add_reactions(self, msg: discord.Message):
-        emojis = self.kwargs.pop('emojis')
+        emojis = self.kwargs['emojis']
         status = []
 
         for emoji in emojis:
@@ -80,21 +80,19 @@ class AutoResponderAction:
         if status:
             await msg.channel.send('\n'.join(status))
 
-    async def execute(self, bot, msg: discord.Message):
-        self.bot = bot
-
+    async def execute(self, msg: discord.Message):
         if self.type == 'send_message':
-            await self.send_message(bot, msg)
+            await self.send_message(msg)
         elif self.type == 'delete_trigger_message':
             await msg.delete()
         elif self.type == 'add_roles':
             await self.add_roles(msg)
-        elif self.type == 'remove_role':
+        elif self.type == 'remove_roles':
             await self.remove_roles(msg)
         elif self.type == 'add_reactions':
             await self.add_reactions(msg)
         elif self.type == 'sleep':
-            await asyncio.sleep(self.kwargs.pop('duration'))
+            await asyncio.sleep(self.kwargs['duration'])
 
 
 class AutoResponder:

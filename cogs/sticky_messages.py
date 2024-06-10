@@ -48,12 +48,12 @@ class StickyMessages(commands.Cog):
         if msg.channel.id not in self.sticky_messages:
             return 
 
-        sm = discord.utils.get(self.sticky_messages.values(), lambda sm: sm.channel == msg.channel)
+        sm = discord.utils.find(lambda sm: sm.channel == msg.channel, self.sticky_messages.values())
         new_message = await sm.layout.send(msg.channel)
         old_message_id = sm.last_message_id
         sm.last_message_id = new_message.id
 
-        query = 'update sticky_messages set last_msg_id = $1 where channel_id = $2'
+        query = 'update sticky_messages set last_message_id = $1 where channel_id = $2'
         await self.bot.db.execute(query, new_message.id, msg.channel.id)
 
         if old_message_id is None:

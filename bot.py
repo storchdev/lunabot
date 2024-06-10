@@ -3,8 +3,11 @@ from cogs.utils.errors import GuildOnly
 import os 
 from discord.ext import commands 
 import logging
+from typing import Union
 import aiohttp 
 from cogs.utils.layouts import Layout 
+from cogs.utils.auto_responders import AutoResponderAction
+from cogs.utils.errors import InvalidURL
 import discord 
 
 
@@ -31,7 +34,9 @@ class LunaBot(commands.Bot):
         # await self.load_extension('cogs.db')
         # await self.load_extension('db_migration')
         # return
+        self.add_check(self.global_check)
         Layout.bot = self 
+        AutoResponderAction.bot = self
 
         await self.load_extension("jishaku")
         priority = ['cogs.db']
@@ -69,12 +74,31 @@ class LunaBot(commands.Bot):
             return Layout(name, f'`Layout "{name}" not found`', [])
         return self.layouts[name]
     
-    def get_layout_from_json(self, data: str) -> Layout:
-        data = json.loads(data)
+    def get_layout_from_json(self, data: Union[str, dict]) -> Layout:
+        if isinstance(data, str):
+            data = json.loads(data)
         if data['name'] is not None:
             return self.get_layout(data['name'])
         
-        return Layout(data['name'], data['content'], data['embeds'])
+        return Layout(None, data['content'], data['embeds'])
+
+    async def fetch_message_from_url(self, url: str) -> discord.Message:
+        tokens = url.split('/')
+        try:
+            channel_id = int(tokens[-2])
+            message_id = int(tokens[-1])
+        except (IndexError, ValueError):
+            raise InvalidURL()
+
+        channel = self.get_channel(channel_id)
+        if channel is None:
+            raise InvalidURL()
+
+        try:
+            return await channel.fetch_message(message_id)
+        except discord.NotFound:
+            raise InvalidURL()
+
 
     def global_check(self, ctx):
         if ctx.guild is None:
