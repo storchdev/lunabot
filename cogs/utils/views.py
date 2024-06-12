@@ -376,9 +376,8 @@ class LayoutChooserOrEditor(View):
         else:
             self.layout = layout
 
-        self.owner = owner 
         self.final_interaction = None
-        super().__init__(timeout=180, bot=bot)
+        super().__init__(timeout=180, bot=bot, owner=owner)
         self.update_submit()
     
     def update_submit(self):

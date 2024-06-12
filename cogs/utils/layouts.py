@@ -138,7 +138,10 @@ class Layout:
         for embed in self.embeds:
             embeds.append(self.fill_embed(ctx, embed))
 
-        return await send_func(content=content, embeds=embeds, 
-                               mention_author=kwargs.get('mention_author', False), 
-                               delete_after=kwargs.get('delete_after', None))
+        try:
+            return await send_func(content=content, embeds=embeds, 
+                                mention_author=kwargs.get('mention_author', False), 
+                                delete_after=kwargs.get('delete_after', None))
+        except discord.Forbidden:
+            pass 
         

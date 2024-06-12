@@ -126,6 +126,17 @@ class Tools(commands.Cog, description='storchs tools'):
         message = await channel.fetch_message(message_id)
         view = ui.View.from_message(message)
         await ctx.send(escape_markdown(str(view.children[0].emoji)))
+    
+    @commands.command(aliases=['delmessage', 'delmsg', 'delmessages'])
+    async def delmsgs(self, ctx, urls):
+        for url in urls.split():
+            tokens = url.split('/')
+            channel_id = int(tokens[-2])
+            message_id = int(tokens[-1])
+            channel = self.bot.get_channel(channel_id)
+            message = await channel.fetch_message(message_id)
+            await message.delete()
+        await ctx.message.delete()
 
     @commands.command()
     async def sync(ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:

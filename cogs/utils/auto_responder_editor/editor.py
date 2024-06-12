@@ -42,7 +42,7 @@ class AutoResponderEditor(View):
         self.message: discord.Message = None
         self.final_interaction: discord.Interaction = None
         self.type = 'AutoResponderEditor'
-        super().__init__(timeout=timeout, bot=bot)
+        super().__init__(timeout=timeout, bot=bot, owner=owner)
         self.update()
 
     async def interaction_check(self, interaction):
@@ -80,6 +80,8 @@ class AutoResponderEditor(View):
         if len(self.restrictions) > 0:
             strs = []
             for k, v in self.restrictions.items():
+                if len(v) == 0:
+                    continue
                 if k.endswith('channels'):
                     v = ', '.join(f'<#{i}>' for i in v)
                 elif  k.endswith('roles'):
@@ -217,8 +219,7 @@ class AutoResponderEditor(View):
 
 class AddActionView(View):
     def __init__(self, parent_view: AutoResponderEditor, *, timeout: float = 600):
-        self.parent_view = parent_view
-        super().__init__(timeout=timeout, bot=parent_view.bot)
+        super().__init__(timeout=timeout, bot=parent_view.bot, parent_view=parent_view)
 
     @ui.select(placeholder='Select an action', options=[
         discord.SelectOption(label='Send message', value='send_message'),
@@ -241,7 +242,7 @@ class AddActionView(View):
             await interaction.response.edit_message(view=view)
         elif action_type == 'add_reactions':
             view = AddReactionView(self)
-            await interaction.response.edit_message(view=view)
+            await interaction.response.edit_message(content='Add reactions to this message, then press **Submit**', view=view)
         elif action_type == 'delete_trigger_message':
             for action in self.parent_view.actions: 
                 if action.type == 'delete_trigger_message':
@@ -272,13 +273,13 @@ class SendMessageEditor(View):
         self.delete_after = None 
         self.layout = Layout()
 
-        super().__init__(timeout=timeout, bot=parent_view.bot)
+        super().__init__(timeout=timeout, parent_view=parent_view)
         self.type = 'SendMessageEditor'
         self.clear_items()
         self.add_items()
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.parent_view.owner:
+        if interaction.user == self.owner:
             return True
         # defer 
         await interaction.response.defer()
@@ -422,10 +423,9 @@ class SendMessageEditor(View):
             ping_on_reply=self.ping_on_reply,
             delete_after=self.delete_after
         )
-        original_view = self.parent_view.parent_view
-        original_view.actions.append(action)
-        original_view.update()
-        await interaction.response.edit_message(view=original_view, embed=original_view.embed)
+        self.original_view.actions.append(action)
+        self.original_view.update()
+        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
 
     @ui.button(label='Cancel', style=ButtonStyle.red, row=4)
     async def cancel_btn(self, interaction, button):
@@ -438,11 +438,10 @@ class SendMessageEditor(View):
 
 class AddRolesView(View):
     def __init__(self, parent_view: AddActionView, *, timeout: float = 600):
-        self.parent_view = parent_view
-        super().__init__(timeout=timeout, bot=parent_view.bot)
+        super().__init__(timeout=timeout, parent_view=parent_view)
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.parent_view.owner:
+        if interaction.user == self.owner:
             return True
         # defer 
         await interaction.response.defer()
@@ -451,9 +450,8 @@ class AddRolesView(View):
     @ui.select(cls=ui.RoleSelect, placeholder='Select roles', max_values=25, row=0)
     async def select_roles(self, interaction, select):
         action = AutoResponderAction('add_roles', roles=[r.id for r in select.values])
-        original_view = self.parent_view.parent_view
-        original_view.actions.append(action)
-        await interaction.response.edit_message(view=original_view, embed=original_view.embed)
+        self.original_view.actions.append(action)
+        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
 
     @ui.button(label='Cancel', style=ButtonStyle.red, row=1)
     async def cancel(self, interaction, button):
@@ -461,11 +459,10 @@ class AddRolesView(View):
 
 class RemoveRolesView(View):
     def __init__(self, parent_view: AddActionView, *, timeout: float = 600):
-        self.parent_view = parent_view
-        super().__init__(timeout=timeout, bot=parent_view.bot)
+        super().__init__(timeout=timeout, parent_view=parent_view)
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.parent_view.owner:
+        if interaction.user == self.owner:
             return True
         # defer 
         await interaction.response.defer()
@@ -474,9 +471,8 @@ class RemoveRolesView(View):
     @ui.select(cls=ui.RoleSelect, placeholder='Select roles', max_values=25, row=0)
     async def select_roles(self, interaction, select):
         action = AutoResponderAction('remove_roles', roles=[r.id for r in select.values])
-        original_view = self.parent_view.parent_view
-        original_view.actions.append(action)
-        await interaction.response.edit_message(view=original_view, embed=original_view.embed)
+        self.original_view.actions.append(action)
+        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
 
     @ui.button(label='Cancel', style=ButtonStyle.red, row=1)
     async def cancel(self, interaction, button):
@@ -485,11 +481,10 @@ class RemoveRolesView(View):
 
 class AddReactionView(View):
     def __init__(self, parent_view: AddActionView, *, timeout: float = 600):
-        self.parent_view = parent_view
-        super().__init__(timeout=timeout, bot=parent_view.bot)
+        super().__init__(timeout=timeout, parent_view=parent_view)
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.parent_view.owner:
+        if interaction.user == self.owner:
             return True
         # defer 
         await interaction.response.defer()
@@ -497,24 +492,25 @@ class AddReactionView(View):
 
     @ui.button(label='Submit', style=ButtonStyle.green)
     async def submit(self, interaction, button):
-        message = await interaction.original_response()
+        # refetch to update emojis
+        channel = self.original_view.message.channel
+        message = await channel.fetch_message(self.original_view.message.id)
+
         emojis = [str(r.emoji) for r in message.reactions]
         if len(emojis) == 0:
             await interaction.response.send_message('No reactions found on the message!', ephemeral=True)
             return
 
-        original_view = self.parent_view.parent_view
         action = AutoResponderAction('add_reactions', emojis=emojis)
-        original_view.actions.append(action)
-        await interaction.response.edit_message(view=original_view, embed=original_view.embed)
+        self.original_view.actions.append(action)
+        await interaction.response.edit_message(content=None, view=self.original_view, embed=self.original_view.embed)
 
 
 class RestrictionsView(View):
     def __init__(self, parent_view: AutoResponderEditor, *, timeout: float = 600):
-        self.parent_view = parent_view
         self.setting = None
         self.restrictions = {}
-        super().__init__(timeout=timeout, bot=parent_view.bot)
+        super().__init__(timeout=timeout, parent_view=parent_view)
         self.clear_items()
         self.add_items()
 
@@ -532,7 +528,7 @@ class RestrictionsView(View):
         self.add_item(self.cancel)
 
     async def interaction_check(self, interaction):
-        if interaction.user == self.parent_view.owner:
+        if interaction.user == self.owner:
             return True
         # defer 
         await interaction.response.defer()
@@ -564,10 +560,9 @@ class UserSelect(ui.UserSelect):
         super().__init__(max_values=25)
 
     async def callback(self, interaction: discord.Interaction):
-        original_view = self.parent_view.parent_view
-        original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
-        original_view.update()
-        await interaction.response.edit_message(view=original_view, embed=original_view.embed)
+        self.original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
+        self.original_view.update()
+        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
     
 
 class ChannelSelect(ui.ChannelSelect):
@@ -576,10 +571,9 @@ class ChannelSelect(ui.ChannelSelect):
         super().__init__(max_values=25)
 
     async def callback(self, interaction: discord.Interaction):
-        original_view = self.parent_view.parent_view
-        original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
-        original_view.update()
-        await interaction.response.edit_message(view=original_view, embed=original_view.embed)
+        self.original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
+        self.original_view.update()
+        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
 
 class RoleSelect(ui.RoleSelect):
     def __init__(self, parent_view: RestrictionsView):
@@ -587,7 +581,6 @@ class RoleSelect(ui.RoleSelect):
         super().__init__(max_values=25)
 
     async def callback(self, interaction: discord.Interaction):
-        original_view = self.parent_view.parent_view
-        original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
-        original_view.update()
-        await interaction.response.edit_message(view=original_view, embed=original_view.embed)
+        self.original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
+        self.original_view.update()
+        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)

@@ -11,13 +11,12 @@ from typing import Optional, List
 
 class LayoutEditor(View):
     def __init__(self, bot, owner: discord.Member, *, text: Optional[str] = None, embed_names: Optional[List[str]] = None, timeout: Optional[float] = 600):
-        self.owner: discord.Member = owner
         self.text = text
         self.embed_names = embed_names if embed_names else [] 
         self.embeds = []
         self.message: Optional[discord.Message] = None
         self.final_interaction = None
-        super().__init__(timeout=timeout, bot=bot)
+        super().__init__(timeout=timeout, bot=bot, owner=owner)
         self.update()
 
     async def interaction_check(self, interaction):

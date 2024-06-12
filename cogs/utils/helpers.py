@@ -17,11 +17,23 @@ class View(discord.ui.View):
         self.final_interaction = None
         return self
 
-    def __init__(self, *, timeout: Optional[float] = 180, bot: Optional[commands.Bot] = None):
+    def __init__(self, *, timeout: Optional[float] = 180, bot: Optional[commands.Bot] = None, owner: Optional[discord.Member] = None, parent_view: Optional[Self] = None):
         super().__init__(timeout=timeout)
         self.bot: Optional[commands.Bot] = bot
-        if bot:
-            bot.views.add(self)
+        self.owner: Optional[discord.Member] = owner 
+
+        self.parent_view: Optional[Self] = parent_view 
+
+        if self.parent_view:
+            if not self.owner:
+                self.owner = self.parent_view.owner
+            self.original_view = self.parent_view.original_view 
+            self.bot = self.parent_view.bot
+        else:
+            self.original_view = self
+            
+        if self.bot:
+            self.bot.views.add(self)
 
     # async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Any]) -> None:
         # if interaction.response.is_done():

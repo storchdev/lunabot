@@ -15,13 +15,17 @@ class Vars(commands.Cog):
         rows = await self.bot.db.fetch(query)
         for row in rows:
             if row['value'].isdigit():
-                row['value'] = int(row['value'])
-            self.bot.vars[row['name']] = row['value']
+                value = int(row['value'])
+            else:
+                value = row['value']
+            self.bot.vars[row['name']] = value
 
     @commands.command()
     async def setvar(self, ctx, name: str, *, value: str):
         query = 'INSERT INTO vars(name, value) VALUES($1, $2) ON CONFLICT(name) DO UPDATE SET value = $2'
         await self.bot.db.execute(query, name, value)
+        if value.isdigit():
+            value = int(value)
         self.bot.vars[name] = value
         await ctx.send(f'Successfully set the variable `{name}` to `{value}`')
     

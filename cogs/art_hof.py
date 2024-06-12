@@ -39,6 +39,9 @@ class ArtHof(commands.Cog):
         if msg.author.bot:
             return
         await msg.add_reaction(ART_HOF_EMOTE)
+        await msg.add_reaction("<a:ML_sparkles:899826759313293432>")
+        await msg.add_reaction("<a:LC_lilac_heart_NF2U_DNS:1046191564055138365>")
+        await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
