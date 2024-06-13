@@ -1,12 +1,17 @@
 from discord.ext import commands, tasks
 from discord import app_commands
-from datetime import datetime, time, date 
+from datetime import datetime, time, date, timedelta
 from discord import ui 
 import discord
 from discord.interactions import Interaction 
 import textwrap 
 from zoneinfo import ZoneInfo
+from .utils import LayoutContext
 import json 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 def is_valid_month(monthstr):
@@ -32,52 +37,18 @@ def is_valid_day(month, daystr):
     return 1 <= day <= limit 
 
 
-BDAY_CHANNEL_ID = 1076766425949163560
-# BDAY_CHANNEL_ID = 1041468895279718473 # test id
 start_time = time(hour=5, minute=0)
 
 class Birthdays(commands.Cog, description="Set your birthday, see other birthdays"):
 
     def __init__(self, bot):
-        self.bot = bot 
-        # with open('events.json') as f:
-        #     self.events = json.load(f)
+        self.bot: 'LunaBot' = bot 
     
     async def cog_load(self):
         self.send_bdays.start()
 
     async def cog_unload(self):
         self.send_bdays.cancel()
-
-    async def send_bdays_test(self):
-        now = datetime.now()
-
-        query = 'SELECT user_id FROM bdays WHERE month = $1 AND day = $2'
-        user_ids = await self.bot.db.fetch(query, now.month, now.day)
-        if len(user_ids) == 0:
-            return 
-
-        # TODO: make this a layout instead of relying on another cog LOL 
-        cog = self.bot.get_cog('Events')
-
-        for row in user_ids:
-            bdayroles = {
-                1041468894487003176: 1126645891839832074 # market
-            }
-            for guild_id, role_id in bdayroles.items():
-                guild = self.bot.get_guild(guild_id)
-                member = guild.get_member(row['user_id'])
-                if not member:
-                    continue 
-                role = guild.get_role(role_id)
-                
-                repl = {
-                    '{name}': member.display_name,
-                    '{mention}': member.mention,
-                    '{username}': member.name,
-                }
-                
-                await cog.send_embed(member, repl, 'birthday', role)
 
     @tasks.loop(time=start_time)
     async def send_bdays(self):
@@ -87,22 +58,33 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
         user_ids = await self.bot.db.fetch(query, now.month, now.day)
         if len(user_ids) == 0:
             return 
-                
-        cog = self.bot.get_cog('Events')
 
-        for row in user_ids:
-            user_id = row['user_id']
-            member = self.bot.get_user(user_id)
-            repl = {
-                '{name}': member.display_name,
-                '{mention}': member.mention,
-                '{username}': member.name,
-            }
-            if not member:
+        mentions_list = []
+        rm_timestamp = (now+timedelta(days=7)).timestamp()
+
+        for user_id in user_ids: 
+            guild = self.bot.get_guild(self.bot.GUILD_ID)
+            member = guild.get_member(user_id)
+            if member is None:
                 continue 
 
-            await cog.send_embed(member, repl, 'birthday')
-    
+            mentions_list.append(member.mention)
+            role = guild.get_role(self.bot.vars.get('bday-role-id'))
+            await member.add_roles(role)
+            await self.bot.schedule_remove_role(member, role, rm_timestamp)
+
+        if len(mentions_list) == 1:
+            mentions_str = mentions_list[0]
+        elif len(mentions_list) == 2:
+            mentions_str = ' and '.join(mentions_list)
+        else:
+            mentions_str = ', '.join(mentions_list[:-1]) + ', and ' + mentions_list[-1]
+
+        channel = self.bot.get_channel(self.bot.vars.get('bday-channel-id'))  
+        layout = self.bot.get_layout('bday')
+        ctx = LayoutContext(author=member)
+        await layout.send(channel, ctx, repls={'mentions': mentions_str})
+
     @commands.hybrid_command(name='set-birthday')
     async def set_bday(self, ctx):
         """Sets your birthday to be announced in the designated channel."""
