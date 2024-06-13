@@ -1,6 +1,6 @@
 import re 
 import json 
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, Union, List, TYPE_CHECKING
 import discord 
 from discord.ext import commands
 
@@ -10,6 +10,13 @@ if TYPE_CHECKING:
 
 class LayoutContext:
     def __init__(self, *, author=None, channel=None, guild=None, message=None):
+        if author is None and message is not None:
+            author = message.author
+        if channel is None and message is not None:
+            channel = message.channel
+        if guild is None and channel is not None:
+            guild = channel.guild
+
         self.author = author
         self.channel = channel
         self.guild = guild
@@ -73,16 +80,16 @@ class Layout:
         return text
 
     @staticmethod
-    def fill_embed(ctx, _embed):
+    def fill_embed(ctx, _embed, **kwargs):
         embed = _embed.copy()
         for field in embed.fields:
-            field.name = Layout.fill_text(ctx, field.name)
-            field.value = Layout.fill_text(ctx, field.value)
+            field.name = Layout.fill_text(ctx, field.name, **kwargs)
+            field.value = Layout.fill_text(ctx, field.value, **kwargs)
 
-        if embed.title: embed.title = Layout.fill_text(ctx, embed.title)
-        if embed.footer: embed.footer.text = Layout.fill_text(ctx, embed.footer.text)
-        if embed.author: embed.author.name = Layout.fill_text(ctx, embed.author.name)
-        if embed.description: embed.description = Layout.fill_text(ctx, embed.description)
+        if embed.title: embed.title = Layout.fill_text(ctx, embed.title, **kwargs)
+        if embed.footer: embed.footer.text = Layout.fill_text(ctx, embed.footer.text, **kwargs)
+        if embed.author: embed.author.name = Layout.fill_text(ctx, embed.author.name, **kwargs)
+        if embed.description: embed.description = Layout.fill_text(ctx, embed.description, **kwargs)
 
         return embed
 
@@ -108,12 +115,14 @@ class Layout:
     def to_json(self, *, indent=4):
         return json.dumps(self.to_dict(), indent=indent)
     
-    async def send(self, msgble, ctx=None, **kwargs) -> Optional[discord.Message]:
+    async def send(self, msgble: discord.abc.Messageable, ctx: Optional[Union[commands.Context, LayoutContext]] = None, *, repls: Optional[dict] = None, **kwargs) -> Optional[discord.Message]:
         send_func = msgble.send
 
         if isinstance(msgble, discord.Message):
             if ctx is None:
-                ctx = await self.bot.get_context(msgble)
+                ctx = LayoutContext(
+                    message=msgble
+                )
             if 'reply' in kwargs and kwargs['reply']:
                 send_func = msgble.reply
             else:
@@ -123,20 +132,26 @@ class Layout:
                 ctx = msgble
         elif isinstance(msgble, discord.Interaction):
             if ctx is None:
-                ctx = await self.bot.get_context(msgble)
+                ctx = LayoutContext(
+                    author=msgble.user,
+                    channel=msgble.channel,
+                )
             if msgble.response.is_done():
                 send_func = msgble.followup.send
             else:
                 send_func = msgble.response.send_message
-        
+
+        if repls is None:
+            repls = {} 
+
         if self.content:
-            content = self.fill_text(ctx, self.content)
+            content = self.fill_text(ctx, self.content, **repls)
         else:
             content = None 
         
         embeds = []
         for embed in self.embeds:
-            embeds.append(self.fill_embed(ctx, embed))
+            embeds.append(self.fill_embed(ctx, embed, **repls))
 
         try:
             return await send_func(content=content, embeds=embeds, 

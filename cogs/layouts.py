@@ -30,6 +30,11 @@ class Layouts(commands.Cog):
     async def create(self, ctx, *, name):
         """Creates a layout with LunaBot"""
         name = name.lower()
+
+        if name in self.bot.layouts:
+            await ctx.send('There is already a layout with that name.', ephemeral=True)
+            return
+
         view = LayoutEditor(self.bot, ctx.author)
         view.message = await ctx.send(view=view, ephemeral=True)
         await view.wait()
@@ -39,7 +44,7 @@ class Layouts(commands.Cog):
         embeds = json.dumps(view.embed_names, indent=4)
         query = 'INSERT INTO layouts (creator_id, name, content, embeds) VALUES ($1, $2, $3, $4)'
         await self.bot.db.execute(query, ctx.author.id, name, view.text, embeds)
-        self.bot.layouts[name] = Layout(name, view.text, view.embeds)
+        self.bot.layouts[name] = Layout(name, view.text, view.embed_names)
         await ctx.send(f'Added your layout `{name}`!')
 
     @layout.command()
@@ -77,7 +82,7 @@ class Layouts(commands.Cog):
         data = json.dumps(view.embed_names, indent=4)
         query = 'UPDATE layouts SET content = $1, embeds = $2 WHERE name = $3'
         await self.bot.db.execute(query, view.text, data, name)
-        self.bot.layouts[name] = Layout(name, view.text, view.embeds)
+        self.bot.layouts[name] = Layout(name, view.text, view.embed_names)
         await ctx.send(f'Edited the layout `{name}`!')
 
     @layout.command(aliases=['remove'])
