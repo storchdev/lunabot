@@ -8,6 +8,7 @@ import aiohttp
 from cogs.utils.layouts import Layout 
 from cogs.utils.auto_responders import AutoResponderAction
 from cogs.utils.errors import InvalidURL
+from cogs.utils.tasks import RemoveRoleTask
 import discord 
 
 
@@ -18,6 +19,7 @@ class LunaBot(commands.Bot):
                          status=discord.Status.idle,
                          **kwargs)
         self.STORCH_ID = 718475543061987329
+        self.GUILD_ID = 899108709450543115
         self.owner_id = self.STORCH_ID
         self.owner_ids = [self.STORCH_ID]
         self.DEFAULT_EMBED_COLOR = 0xcab7ff
@@ -25,6 +27,7 @@ class LunaBot(commands.Bot):
         self.session = aiohttp.ClientSession()
         self.embeds = {}
         self.layouts = {}
+        self.remove_role_tasks = {}
 
     async def start_task(self):
         await self.wait_until_ready()
@@ -35,8 +38,11 @@ class LunaBot(commands.Bot):
         # await self.load_extension('db_migration')
         # return
         self.add_check(self.global_check)
+
+        # Make bot accessible in these classes
         Layout.bot = self 
         AutoResponderAction.bot = self
+        RemoveRoleTask.bot = self
 
         await self.load_extension("jishaku")
         priority = ['cogs.db']
@@ -98,6 +104,17 @@ class LunaBot(commands.Bot):
             return await channel.fetch_message(message_id)
         except discord.NotFound:
             raise InvalidURL()
+    
+    async def schedule_remove_role(self, member, role, timestamp):
+        query = 'DELETE FROM rmroles WHERE user_id = $1 AND role_id = $2'
+        await self.db.execute(query, member.id, role.id)
+        query = 'INSERT INTO rmroles (user_id, guild_id, role_id, rm_time) VALUES ($1, $2, $3, $4)'
+        await self.db.execute(query, member.id, member.guild.id, role.id, timestamp)
+        query = 'SELECT id FROM rmroles WHERE user_id = $1 AND role_id = $2'
+        task_id = await self.db.fetchval(query, member.id, role.id)
+        task = RemoveRoleTask(task_id, member=member, role=role, timestamp=timestamp)
+        task.start()
+        self.remove_role_tasks[task.id] = task 
 
 
     def global_check(self, ctx):
