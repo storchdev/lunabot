@@ -11,7 +11,7 @@ from typing import Optional, List
 
 class LayoutEditor(View):
     def __init__(self, bot, owner: discord.Member, *, text: Optional[str] = None, embed_names: Optional[List[str]] = None, timeout: Optional[float] = 600):
-        self.text = text
+        self.content = text
         self.embed_names = embed_names if embed_names else [] 
         self.embeds = []
         self.message: Optional[discord.Message] = None
@@ -19,16 +19,9 @@ class LayoutEditor(View):
         super().__init__(timeout=timeout, bot=bot, owner=owner)
         self.update()
 
-    async def interaction_check(self, interaction):
-        if interaction.user == self.owner:
-            return True
-        # defer 
-        await interaction.response.defer()
-        return False
-
     @discord.ui.button(label='Set text', style=ButtonStyle.blurple, row=0)
     async def set_text(self, interaction, button):
-        modal = TextModal(self, self.text)
+        modal = TextModal(self, self.content)
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label='Set embeds', style=ButtonStyle.blurple, row=0)
@@ -43,7 +36,7 @@ class LayoutEditor(View):
                 self.embeds.append(self.bot.embeds[name])
 
     def update_buttons(self):
-        if self.text or self.embed_names:
+        if self.content or self.embed_names:
             self.send.disabled = False 
             self.send.style = ButtonStyle.green 
         else:

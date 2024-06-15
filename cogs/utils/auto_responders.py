@@ -10,9 +10,8 @@ from .layouts import LayoutContext
 
 
 class AutoResponderAction:
-    bot = None 
-
-    def __init__(self, action_type, **kwargs):
+    def __init__(self, bot, action_type, **kwargs):
+        self.bot = bot
         self.type = action_type
         self.kwargs = kwargs
 
@@ -120,10 +119,10 @@ class AutoResponder:
             self.cooldown = None
 
     @classmethod 
-    def from_db_row(cls, row):
+    def from_db_row(cls, bot, row):
         actions = []
         for action in json.loads(row['actions']):
-            actions.append(AutoResponderAction(action['type'], **action['kwargs'])) 
+            actions.append(AutoResponderAction(bot, action['type'], **action['kwargs'])) 
 
         if row['cooldown']:
             cooldown_dict = json.loads(row['cooldown'])

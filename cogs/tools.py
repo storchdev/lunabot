@@ -2,13 +2,21 @@ from discord.ext import commands
 import csv 
 import asyncio
 import json 
-from io import StringIO
+from io import BytesIO, StringIO
 from discord import ui 
 from discord.utils import escape_markdown
 from .utils import EmbedEditor
 import discord 
 from typing import Optional, Literal
 import importlib 
+import aiohttp 
+
+
+class StickerFlags(commands.FlagConverter):
+    name: str
+    description: str
+    emoji: str
+    url: str
 
 
 class Tools(commands.Cog, description='storchs tools'):
@@ -137,6 +145,40 @@ class Tools(commands.Cog, description='storchs tools'):
             message = await channel.fetch_message(message_id)
             await message.delete()
         await ctx.message.delete()
+    
+    @commands.command()
+    async def setroleicon(self, ctx, role: discord.Role, url: str):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return await ctx.send('Failed to fetch image.')
+                data = await resp.read()
+        
+        await role.edit(display_icon=data)
+        await ctx.send('Role icon set.')
+    
+    @commands.command()
+    async def addsticker(self, ctx, *, flags: StickerFlags):
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(flags.url) as resp:
+                if resp.status != 200:
+                    return await ctx.send('Failed to fetch image.')
+                data = await resp.read()
+
+        buf = BytesIO(data)
+        buf.seek(0)
+        file = discord.File(buf, filename='sticker.png')
+
+        sticker = await ctx.guild.create_sticker(
+            name=flags.name,
+            description=flags.description,
+            emoji=flags.emoji,
+            file=file
+        )
+
+        await ctx.send(f'Sticker `{sticker.name}` created.')
+
 
     @commands.command()
     async def sync(ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:

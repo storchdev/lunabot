@@ -54,4 +54,10 @@ CREATE TABLE IF NOT EXISTS sticky_messages (
     layout JSON,
     last_message_id BIGINT DEFAULT NULL
 );
+CREATE TABLE IF NOT EXISTS future_tasks (
+  id SERIAL PRIMARY KEY,
+  action TEXT,
+  data JSONB,
+  time TIMESTAMP WITH TIME ZONE
+);
 

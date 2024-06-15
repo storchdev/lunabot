@@ -13,8 +13,6 @@ class View(discord.ui.View):
     def __new__(cls, *args: Any, **kwargs: Any):
         self = super().__new__(cls)
         self.on_timeout = cls._wrap_timeout(self)
-        self.cancelled = True
-        self.final_interaction = None
         return self
 
     def __init__(self, *, timeout: Optional[float] = 180, bot: Optional[commands.Bot] = None, owner: Optional[discord.Member] = None, parent_view: Optional[Self] = None):
@@ -34,6 +32,19 @@ class View(discord.ui.View):
             
         if self.bot:
             self.bot.views.add(self)
+
+        self.cancelled = True
+        self.final_interaction = None
+
+    async def interaction_check(self, interaction):
+        if self.owner is None:
+            return True 
+
+        if interaction.user == self.owner:
+            return True
+        # defer 
+        await interaction.response.defer()
+        return False
 
     # async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Any]) -> None:
         # if interaction.response.is_done():

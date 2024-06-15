@@ -372,7 +372,7 @@ class LayoutChooserOrEditor(View):
     # user can click either layout or no layout
     def __init__(self, bot, owner, layout: Optional[Layout] = None):
         if layout is None:
-            self.layout = Layout()
+            self.layout = Layout(bot)
         else:
             self.layout = layout
 
@@ -382,12 +382,6 @@ class LayoutChooserOrEditor(View):
     
     def update_submit(self):
         self.submit.disabled = not self.layout
-
-    async def interaction_check(self, interaction):
-        if interaction.user == self.owner:
-            return True
-        await interaction.response.defer()
-        return False 
 
     @discord.ui.button(label='Choose layout', style=discord.ButtonStyle.blurple, row=0) 
     async def set_layout(self, interaction, button):

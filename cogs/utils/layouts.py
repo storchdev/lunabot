@@ -39,9 +39,8 @@ _REPLS = {
 }
 
 class Layout:
-    bot: 'LunaBot' = None
-
-    def __init__(self, name: Optional[str] = None, content: Optional[str] = None, embed_names: Optional[List[str]] = None):
+    def __init__(self, bot: Optional['LunaBot'] = None, name: Optional[str] = None, content: Optional[str] = None, embed_names: Optional[List[str]] = None):
+        self.bot = bot
         self.name = name
         self.content = content
         self.embed_names = embed_names if embed_names else []

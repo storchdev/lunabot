@@ -6,9 +6,8 @@ import logging
 from typing import Union
 import aiohttp 
 from cogs.utils.layouts import Layout 
-from cogs.utils.auto_responders import AutoResponderAction
 from cogs.utils.errors import InvalidURL
-from cogs.utils.tasks import RemoveRoleTask
+from cogs.future_tasks import FutureTask
 import discord 
 
 
@@ -27,7 +26,7 @@ class LunaBot(commands.Bot):
         self.session = aiohttp.ClientSession()
         self.embeds = {}
         self.layouts = {}
-        self.remove_role_tasks = {}
+        self.future_tasks = {}
 
     async def start_task(self):
         await self.wait_until_ready()
@@ -38,11 +37,6 @@ class LunaBot(commands.Bot):
         # await self.load_extension('db_migration')
         # return
         self.add_check(self.global_check)
-
-        # Make bot accessible in these classes
-        Layout.bot = self 
-        AutoResponderAction.bot = self
-        RemoveRoleTask.bot = self
 
         await self.load_extension("jishaku")
         priority = ['cogs.db']
@@ -77,7 +71,7 @@ class LunaBot(commands.Bot):
     
     def get_layout(self, name: str) -> Layout:
         if name not in self.layouts:
-            return Layout(name, f'`Layout "{name}" not found`', [])
+            return Layout(self, name, f'`Layout "{name}" not found`', [])
         return self.layouts[name]
     
     def get_layout_from_json(self, data: Union[str, dict]) -> Layout:
@@ -86,7 +80,7 @@ class LunaBot(commands.Bot):
         if data['name'] is not None:
             return self.get_layout(data['name'])
         
-        return Layout(None, data['content'], data['embeds'])
+        return Layout(self, None, data['content'], data['embeds'])
 
     async def fetch_message_from_url(self, url: str) -> discord.Message:
         tokens = url.split('/')
@@ -105,16 +99,12 @@ class LunaBot(commands.Bot):
         except discord.NotFound:
             raise InvalidURL()
     
-    async def schedule_remove_role(self, member, role, timestamp):
-        query = 'DELETE FROM rmroles WHERE user_id = $1 AND role_id = $2'
-        await self.db.execute(query, member.id, role.id)
-        query = 'INSERT INTO rmroles (user_id, guild_id, role_id, rm_time) VALUES ($1, $2, $3, $4)'
-        await self.db.execute(query, member.id, member.guild.id, role.id, timestamp)
-        query = 'SELECT id FROM rmroles WHERE user_id = $1 AND role_id = $2'
-        task_id = await self.db.fetchval(query, member.id, role.id)
-        task = RemoveRoleTask(task_id, member=member, role=role, timestamp=timestamp)
+    async def schedule_future_task(self, action, time, **kwargs):
+        query = 'INSERT INTO future_tasks (action, time, data) VALUES ($1, $2, $3) RETURNING id'
+        task_id = await self.db.fetchval(query, action, time, json.dumps(kwargs, indent=4))
+        task = FutureTask(self, task_id, action, time, **kwargs)
+        self.future_tasks[task_id] = task
         task.start()
-        self.remove_role_tasks[task.id] = task 
 
 
     def global_check(self, ctx):

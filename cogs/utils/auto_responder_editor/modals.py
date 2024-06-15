@@ -176,7 +176,7 @@ class SleepModal(AutoResponderEditorBaseModal, title='Enter Sleep Duration'):
         except ValueError:
             raise InvalidModalField('Duration must be a number!')
 
-        self.parent_view.actions.append(AutoResponderAction('sleep', duration=duration))
+        self.parent_view.actions.append(AutoResponderAction(self.parent_view.bot, 'sleep', duration=duration))
 
 
 class CooldownModal(AutoResponderEditorBaseModal, title='Edit Cooldown'):

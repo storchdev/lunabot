@@ -28,7 +28,7 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
     async def on_member_join(self, member):
         layout = self.bot.get_layout('welc')
         ctx = LayoutContext(author=member)
-        channel = self.bot.vars.get('welc-channel-id')
+        channel = self.bot.get_channel(self.bot.vars.get('welc-channel-id'))
         await layout.send(channel, ctx)
     
     # @commands.command()

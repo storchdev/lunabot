@@ -11,9 +11,9 @@ class TextModal(discord.ui.Modal, title='Set Layout Text'):
 
     async def on_submit(self, interaction):
         text = self.text.value
-        self.parent_view.text = text
+        self.parent_view.content = text
         self.parent_view.update()
-        await interaction.response.edit_message(view=self.parent_view, content=self.parent_view.text)
+        await interaction.response.edit_message(view=self.parent_view, content=self.parent_view.content)
     
 class EmbedsModal(discord.ui.Modal, title='Set Layout Embeds'):
     names = discord.ui.TextInput(

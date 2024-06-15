@@ -70,15 +70,14 @@ class Levels(commands.Cog):
     # make a loop that runs every sunday at 1am 
     async def weekly_xp(self):
         # await self.dump_xp()
-        # TODO: make luna id a variable instead of hardcoding in the sql query
         query = '''SELECT xp.user_id, (xp.total_xp - xp_copy.total_xp) AS diff
                     FROM xp
                     INNER JOIN xp_copy ON xp.user_id = xp_copy.user_id
-                    WHERE xp.user_id != 496225545529327616
+                    WHERE xp.user_id != $1 
                     ORDER BY diff DESC
                     LIMIT 3;
                 '''
-        rows = await self.bot.db.fetch(query)
+        rows = await self.bot.db.fetch(query, self.bot.vars.get('luna-id'))
     
         # TODO: make this a layout
         with open('cogs/static/embeds.json', encoding='utf8') as f:

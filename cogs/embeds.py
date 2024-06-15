@@ -94,7 +94,7 @@ class Embeds(commands.Cog, description='Create, save, and edit your own embeds.'
         query = 'INSERT INTO embeds (creator_id, name, embed) VALUES ($1, $2, $3)'
         await self.bot.db.execute(query, ctx.author.id, name, data)
         self.bot.embeds[name] = discord.Embed.from_dict(json.loads(data))
-        await ctx.send(f'Added your embed `{name}`!')
+        await view.final_interaction.response.edit_message(content=f'Added your embed `{name}`!', view=None)
     
     @embed.command()
     @app_commands.default_permissions()
@@ -114,7 +114,7 @@ class Embeds(commands.Cog, description='Create, save, and edit your own embeds.'
         query = 'UPDATE embeds SET embed = $1 WHERE name = $2'
         await self.bot.db.execute(query, data, name)
         self.bot.embeds[name] = discord.Embed.from_dict(json.loads(data))
-        await view.final_interaction.response.edit_message(f'Edited the embed `{name}`!')
+        await view.final_interaction.response.edit_message(content=f'Edited the embed `{name}`!', view=None)
 
     @embed.command(aliases=['remove'])
     @app_commands.default_permissions()

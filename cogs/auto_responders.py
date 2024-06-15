@@ -22,7 +22,7 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
         query = 'SELECT * FROM auto_responders'
         rows = await self.bot.db.fetch(query)
         for row in rows:
-            auto_responder = AutoResponder.from_db_row(row)
+            auto_responder = AutoResponder.from_db_row(self.bot, row)
             self.auto_responders.append(auto_responder)
             self.name_lookup[auto_responder.name] = auto_responder
 

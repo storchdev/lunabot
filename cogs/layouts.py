@@ -15,6 +15,7 @@ class Layouts(commands.Cog):
         rows = await self.bot.db.fetch('select * from layouts')
         for row in rows:
             self.bot.layouts[row['name']] = Layout(
+                self.bot,
                 row['name'], 
                 row['content'], 
                 json.loads(row['embeds'])
@@ -43,8 +44,8 @@ class Layouts(commands.Cog):
 
         embeds = json.dumps(view.embed_names, indent=4)
         query = 'INSERT INTO layouts (creator_id, name, content, embeds) VALUES ($1, $2, $3, $4)'
-        await self.bot.db.execute(query, ctx.author.id, name, view.text, embeds)
-        self.bot.layouts[name] = Layout(name, view.text, view.embed_names)
+        await self.bot.db.execute(query, ctx.author.id, name, view.content, embeds)
+        self.bot.layouts[name] = Layout(self.bot, name, view.content, view.embed_names)
         await ctx.send(f'Added your layout `{name}`!')
 
     @layout.command()
@@ -63,6 +64,7 @@ class Layouts(commands.Cog):
         data = json.dumps([embed_name], indent=4)
         query = 'INSERT INTO layouts (creator_id, name, content, embeds) VALUES ($1, $2, $3, $4)'
         await self.bot.db.execute(query, ctx.author.id, embed_name, None, data)
+        self.bot.layouts[embed_name] = Layout(self.bot, embed_name, None, [embed_name])
         await ctx.send(f'Added your layout `{embed_name}`!')
 
     @layout.command()
@@ -74,15 +76,15 @@ class Layouts(commands.Cog):
             return
 
         layout = self.bot.layouts[name]  
-        view = LayoutEditor(self.bot, ctx.author, text=layout.text, embed=layout.embed_names)
-        view.message = await ctx.send(layout.text, embeds=layout.embeds, view=view, ephemeral=True)
+        view = LayoutEditor(self.bot, ctx.author, text=layout.content, embed_names=layout.embed_names)
+        view.message = await ctx.send(layout.content, embeds=layout.embeds, view=view, ephemeral=True)
         await view.wait()
         if view.cancelled:
             return 
         data = json.dumps(view.embed_names, indent=4)
         query = 'UPDATE layouts SET content = $1, embeds = $2 WHERE name = $3'
-        await self.bot.db.execute(query, view.text, data, name)
-        self.bot.layouts[name] = Layout(name, view.text, view.embed_names)
+        await self.bot.db.execute(query, view.content, data, name)
+        self.bot.layouts[name] = Layout(self.bot, name, view.content, view.embed_names)
         await ctx.send(f'Edited the layout `{name}`!')
 
     @layout.command(aliases=['remove'])

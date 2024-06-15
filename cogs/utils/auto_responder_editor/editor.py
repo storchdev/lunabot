@@ -45,13 +45,6 @@ class AutoResponderEditor(View):
         super().__init__(timeout=timeout, bot=bot, owner=owner)
         self.update()
 
-    async def interaction_check(self, interaction):
-        if interaction.user == self.owner:
-            return True
-        # defer 
-        await interaction.response.defer()
-        return False
-
     @property 
     def embed(self):
         if len(self.actions) == 0:
@@ -248,7 +241,7 @@ class AddActionView(View):
                 if action.type == 'delete_trigger_message':
                     await interaction.response.send_message('You can only have one delete trigger message action!', ephemeral=True)
                     return
-            self.parent_view.actions.append(AutoResponderAction('delete_trigger_message'))
+            self.parent_view.actions.append(AutoResponderAction(self.bot, 'delete_trigger_message'))
             self.parent_view.update() 
             await interaction.response.edit_message(view=self.parent_view, embed=self.parent_view.embed)
         elif action_type == 'sleep':
@@ -271,19 +264,12 @@ class SendMessageEditor(View):
         self.reply = False 
         self.ping_on_reply = True 
         self.delete_after = None 
-        self.layout = Layout()
+        self.layout = Layout(self.bot)
 
         super().__init__(timeout=timeout, parent_view=parent_view)
         self.type = 'SendMessageEditor'
         self.clear_items()
         self.add_items()
-
-    async def interaction_check(self, interaction):
-        if interaction.user == self.owner:
-            return True
-        # defer 
-        await interaction.response.defer()
-        return False
 
     def add_user_select(self):
         select = ui.UserSelect(row=1, placeholder='Select user (nothing = same)', min_values=0)
@@ -414,6 +400,7 @@ class SendMessageEditor(View):
     @ui.button(label='Submit', style=ButtonStyle.green, disabled=True, row=4)
     async def submit_btn(self, interaction, button):
         action = AutoResponderAction(
+            self.bot,
             'send_message',
             layout=self.layout.to_dict(),
             is_dm=self.is_dm,
@@ -440,16 +427,9 @@ class AddRolesView(View):
     def __init__(self, parent_view: AddActionView, *, timeout: float = 600):
         super().__init__(timeout=timeout, parent_view=parent_view)
 
-    async def interaction_check(self, interaction):
-        if interaction.user == self.owner:
-            return True
-        # defer 
-        await interaction.response.defer()
-        return False
-
     @ui.select(cls=ui.RoleSelect, placeholder='Select roles', max_values=25, row=0)
     async def select_roles(self, interaction, select):
-        action = AutoResponderAction('add_roles', roles=[r.id for r in select.values])
+        action = AutoResponderAction(self.bot, 'add_roles', roles=[r.id for r in select.values])
         self.original_view.actions.append(action)
         await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
 
@@ -461,16 +441,9 @@ class RemoveRolesView(View):
     def __init__(self, parent_view: AddActionView, *, timeout: float = 600):
         super().__init__(timeout=timeout, parent_view=parent_view)
 
-    async def interaction_check(self, interaction):
-        if interaction.user == self.owner:
-            return True
-        # defer 
-        await interaction.response.defer()
-        return False
-
     @ui.select(cls=ui.RoleSelect, placeholder='Select roles', max_values=25, row=0)
     async def select_roles(self, interaction, select):
-        action = AutoResponderAction('remove_roles', roles=[r.id for r in select.values])
+        action = AutoResponderAction(self.bot, 'remove_roles', roles=[r.id for r in select.values])
         self.original_view.actions.append(action)
         await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
 
@@ -483,13 +456,6 @@ class AddReactionView(View):
     def __init__(self, parent_view: AddActionView, *, timeout: float = 600):
         super().__init__(timeout=timeout, parent_view=parent_view)
 
-    async def interaction_check(self, interaction):
-        if interaction.user == self.owner:
-            return True
-        # defer 
-        await interaction.response.defer()
-        return False
-
     @ui.button(label='Submit', style=ButtonStyle.green)
     async def submit(self, interaction, button):
         # refetch to update emojis
@@ -501,7 +467,7 @@ class AddReactionView(View):
             await interaction.response.send_message('No reactions found on the message!', ephemeral=True)
             return
 
-        action = AutoResponderAction('add_reactions', emojis=emojis)
+        action = AutoResponderAction(self.bot, 'add_reactions', emojis=emojis)
         self.original_view.actions.append(action)
         await interaction.response.edit_message(content=None, view=self.original_view, embed=self.original_view.embed)
 
@@ -526,13 +492,6 @@ class RestrictionsView(View):
                 self.add_item(UserSelect(self))
 
         self.add_item(self.cancel)
-
-    async def interaction_check(self, interaction):
-        if interaction.user == self.owner:
-            return True
-        # defer 
-        await interaction.response.defer()
-        return False
 
     @ui.select(options=[
         discord.SelectOption(label='Blacklist channels', value='blacklisted_channels'),

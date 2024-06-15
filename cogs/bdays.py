@@ -37,30 +37,40 @@ def is_valid_day(month, daystr):
     return 1 <= day <= limit 
 
 
-start_time = time(hour=5, minute=0)
-
 class Birthdays(commands.Cog, description="Set your birthday, see other birthdays"):
 
     def __init__(self, bot):
         self.bot: 'LunaBot' = bot 
     
     async def cog_load(self):
-        self.send_bdays.start()
+        self.send_bdays_loop.start()
 
     async def cog_unload(self):
-        self.send_bdays.cancel()
+        self.send_bdays_loop.cancel()
 
-    @tasks.loop(time=start_time)
+    @commands.command()
+    async def send_bdays_test(self, ctx):
+        old_channel_id = self.bot.vars.get('bday-channel-id')
+        self.bot.vars['bday-channel-id'] = ctx.channel.id
+        await self.send_bdays()
+        self.bot.vars['bday-channel-id'] = old_channel_id
+
+
+    @tasks.loop(hours=24)
+    async def send_bdays_loop(self):
+        await self.send_bdays()
+
     async def send_bdays(self):
-        now = datetime.now()
+        now = datetime.now(tz=ZoneInfo('US/Central'))
 
         query = 'SELECT user_id FROM bdays WHERE month = $1 AND day = $2'
-        user_ids = await self.bot.db.fetch(query, now.month, now.day)
-        if len(user_ids) == 0:
+        rows = await self.bot.db.fetch(query, now.month, now.day)
+        if len(rows) == 0:
             return 
 
+        user_ids = [int(row['user_id']) for row in rows]
+
         mentions_list = []
-        rm_timestamp = (now+timedelta(days=7)).timestamp()
 
         for user_id in user_ids: 
             guild = self.bot.get_guild(self.bot.GUILD_ID)
@@ -71,19 +81,19 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
             mentions_list.append(member.mention)
             role = guild.get_role(self.bot.vars.get('bday-role-id'))
             await member.add_roles(role)
-            await self.bot.schedule_remove_role(member, role, rm_timestamp)
+            await self.bot.schedule_future_task('remove_role', discord.utils.utcnow() + timedelta(days=7), user_id=user_id, role_id=role.id)
 
-        if len(mentions_list) == 1:
-            mentions_str = mentions_list[0]
-        elif len(mentions_list) == 2:
-            mentions_str = ' and '.join(mentions_list)
-        else:
-            mentions_str = ', '.join(mentions_list[:-1]) + ', and ' + mentions_list[-1]
-
+        mentions_str = 'ㆍ'.join(mentions_list) + 'ㆍ'
         channel = self.bot.get_channel(self.bot.vars.get('bday-channel-id'))  
         layout = self.bot.get_layout('bday')
         ctx = LayoutContext(author=member)
         await layout.send(channel, ctx, repls={'mentions': mentions_str})
+
+    @send_bdays_loop.before_loop 
+    async def wait_until_next_day(self):
+        now = datetime.now(tz=ZoneInfo("US/Central"))
+        tomorrow = now.replace(day=now.day+1, hour=0, minute=0, second=0, microsecond=0)
+        await discord.utils.sleep_until(tomorrow)
 
     @commands.hybrid_command(name='set-birthday')
     async def set_bday(self, ctx):
@@ -91,6 +101,7 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
         if ctx.interaction is None:
             return await ctx.send('Sorry, this command is **slash only**!')
         inter = ctx.interaction
+
         class Modal(ui.Modal, title='Enter your birthday'):
             month = ui.TextInput(label='Month (1-12)', max_length=2)
             day = ui.TextInput(label='Day (1-31)', max_length=2)
@@ -108,7 +119,7 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
                 day = int(day)
                 
                 query = 'INSERT INTO bdays (user_id, month, day) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET month = $2, DAY = $3'
-                await minter.bot.db.execute(query, minter.author.id, month, day)
+                await minter.client.db.execute(query, minter.user.id, month, day)
                 
                 await minter.response.send_message(f'Set your birthday to {month}/{day}!', ephemeral=True)
         
