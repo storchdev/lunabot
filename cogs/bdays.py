@@ -87,7 +87,10 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
         channel = self.bot.get_channel(self.bot.vars.get('bday-channel-id'))  
         layout = self.bot.get_layout('bday')
         ctx = LayoutContext(author=member)
-        await layout.send(channel, ctx, repls={'mentions': mentions_str})
+        message = await layout.send(channel, ctx, repls={'mentions': mentions_str})
+        thread = await message.create_thread(name='⁺﹒Happy Birthday﹗𖹭﹒⁺', auto_archive_duration=10080)
+        await thread.send('<:LCD_blank:1142276034327228436>      <a:LCD_wingding_L_by_Karla2103:1132430460056780923> <a:Lumi_sparkles:899826759313293432> <a:LCD_wingding_R_by_Karla2103:1132430490771656786>')
+        await self.bot.schedule_future_task('lock_thread', discord.utils.utcnow() + timedelta(days=7), thread_id=thread.id)
 
     @send_bdays_loop.before_loop 
     async def wait_until_next_day(self):
@@ -145,12 +148,18 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
 
             
         embed = discord.Embed(title='Upcoming Birthdays', color=0xcab7ff)
-        row = await self.bot.db.fetchrow('SELECT user_id, month, day FROM bdays')
+        rows = await self.bot.db.fetch('SELECT user_id, month, day FROM bdays')
         now = datetime.now(tz=ZoneInfo("US/Central"))
-        x = sorted(x, key=lambda row: magic(now, row['month'], row['day']))
-        x = x[:10]
-        for row in x:
+        rows = sorted(rows, key=lambda row: magic(now, row['month'], row['day']))
+        i = 0
+        for row in rows:
+            if i == 10:
+                continue 
+
             user = ctx.guild.get_member(row['user_id'])
+            if user is None:
+                continue
+
             disp = user.display_name if user else f'User with ID {row["user_id"]}'
             
             if (row['month'], row['day']) == (now.month, now.day):
@@ -158,6 +167,8 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
             else:
                 opt = ''
             embed.add_field(name=disp, value=f'{row["month"]}/{row["day"]} {opt}', inline=False)
+
+            i += 1
         await ctx.send(embed=embed)
 
 async def setup(bot):

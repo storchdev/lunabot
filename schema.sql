@@ -61,3 +61,23 @@ CREATE TABLE IF NOT EXISTS future_tasks (
   time TIMESTAMP WITH TIME ZONE
 );
 
+CREATE TABLE IF NOT EXISTS todos (
+  id SERIAL PRIMARY KEY,
+  name TEXT,
+  priority INTEGER,
+  completed BOOLEAN,
+  creator_id BIGINT,
+  time TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS sticky_roles (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  role_id BIGINT,
+  until TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS bump_remind (
+  user_id BIGINT,
+  next_bump TIMESTAMP WITH TIME ZONE
+)

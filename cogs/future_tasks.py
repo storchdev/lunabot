@@ -38,12 +38,19 @@ class FutureTask:
         await thread.edit(locked=True)
 
     async def task_coro(self):
-        await asyncio.sleep((self.dt - datetime.now()).total_seconds())
+        if self.action == 'remove_role':
+            query = 'INSERT INTO sticky_roles (user_id, role_id, until) VALUES ($1, $2, $3)'
+            await self.bot.db.execute(query, self.kwargs.get('user_id'), self.kwargs.get('role_id'), self.dt)
+
+        await asyncio.sleep((self.dt - discord.utils.utcnow()).total_seconds())
 
         if self.action == 'remove_role':
             await self.remove_role()
         elif self.action == 'lock_thread':
             await self.lock_thread()
+        
+        query = 'DELETE FROM future_tasks WHERE id = $1'
+        await self.bot.db.execute(query, self.id) 
     
     def start(self):
         self.task = self.bot.loop.create_task(self.task_coro())
@@ -73,16 +80,6 @@ class FutureTasksCog(commands.Cog):
         for task in self.bot.future_tasks.values():
             task.cancel()   
 
-    @commands.Cog.listener()
-    async def on_member_join(self, member):
-        query = 'SELECT data FROM future_tasks WHERE action = $1 AND user_id = $2'
-        row = await self.bot.db.fetchrow(query, 'remove_role', member.id)
-        if row:
-            role_id = json.loads(row['data'])['role_id']
-            role = member.guild.get_role(role_id)
-            if role:
-                await member.add_roles(role)
-    
 
 async def setup(bot):
     await bot.add_cog(FutureTasksCog(bot))
