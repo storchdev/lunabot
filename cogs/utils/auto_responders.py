@@ -39,7 +39,8 @@ class AutoResponderAction:
             msgble = channel
 
         layout = self.bot.get_layout_from_json(self.kwargs['layout'])
-        await layout.send(msgble, **self.kwargs)
+        ctx = LayoutContext(message=msg)
+        await layout.send(msgble, ctx=ctx, **self.kwargs)
 
     async def add_roles(self, msg: discord.Message):
         role_ids = self.kwargs['roles']

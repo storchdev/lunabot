@@ -14,8 +14,11 @@ class LayoutContext:
             author = message.author
         if channel is None and message is not None:
             channel = message.channel
-        if guild is None and channel is not None:
-            guild = channel.guild
+        if guild is None:
+            if channel is not None:
+                guild = channel.guild
+            if author is not None:
+                guild = author.guild
 
         self.author = author
         self.channel = channel
@@ -35,7 +38,8 @@ _REPLS = {
     'channelid': lambda ctx: ctx.channel.id,
     'serverid': lambda ctx: ctx.guild.id,
     'userid': lambda ctx: ctx.author.id,
-    'boosts': lambda ctx: ctx.guild.premium_subscription_count,
+    'boostcount': lambda ctx: ctx.guild.premium_subscription_count,
+    'boostlevel': lambda ctx: ctx.guild.premium_tier,
 }
 
 class Layout:
@@ -60,7 +64,7 @@ class Layout:
             field.value = Layout.fill_text_one(field.value, key, value)
         
         if embed.title: embed.title = Layout.fill_text_one(embed.title, key, value)
-        if embed.footer: embed.footer.text = Layout.fill_text_one(embed.footer.text, key, value)
+        if embed.footer: embed.set_footer(text=Layout.fill_text_one(embed.footer.text, key, value))
         if embed.author: embed.author.name = Layout.fill_text_one(embed.author.name, key, value)
         if embed.description: embed.description = Layout.fill_text_one(embed.description, key, value)
         
@@ -86,7 +90,7 @@ class Layout:
             field.value = Layout.fill_text(ctx, field.value, **kwargs)
 
         if embed.title: embed.title = Layout.fill_text(ctx, embed.title, **kwargs)
-        if embed.footer: embed.footer.text = Layout.fill_text(ctx, embed.footer.text, **kwargs)
+        if embed.footer: embed.set_footer(text=Layout.fill_text(ctx, embed.footer.text, **kwargs))
         if embed.author: embed.author.name = Layout.fill_text(ctx, embed.author.name, **kwargs)
         if embed.description: embed.description = Layout.fill_text(ctx, embed.description, **kwargs)
 
@@ -115,8 +119,6 @@ class Layout:
         return json.dumps(self.to_dict(), indent=indent)
     
     async def send(self, msgble: discord.abc.Messageable, ctx: Optional[Union[commands.Context, LayoutContext]] = None, *, repls: Optional[dict] = None, **kwargs) -> Optional[discord.Message]:
-        send_func = msgble.send
-
         if isinstance(msgble, discord.Message):
             if ctx is None:
                 ctx = LayoutContext(
@@ -129,6 +131,7 @@ class Layout:
         elif isinstance(msgble, commands.Context):
             if ctx is None:
                 ctx = msgble
+            send_func = msgble.send
         elif isinstance(msgble, discord.Interaction):
             if ctx is None:
                 ctx = LayoutContext(

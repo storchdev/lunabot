@@ -48,7 +48,7 @@ class PingOnJoin(commands.Cog):
         for channel in view.channels:
             await self.bot.db.execute('insert into pingonjoin (guild_id, channel_id) values ($1, $2)', ctx.guild.id, channel.id)
         self.channels[ctx.guild.id] = [channel.id for channel in view.channels]
-        await view.inter.response.send_message('Done!')
+        await view.final_interaction.response.edit_message(content='Done', view=None)
 
 
 async def setup(bot):

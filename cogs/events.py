@@ -31,14 +31,14 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
         channel = self.bot.get_channel(self.bot.vars.get('welc-channel-id'))
         await layout.send(channel, ctx)
     
-    # @commands.command()
-    # async def boosttest(self, ctx):
-    #     booster_role = ctx.guild.get_role(self.bot.vars.get('booster-role-id'))
-    #     if booster_role not in ctx.author.roles:
-    #         await ctx.author.add_roles(booster_role)
-    #     else:
-    #         await ctx.author.remove_roles(booster_role)
-    #     await ctx.send(':white_check_mark:')
+    @commands.command()
+    async def boosttest(self, ctx):
+        booster_role = ctx.guild.get_role(self.bot.vars.get('booster-role-id'))
+        if booster_role not in ctx.author.roles:
+            await ctx.author.add_roles(booster_role)
+        else:
+            await ctx.author.remove_roles(booster_role)
+        await ctx.send(':white_check_mark:')
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):

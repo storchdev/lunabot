@@ -3,11 +3,12 @@ from cogs.utils.errors import GuildOnly
 import os 
 from discord.ext import commands 
 import logging
-from typing import Union
+from typing import Union, Optional
 import aiohttp 
 from cogs.utils.layouts import Layout 
 from cogs.utils.errors import InvalidURL
 from cogs.future_tasks import FutureTask
+from datetime import datetime, timedelta
 import discord 
 
 
@@ -106,6 +107,19 @@ class LunaBot(commands.Bot):
         self.future_tasks[task_id] = task
         task.start()
 
+    async def get_cd(self, action, user, duration, *, update=True) -> Optional[datetime]:
+        query = 'SELECT end_time FROM cooldowns WHERE action = $1 AND user_id = $2 ORDER BY end_time DESC'
+        row = await self.db.fetchrow(query, action, user.id)
+        if row is None or row['end_time'] < discord.utils.utcnow():
+
+            if update:
+                query = 'INSERT INTO cooldowns (action, user_id, end_time) VALUES ($1, $2, $3) ON CONFLICT (action, user_id) DO UPDATE SET end_time = $3'
+                end_time = discord.utils.utcnow() + timedelta(seconds=duration)
+                await self.db.execute(query, action, user.id, end_time)
+
+            return None
+
+        return row['end_time'] 
 
     def global_check(self, ctx):
         if ctx.guild is None:

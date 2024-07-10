@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS todos (
   priority INTEGER,
   completed BOOLEAN,
   creator_id BIGINT,
-  time TIMESTAMP WITH TIME ZONE
+  time_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  time_completed TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS sticky_roles (
@@ -80,4 +81,19 @@ CREATE TABLE IF NOT EXISTS sticky_roles (
 CREATE TABLE IF NOT EXISTS bump_remind (
   user_id BIGINT,
   next_bump TIMESTAMP WITH TIME ZONE
-)
+);
+
+CREATE TABLE IF NOT EXISTS cooldowns (
+  id SERIAL PRIMARY KEY,
+  action TEXT,
+  user_id BIGINT,
+  end_time TIMESTAMP WITH TIME ZONE,
+  UNIQUE(action, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS ticket_transcripts (
+  id SERIAL PRIMARY KEY,
+  ticket_id BIGINT,
+  opener_id BIGINT,
+  messages JSONB
+);

@@ -5,27 +5,27 @@ from discord import ui
 import time 
 import asyncio 
 from datetime import timedelta, datetime
+from .utils import View
+from io import StringIO
 
-# TODO: this whole file is a mess pls save me
+from typing import TYPE_CHECKING
 
-# TODO: get rid of this goofy ahh json and use layouts or some shit
-with open('./cogs/static/ticketinfo.json') as f:
-    data = json.load(f)
+if TYPE_CHECKING:
+    from bot import LunaBot
 
-
-# ticket_cds = {}
-# tickets = []
 
 class Ticket:
-    def __init__(self, opener, timestamp, archive_id):
+    def __init__(self, opener, timestamp):
         self.opener = opener
         self.timestamp = timestamp 
         self.id = None
         self.channel = None
-        self.archive_id = archive_id
     
 
 class CloseReason(ui.Modal, title='Close'):
+    def __init__(self, parent_view):
+        self.parent_view = parent_view 
+
     reason = ui.TextInput(
         label='Reason', 
         placeholder='Reason for closing the ticket, e.g. "Resolved"',
@@ -33,29 +33,60 @@ class CloseReason(ui.Modal, title='Close'):
     )
 
     async def on_submit(self, inter):
-        await inter.response.send_message('Ticket closed, deleting channel in 5 seconds...')
+        await inter.response.send_message('Saving transcript...')
+        await self.parent_view.close(inter, str(self.reason))
 
     
-# TODO: make using custom view class
-class CloseView(ui.View):
-    def __init__(self, ticket_id, channel, opener_id, timestamp, archive_id):
-        super().__init__(timeout=None)
+class CloseView(View):
+    def __init__(self, bot, ticket_id, channel, opener_id, timestamp):
+        super().__init__(bot=bot, timeout=None)
         self.ticket_id = ticket_id
         self.channel = channel 
         self.opener_id = opener_id 
         self.timestamp = timestamp
-        self.archive_id = archive_id
         self.close_without_reason.custom_id = f'ticket-noreason-{ticket_id}'
         self.close_with_reason.custom_id = f'ticket-reason-{ticket_id}'
+    
+    async def save_transcript(self):
+        msg_objs = []
+        async for msg in self.channel.history(limit=None):
+            if msg.author.bot:
+                continue 
+            file_channel = self.bot.get_channel(self.bot.vars.get('transcript-file-channel-id'))
+
+            if msg.attachments:
+                new_msg = await file_channel.send(files=[await a.to_file() for a in msg.attachments])
+                attachments = [a.url for a in new_msg.attachments]
+            else:
+                attachments = []
+
+            msg_objs.append({
+                'author_id': msg.author.id,
+                'username': msg.author.name,
+                'content': msg.content,
+                'attachments': attachments
+            })
+        query = 'INSERT INTO ticket_transcripts (ticket_id, opener_id, messages) VALUES ($1, $2, $3)'
+        await self.bot.db.execute(query, self.ticket_id, self.opener_id, json.dumps(msg_objs, indent=4))
+
+    async def interaction_check(self, inter):
+        if inter.user.id == self.bot.owner_id:
+            return True 
+
+        if inter.user.id == self.opener_id:
+            await inter.response.send_message('Sorry, only staff can close tickets.', ephemeral=True) 
+            return False
+        return True
 
     async def close(self, inter, reason):
+        await self.save_transcript()
         await self.channel.delete()
-        query = 'DELETE FROM actickets WHERE ticket_id = $1'
+        query = 'DELETE FROM active_tickets WHERE ticket_id = $1'
         await inter.client.db.execute(query, self.ticket_id) 
 
         embed = discord.Embed(
             title='Ticket Closed',
-            color=0xcab7ff,
+            color=self.bot.DEFAULT_EMBED_COLOR,
             timestamp=discord.utils.utcnow()
         )
         embed.add_field(name='Ticket ID', value=str(self.ticket_id))
@@ -63,190 +94,156 @@ class CloseView(ui.View):
         embed.add_field(name='Closed By', value=inter.user.mention)
         embed.add_field(name='Open Time', value=discord.utils.format_dt(self.timestamp))
         embed.add_field(name='Reason', value=reason, inline=False)
-        archive = inter.client.get_channel(self.archive_id)
+        archive = self.bot.get_channel(self.bot.vars.get('archive-channel-id'))
         await archive.send(embed=embed)
         
     @ui.button(label='Close', style=discord.ButtonStyle.red, emoji='\U0001f512')
     async def close_without_reason(self, inter, button):
-        await inter.response.send_message('Ticket closed, deleting channel in 5 seconds...')
-        await asyncio.sleep(5)
+        await inter.response.send_message('Saving transcript...')
         await self.close(inter, "No reason given")
     
     @ui.button(label='Close With Reason', style=discord.ButtonStyle.red, emoji='\U0001f512', row=1)
     async def close_with_reason(self, inter, button):
-        modal = CloseReason()
+        modal = CloseReason(self)
         await inter.response.send_modal(modal)
-        await modal.wait()
-        await asyncio.sleep(5)
-        await self.close(inter, str(modal.reason))
 
 
 
 class TicketView(ui.View):
 
-    def __init__(
-            self, 
-            bot, 
-            channel_id, 
-            custom_id, 
-            emoji, 
-            required_role_id,
-            missing_role_message,
-            initial_wait_message,
-            cooldown, 
-            cooldown_message,
-            embed1, 
-            embed2, 
-            archive_id, 
-            staff_id,
-        ):
-        self.bot = bot
-        self.emoji = emoji
-        self.custom_id = custom_id 
-        self.channel_id = channel_id
-        self.required_role_id = required_role_id
-        self.missing_role_message = missing_role_message
-        self.initial_wait_message = initial_wait_message
-        self.cooldown = cooldown 
-        self.cooldown_message = cooldown_message
-        self.embed1 = discord.Embed.from_dict(embed1)
-        self.embed2 = discord.Embed.from_dict(embed2)
-        self.archive_id = archive_id
-        self.staff_id = staff_id
-
-        # emoji = self.bot.get_emoji(924048498477891614)
-        btn_text = "❀﹒﹒Click me!﹒﹒❀"
-        btn = ui.Button(
-            custom_id=custom_id, 
-            label=btn_text, 
-            style=discord.ButtonStyle.blurple, 
-            emoji=self.emoji
-        )
-
-        async def callback(inter):
-            await inter.response.defer()
-            ticket = await self.create_ticket(inter)
-            embed = discord.Embed(
-                title='Ticket',
-                color=0xcab7ff,
-                description=f'Opened a new ticket: {ticket.channel.mention}'
-            )
-            await inter.followup.send(embed=embed, ephemeral=True)
-
-        btn.callback = callback 
-
+    def __init__(self, bot):
         super().__init__(timeout=None)
-        self.add_item(btn)
+        self.bot: 'LunaBot' = bot 
+    
+    @ui.button(label='joe', custom_id='helpdesk')
+    async def open_ticket(self, interaction, button):
+        menu = TicketTypeMenu(self.bot, interaction.user)
+        await interaction.response.send_message('**Please select an option from the menu**', view=menu, ephemeral=True)
         
-    async def create_ticket(self, inter):
-        ticket = Ticket(inter.user, discord.utils.utcnow(), self.archive_id)
-        channel = await self.create_channel(inter, ticket)
-        temp = await channel.send(f'{inter.user.mention}')
-        # temp = await channel.send(inter.user.mention)
-        query = 'INSERT INTO actickets (ticket_id, channel_id, opener_id, timestamp, archive_id) VALUES ($1, $2, $3, $4, $5)'
-        await inter.client.db.execute(query, ticket.id, ticket.channel.id, ticket.opener.id, ticket.timestamp.timestamp(), ticket.archive_id)
-        view = CloseView(ticket.id, ticket.channel, ticket.opener.id, ticket.timestamp, ticket.archive_id)
-        
-        role = inter.guild.get_role(self.staff_id)
-        archive = inter.client.get_channel(self.archive_id)
-        await archive.send(role.mention)
 
-        # inter.client.add_view(view)  
-        await channel.send(view=view, embed=self.embed2)
+class TicketTypeMenu(View):
+    def __init__(self, bot, owner):
+        super().__init__(bot=bot, owner=owner)
+
+        for option in ['VIP Artist', 'Trusted Seller', 'Partnership Request', 'PM Request', 'Booster Perks', 'User Report', 'General Inquiry', 'Other']:
+            self.ticket_type.add_option(label=option)
+    
+    async def interaction_check(self, inter):
+        end_time = await self.bot.get_cd('ticket', inter.user, 60)
+        if end_time:
+            layout = self.bot.get_layout('ticketcd')
+            await layout.send(inter, None, repls={'timethingy', discord.utils.format_dt(end_time, 'R')})
+            return False 
+        
+        return True
+
+    @ui.select(placeholder='What is this ticket for?')
+    async def ticket_type(self, interaction, select):
+        await interaction.response.defer()
+        ticket = await self.create_ticket()
+        embed = discord.Embed(
+            title='Ticket',
+            color=self.bot.DEFAULT_EMBED_COLOR,
+            description=f'Opened a new ticket: {ticket.channel.mention}'
+        )
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    async def create_ticket(self):
+        ticket = Ticket(self.owner, discord.utils.utcnow())
+        channel = await self.create_channel(ticket)
+        query = 'INSERT INTO active_tickets (ticket_id, channel_id, opener_id, timestamp) VALUES ($1, $2, $3, $4)'
+        await self.bot.db.execute(query, ticket.id, ticket.channel.id, ticket.opener.id, ticket.timestamp.timestamp())
+        view = CloseView(self.bot, ticket.id, ticket.channel, ticket.opener.id, ticket.timestamp)
+        
+        choice = self.ticket_type.values[0]
+        luna_id = self.bot.vars.get('luna-id')
+        pm_id = self.bot.vars.get('pm-role-id')
+        staff_id = self.bot.vars.get('staff-role-id')
+
+        if choice == 'VIP Artist':
+            pings = f'<@{luna_id}>'
+        elif choice == 'Trusted Seller':
+            pings = f'<@{luna_id}>'
+        elif choice == 'Partnership Request':
+            pings = f'<@&{pm_id}>'  
+        elif choice == 'PM Request':
+            pings = f'<@{luna_id}>'  
+        elif choice == 'Booster Perks':
+            pings = f'<@{luna_id}>'
+        elif choice == 'User Report':
+            pings = f'<@&{staff_id}>'
+        elif choice == 'General Inquiry':
+            pings = f'<@&{staff_id}>'
+        else:
+            pings = f'<@&{staff_id}>'
+
+        temp = await channel.send(f'{self.owner.mention}')
+        archive = self.bot.get_channel(self.bot.vars.get('archive-channel-id'))
+        await channel.send(view=view, embed=self.bot.get_embed('ticketinfo'))
+        await archive.send(f'{pings}: get ready to rizz up {self.owner.mention} in {channel.mention} on skibidi')
         await asyncio.sleep(1)
         await temp.delete()
         return ticket 
 
-    async def create_channel(self, inter, ticket):
-        query = 'UPDATE counter SET num = num + 1'
-        await inter.client.db.execute(query)
-        query = 'SELECT num FROM counter'
-        row = await inter.client.db.fetchrow(query)
-        (ticket_id,) = row
-        self.id = ticket_id
+    async def create_channel(self, ticket: Ticket):
+        query = 'UPDATE ticket_counter SET num = num + 1 RETURNING num'
+        ticket_id = await self.bot.db.fetchval(query)
 
         ticket.id = ticket_id
-        archive = inter.client.get_channel(self.archive_id)
-        staffrole = inter.guild.get_role(self.staff_id)
+        archive = self.bot.get_channel(self.bot.vars.get('archive-channel-id'))
+        staffrole = self.owner.guild.get_role(self.bot.vars.get('staff-role-id'))
+
         overwrites = {
-            inter.guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            inter.user: discord.PermissionOverwrite(view_channel=True),
+            self.owner.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            self.owner: discord.PermissionOverwrite(view_channel=True),
             staffrole: discord.PermissionOverwrite(view_channel=True)
         }
+
         ticket.channel = await archive.category.create_text_channel(name=f'ticket-{ticket_id}', overwrites=overwrites)
         return ticket.channel
-    
-    async def interaction_check(self, inter):
-        # if inter.user.id == STORCH_ID:
-        #     return True 
-        
-        if self.required_role_id:
-            if self.required_role_id not in [r.id for r in inter.user.roles]:
-                await inter.response.send_message(self.missing_role_message, ephemeral=True)
-                return 
-            
-        query = 'SELECT end_time, reason FROM cooldowns WHERE custom_id = $1 AND user_id = $2 ORDER BY end_time DESC'
-        row = await inter.client.db.fetchrow(query, self.custom_id, inter.user.id)
-        
-        if row is None or row['end_time'] - time.time() < 0:
-            query = 'INSERT INTO cooldowns (custom_id, user_id, end_time) VALUES ($1, $2, $3)'
-            await inter.client.db.execute(query, self.custom_id, inter.user.id, int(time.time() + self.cooldown))
-            return True
-        else:
-            dt = discord.utils.utcnow() + timedelta(seconds=row['end_time'] - time.time())
-            md = discord.utils.format_dt(dt, 'R')
-            if row['reason']:
-                msg = self.initial_wait_message
-            else:
-                if self.cooldown_message is None:
-                    msg = "♡﹒﹒**Psst!** Please slow down a bit; there is a __1 minute__ cooldown to prevent spam. Please try again (time thingy)! <a:Lumi_heart_bounce:917958025195696169> __ __✿__ __❀__ __"
-                else:
-                    msg = self.cooldown_message 
-            msg = msg.replace('(time thingy)', md)
-            await inter.response.send_message(
-                msg,
-                ephemeral=True
-            )
-            return False 
-
-
-STORCH_ID = 718475543061987329
 
 class TicketCog(commands.Cog, name='Tickets', description='a few sketchy admin-only sketchy commands'):
 
     def __init__(self, bot):
-        self.bot = bot 
+        self.bot: 'LunaBot' = bot 
 
     async def cog_load(self):
-
-        for guild in data:
-            archive_id = guild['archive id']
-            staff_id = guild['staff id']
-            for ticket in guild['tickets']:
-                self.bot.add_view(TicketView(
-                    self.bot, 
-                    ticket['channel id'], 
-                    ticket['custom id'], 
-                    ticket.get('emoji'),
-                    ticket.get('required role id'),
-                    ticket.get('missing role message'),
-                    ticket.get('initial wait message'),
-                    ticket['cooldown'],
-                    ticket.get('cooldown_message'),
-                    ticket['embed 1'],
-                    ticket['embed 2'],
-                    archive_id,
-                    staff_id
-                ))
+        self.bot.add_view(TicketView(self.bot))
+    
+        query = 'SELECT * FROM active_tickets'
+        rows = await self.bot.db.fetch(query)
+        for row in rows:
+            close = CloseView(self.bot, row['ticket_id'], self.bot.get_channel(row['channel_id']), row['opener_id'], datetime.fromtimestamp(row['timestamp']))
+            self.bot.add_view(close)
+    
+    
+    async def get_txt_file(self, ticket_id):
+        query = 'SELECT messages FROM ticket_transcripts WHERE ticket_id = $1'
+        row = await self.bot.db.fetchrow(query, ticket_id)
+        if not row:
+            return None
+        msgs = json.loads(row['messages'])
+        output = StringIO()
+        for msg in msgs:
+            output.write(f'{msg["username"]} ({msg["author_id"]}): {msg["content"]}\n')
+            for a in msg['attachments']:
+                output.write(f'  {a}\n')
+            output.write('\n')
         
-            query = 'SELECT ticket_id, channel_id, opener_id, timestamp, archive_id FROM actickets'
-            rows = await self.bot.db.fetch(query)
-            for row in rows:
-                close = CloseView(row['ticket_id'], self.bot.get_channel(row['channel_id']), row['opener_id'], datetime.fromtimestamp(row['timestamp']), row['archive_id'])
-                self.bot.add_view(close)
+        output.seek(0)
+        return discord.File(output, filename=f'transcript-{ticket_id}.txt')
+
 
     async def cog_check(self, ctx):
         return ctx.author.id == self.bot.owner_id or ctx.author.guild_permissions.administrator
+
+    @commands.command()
+    async def transcript(self, ctx, ticket_id: int):
+        file = await self.get_txt_file(ticket_id)
+        if file is None:
+            await ctx.send('No transcript found for that ticket')
+            return 
+        await ctx.send(file=file)
 
     @commands.command()
     async def sendembed(self, ctx, channel: discord.TextChannel):

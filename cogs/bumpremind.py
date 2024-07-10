@@ -45,11 +45,14 @@ class BumpRemind(commands.Cog):
         embed = msg.embeds[0]
         if 'Bump done!' not in embed.description:
             return 
+        if not msg.interaction:
+            return
 
+        user_id = msg.interaction.user.id 
         end_time = discord.utils.utcnow() + timedelta(hours=2)
-        self.bot.loop.create_task(self.task(msg.author.id, end_time))
+        self.bot.loop.create_task(self.task(user_id, end_time))
         query = 'INSERT INTO bump_remind (user_id, next_bump) VALUES ($1, $2)'
-        await self.bot.db.execute(query, msg.author.id, end_time)
+        await self.bot.db.execute(query, user_id, end_time)
         logging.info(f'Next bump remind at {end_time}')
 
 

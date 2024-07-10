@@ -76,10 +76,12 @@ class Tools(commands.Cog, description='storchs tools'):
     @commands.command()
     async def buildembed(self, ctx):
         view = EmbedEditor(self.bot, ctx.author, timeout=None)
-        await ctx.send('Please hit the **Submit** button when you\'re ready!', view=view)
+        view.message = await ctx.send('Please hit the **Submit** button when you\'re ready!', view=view)
         await view.wait()
-        if view.ready:
-            await ctx.send(embed=view.current_embed)
+        if view.cancelled:
+            return
+        await ctx.send(embed=view.current_embed)
+        await view.message.delete()
         
     @commands.command()
     async def r(self, ctx):

@@ -95,7 +95,7 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
     @send_bdays_loop.before_loop 
     async def wait_until_next_day(self):
         now = datetime.now(tz=ZoneInfo("US/Central"))
-        tomorrow = now.replace(day=now.day+1, hour=0, minute=0, second=0, microsecond=0)
+        tomorrow = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
         await discord.utils.sleep_until(tomorrow)
 
     @commands.hybrid_command(name='set-birthday')

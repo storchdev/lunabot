@@ -164,7 +164,7 @@ class Levels(commands.Cog):
         # make a copy of the xp table
         await self.bot.db.execute('CREATE TABLE xp_copy AS SELECT * FROM xp')
         await self.bot.db.execute('DROP TABLE IF EXISTS msg_count')
-        await self.bot.db.execute('CREATE TABLE msg_count (user_id INTEGER PRIMARY KEY, count INTEGER)')
+        await self.bot.db.execute('CREATE TABLE msg_count (user_id BIGINT PRIMARY KEY, count INTEGER)')
         self.msg_counts = {}
 
     async def add_leveled_roles(self, message, old_level, new_level, authorroles):
@@ -316,7 +316,17 @@ class Levels(commands.Cog):
         view = SimplePages(entries, ctx=ctx, embed=embed)
         await view.start() 
 
-
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def givexp(self, ctx, member: discord.Member, xp: int):
+        self.xp_cache[member.id] += xp
+        query = '''INSERT INTO xp (user_id, "total_xp") 
+                    VALUES ($1, $2)
+                    ON CONFLICT (user_id)
+                    DO UPDATE SET total_xp = $2
+                '''
+        await self.bot.db.execute(query, member.id, self.xp_cache[member.id])
+        await ctx.send(f'Gave {xp} xp to {member.mention}.')
 
 async def setup(bot):
     await bot.add_cog(Levels(bot))
