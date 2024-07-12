@@ -24,6 +24,7 @@ class Ticket:
 
 class CloseReason(ui.Modal, title='Close'):
     def __init__(self, parent_view):
+        super().__init__()
         self.parent_view = parent_view 
 
     reason = ui.TextInput(
@@ -49,7 +50,7 @@ class CloseView(View):
     
     async def save_transcript(self):
         msg_objs = []
-        async for msg in self.channel.history(limit=None):
+        async for msg in self.channel.history(oldest_first=True, limit=None):
             if msg.author.bot:
                 continue 
             file_channel = self.bot.get_channel(self.bot.vars.get('transcript-file-channel-id'))
@@ -132,21 +133,22 @@ class TicketTypeMenu(View):
         end_time = await self.bot.get_cd('ticket', inter.user, 60)
         if end_time:
             layout = self.bot.get_layout('ticketcd')
-            await layout.send(inter, None, repls={'timethingy', discord.utils.format_dt(end_time, 'R')})
+            await layout.send(inter, None, ephemeral=True, repls={'timethingy': discord.utils.format_dt(end_time, 'R')})
             return False 
         
         return True
 
     @ui.select(placeholder='What is this ticket for?')
     async def ticket_type(self, interaction, select):
-        await interaction.response.defer()
+        await interaction.response.edit_message(content='Please wait a moment...', view=None)
         ticket = await self.create_ticket()
         embed = discord.Embed(
             title='Ticket',
             color=self.bot.DEFAULT_EMBED_COLOR,
             description=f'Opened a new ticket: {ticket.channel.mention}'
         )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        msg = await interaction.original_response()
+        await msg.edit(content=None, embed=embed)
 
     async def create_ticket(self):
         ticket = Ticket(self.owner, discord.utils.utcnow())

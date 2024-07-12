@@ -40,7 +40,7 @@ class LunaBot(commands.Bot):
         self.add_check(self.global_check)
 
         await self.load_extension("jishaku")
-        priority = ['cogs.db']
+        priority = ['cogs.db', 'cogs.vars']
         for cog in priority:
             await self.load_extension(cog)
             logging.info(f'Loaded cog {cog}')

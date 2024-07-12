@@ -64,6 +64,7 @@ class ArtHof(commands.Cog):
             hof_channel = self.bot.get_channel(row['hof_channel_id'])
             hof_msg = await hof_channel.fetch_message(row['hof_id'])
             embed = self.create_embed(message, stars)
+            await hof_msg.edit(embed=embed)
             query = 'UPDATE art_hof SET stars = $1 WHERE original_id = $2'
             await self.bot.db.execute(query, stars, payload.message_id)
             return 

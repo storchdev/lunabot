@@ -142,6 +142,20 @@ class Layout:
                 send_func = msgble.followup.send
             else:
                 send_func = msgble.response.send_message
+        elif isinstance(msgble, discord.User) or isinstance(msgble, discord.Member):
+            if ctx is None:
+                ctx = LayoutContext(
+                    author=msgble
+                )
+            send_func = msgble.send
+        elif isinstance(msgble, discord.TextChannel):
+            if ctx is None:
+                ctx = LayoutContext(
+                    channel=msgble
+                )
+            send_func = msgble.send
+        else:
+            raise TypeError(f'Invalid messageable type {type(msgble)}')
 
         if repls is None:
             repls = {} 
@@ -155,10 +169,14 @@ class Layout:
         for embed in self.embeds:
             embeds.append(self.fill_embed(ctx, embed, **repls))
 
+        if not isinstance(msgble, discord.Interaction):
+            cleaned_kwargs = {'mention_author': kwargs.get('mention_author', False), 
+                      'delete_after': kwargs.get('delete_after', None)}
+        else:
+            cleaned_kwargs = {'ephemeral': kwargs.get('ephemeral', False)}
+
         try:
-            return await send_func(content=content, embeds=embeds, 
-                                mention_author=kwargs.get('mention_author', False), 
-                                delete_after=kwargs.get('delete_after', None))
+            return await send_func(content=content, embeds=embeds, **cleaned_kwargs)
         except discord.Forbidden:
             pass 
         
