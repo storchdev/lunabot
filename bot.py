@@ -1,5 +1,5 @@
 import json 
-from cogs.utils.errors import GuildOnly
+from cogs.utils.checks import guild_only
 import os 
 from discord.ext import commands 
 import logging
@@ -37,8 +37,7 @@ class LunaBot(commands.Bot):
         # await self.load_extension('cogs.db')
         # await self.load_extension('db_migration')
         # return
-        self.add_check(self.global_check)
-
+        self.add_check(guild_only)
         await self.load_extension("jishaku")
         priority = ['cogs.db', 'cogs.vars']
         for cog in priority:
@@ -120,9 +119,21 @@ class LunaBot(commands.Bot):
             return None
 
         return row['end_time'] 
+    
+    def get_var_channel(self, name: str) -> discord.TextChannel:
+        name = name + '-channel-id'
+        if name not in self.vars:
+            return None
+        return self.get_channel(self.vars[name])
+    
+    async def get_count(self, name, *, update=True):
+        if update:
+            query = 'INSERT INTO counters (name, count) VALUES ($1, 1) ON CONFLICT (name) DO UPDATE SET count = counters.count + 1 RETURNING count'
+            return await self.db.fetchval(query, name)
+        else:
+            query = 'INSERT INTO counters (name, count) VALUES ($1, 0) ON CONFLICT (name) DO NOTHING RETURNING count'
+            return await self.db.fetchval(query, name)
 
-    def global_check(self, ctx):
-        if ctx.guild is None:
-            raise GuildOnly()
-        return True
+
+    
     

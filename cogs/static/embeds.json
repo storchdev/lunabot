@@ -1,53 +1,47 @@
 {
-    "weekly_lb": {
-        "footer": {
-            "text": "\u207a\ufe52Tysm for being active this week! Luna will give your well deserved rewards. Luna fanart made by hiasensen. PLEASE DO NOT STEAL OR USE\ufe52\u207a"
-        },
-        "image": {
-            "url": "https://media.discordapp.net/attachments/1122048063771512872/1152068166340587593/Untitled129_20230817155205.png",
-            "proxy_url": "https://media.discordapp.net/attachments/1122048063771512872/1152068166340587593/Untitled129_20230817155205.png",
-            "width": 551,
-            "height": 248
-        },
-        "color": 13285375,
-        "type": "rich",
-        "description": "> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52{ping0}\ufe52\u207a\n> <:LC_reply_F2U:1081275742765195355> {msgs0} messages <a:LCD_flower_spin:1147757953064128512> {xp0} XP\n> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52{ping1}\ufe52\u207a\n> <:LC_reply_F2U:1081275742765195355> {msgs1} messages <a:LCD_flower_spin:1147757953064128512> {xp1} XP\n> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52{ping2}\ufe52\u207a\n> <:LC_reply_F2U:1081275742765195355> {msgs2} messages <a:LCD_flower_spin:1147757953064128512> {xp2} XP\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027",
-        "title": "\u2740\u318d\u318dWeekly LB\ufe57\u207a \u208d <a:LC_star_burst:1147790893064142989> \u208e"
+  "weekly_lb": {
+    "footer": {
+      "text": "\u207a\ufe52Tysm for being active this week! Luna will give your well deserved rewards. Luna fanart made by hiasensen. PLEASE DO NOT STEAL OR USE\ufe52\u207a"
     },
-    "weekly_reset": {
-        "footer": {
-            "text": "\u207a\ufe52Luna fanart made by rie.leya. PLEASE DO NOT STEAL OR USE\ufe52\u207a"
-        },
-        "image": {
-            "url": "https://media.discordapp.net/attachments/1122048063771512872/1152068404908408903/IMG_7260.jpg",
-            "proxy_url": "https://media.discordapp.net/attachments/1122048063771512872/1152068404908408903/IMG_7260.jpg",
-            "width": 1168,
-            "height": 526
-        },
-        "color": 13285375,
-        "type": "rich",
-        "description": "> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52**{this_sunday} - {next_sunday}**\ufe52\u207a\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027\n> \u2661\ufe52\ufe52**Psst!** Yet another week begins. Never forget that fresh starts are a healthy part of life! I have now reset our weekly leaderboard to allow new members to gain Luminaires and other various rewards for being active. Go [here](https://discord.com/channels/899108709450543115/1137942143562940436/1150163448601268414) to see what our weekly top 3 most active users will recieve in turn for being as active as they are. We hope you come chat with us this week! \u273f\u2740\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027",
-        "title": "\u2740\u318d\u318dWeekly Reset\ufe57\u207a \u208d <a:LC_star_jump_spin:1147776861154316328> \u208e"
+    "image": {
+      "url": "https://media.discordapp.net/attachments/1122048063771512872/1152068166340587593/Untitled129_20230817155205.png",
+      "proxy_url": "https://media.discordapp.net/attachments/1122048063771512872/1152068166340587593/Untitled129_20230817155205.png",
+      "width": 551,
+      "height": 248
     },
-    "bump_remind": {
-        "footer": {
-            "text": "\u207a\ufe52Please don't complain about these pings, just remove the ping role in the \"channels & roles\" section at the top of the server. Luna fanart made by aly_aka_fish. PLEASE DO NOT STEAL OR USE\ufe52\u207a"
-        },
-        "image": {
-            "url": "https://media.discordapp.net/attachments/1122048063771512872/1152066562140946442/Untitled352_20230816164333.png",
-            "proxy_url": "https://media.discordapp.net/attachments/1122048063771512872/1152066562140946442/Untitled352_20230816164333.png",
-            "width": 834,
-            "height": 375
-        },
-        "color": 13285375,
-        "type": "rich",
-        "description": "> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52**Come help us grow**\ufe52\u207a\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027\n> \u2661\ufe52\ufe52**Psst!** It's time to bump with Disboard again; just type `/bump` to \"bump\" our server to the top of [Disboard's website!](https://disboard.org/) This helps us gain more exposure so more people can join our lovely family. <a:LCD_cute_hearts:1127849485289136138> \u273f\u2740\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027",
-        "title": "\u2740\u318d\u318dBump Time\ufe57\u207a \u208d <a:LC_star_jump_spin:1147776861154316328> \u208e"
+    "color": 13285375,
+    "type": "rich",
+    "description": "> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52{ping0}\ufe52\u207a\n> <:LC_reply_F2U:1081275742765195355> {msgs0} messages <a:LCD_flower_spin:1147757953064128512> {xp0} XP\n> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52{ping1}\ufe52\u207a\n> <:LC_reply_F2U:1081275742765195355> {msgs1} messages <a:LCD_flower_spin:1147757953064128512> {xp1} XP\n> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52{ping2}\ufe52\u207a\n> <:LC_reply_F2U:1081275742765195355> {msgs2} messages <a:LCD_flower_spin:1147757953064128512> {xp2} XP\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027",
+    "title": "\u2740\u318d\u318dWeekly LB\ufe57\u207a \u208d <a:LC_star_burst:1147790893064142989> \u208e"
+  },
+  "weekly_reset": {
+    "footer": {
+      "text": "\u207a\ufe52Luna fanart made by rie.leya. PLEASE DO NOT STEAL OR USE\ufe52\u207a"
     },
-    "topic": {
-        "color": 13285375,
-        "type": "rich",
-        "description": "> \u207a <a:Lumi_heart_point:917958056409706497>\ufe52**Here's a topic...**\ufe52\u207a\n> <:LC_reply_F2U:1081275742765195355> {q}? \u273f\u2740\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027",
-        "title": "\u2740\u318d\u318dChat With Us\ufe57\u207a \u208d <a:LCD_flower_spin:1147757953064128512> \u208e"
-    }
+    "image": {
+      "url": "https://media.discordapp.net/attachments/1122048063771512872/1152068404908408903/IMG_7260.jpg",
+      "proxy_url": "https://media.discordapp.net/attachments/1122048063771512872/1152068404908408903/IMG_7260.jpg",
+      "width": 1168,
+      "height": 526
+    },
+    "color": 13285375,
+    "type": "rich",
+    "description": "> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52**{this_sunday} - {next_sunday}**\ufe52\u207a\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027\n> \u2661\ufe52\ufe52**Psst!** Yet another week begins. Never forget that fresh starts are a healthy part of life! I have now reset our weekly leaderboard to allow new members to gain Luminaires and other various rewards for being active. Go [here](https://discord.com/channels/899108709450543115/1137942143562940436/1150163448601268414) to see what our weekly top 3 most active users will recieve in turn for being as active as they are. We hope you come chat with us this week! \u273f\u2740\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027",
+    "title": "\u2740\u318d\u318dWeekly Reset\ufe57\u207a \u208d <a:LC_star_jump_spin:1147776861154316328> \u208e"
+  },
+  "bump_remind": {
+    "footer": {
+      "text": "\u207a\ufe52Please don't complain about these pings, just remove the ping role in the \"channels & roles\" section at the top of the server. Luna fanart made by aly_aka_fish. PLEASE DO NOT STEAL OR USE\ufe52\u207a"
+    },
+    "image": {
+      "url": "https://media.discordapp.net/attachments/1122048063771512872/1152066562140946442/Untitled352_20230816164333.png",
+      "proxy_url": "https://media.discordapp.net/attachments/1122048063771512872/1152066562140946442/Untitled352_20230816164333.png",
+      "width": 834,
+      "height": 375
+    },
+    "color": 13285375,
+    "type": "rich",
+    "description": "> \u207a <a:Lumi_arrow_R:927733713163403344>\ufe52**Come help us grow**\ufe52\u207a\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027\n> \u2661\ufe52\ufe52**Psst!** It's time to bump with Disboard again; just type `/bump` to \"bump\" our server to the top of [Disboard's website!](https://disboard.org/) This helps us gain more exposure so more people can join our lovely family. <a:LCD_cute_hearts:1127849485289136138> \u273f\u2740\n             \u2027  \u2574\u2027  \u2574\u2027  \u2574\u2027",
+    "title": "\u2740\u318d\u318dBump Time\ufe57\u207a \u208d <a:LC_star_jump_spin:1147776861154316328> \u208e"
+  }
 }

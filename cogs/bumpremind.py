@@ -53,7 +53,6 @@ class BumpRemind(commands.Cog):
         self.bot.loop.create_task(self.task(user_id, end_time))
         query = 'INSERT INTO bump_remind (user_id, next_bump) VALUES ($1, $2)'
         await self.bot.db.execute(query, user_id, end_time)
-        logging.info(f'Next bump remind at {end_time}')
 
 
 async def setup(bot):

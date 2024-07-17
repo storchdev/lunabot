@@ -4,19 +4,21 @@ import random
 import discord 
 import asyncio 
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from bot import LunaBot 
+
 
 class Misc(commands.Cog):
 
     def __init__(self, bot):
-        self.bot = bot 
+        self.bot: 'LunaBot' = bot 
 
-        with open('cogs/static/topics.json') as f:
-            self.topics = json.load(f)
-        with open('cogs/static/embeds.json') as f:
-            self.embedjson = json.load(f)['topic']
         # TODO: use db
         with open('cogs/webhooks.json') as f:
             self.webhooks = json.load(f)
+        with open('cogs/static/8ball.json') as f:
+            self._8ball_answers = json.load(f)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -29,10 +31,15 @@ class Misc(commands.Cog):
     
     @commands.hybrid_command()
     async def topic(self, ctx):
-        # TODO: make it a layout
-        embed = discord.Embed.from_dict(self.embedjson)
-        embed.description = embed.description.replace('{q}', random.choice(self.topics))
-        await ctx.send(embed=embed)
+        with open('cogs/static/topics.json') as f:
+            topics = json.load(f)
+            topics.append(topics.pop(0))
+            topic = topics[0] 
+        with open('cogs/static/topics.json', 'w') as f:
+            json.dump(topics, f, indent=4)
+
+        layout = self.bot.get_layout('topic')
+        await layout.send(ctx, repls={'question': topic})
     
     @commands.hybrid_command()
     async def polyjuice(self, ctx, member: discord.Member, *, sentence: str):
@@ -49,7 +56,21 @@ class Misc(commands.Cog):
             webhook = discord.Webhook.from_url(self.webhooks[str(ctx.channel.id)], session=self.bot.session)
         
         await webhook.send(sentence, username=member.display_name, avatar_url=member.display_avatar.url)
-        
+
+    @commands.hybrid_command(name='8ball')
+    async def _8ball(self, ctx, *, question: str):
+        answer = random.choice(self._8ball_answers)
+        answer = f'*{answer}*'
+        layout = self.bot.get_layout('8ball')
+        await layout.send(ctx, repls={'question': question, 'answer': answer})
+    
+    @commands.hybrid_command(name='qna')
+    async def qna(self, ctx, *, question: str):
+        channel = self.bot.get_var_channel('qna') 
+        layout = self.bot.get_layout('qna')
+        msg = await layout.send(channel, repls={'question': question})
+        await msg.create_thread(name="⁺﹒Luna's Answer﹗𖹭﹒⁺")
+        await ctx.send(f'Your question has been sent to the QnA channel! {msg.jump_url}')
 
 
 async def setup(bot):

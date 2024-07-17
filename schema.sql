@@ -97,3 +97,15 @@ CREATE TABLE IF NOT EXISTS ticket_transcripts (
   opener_id BIGINT,
   messages JSONB
 );
+
+CREATE TABLE IF NOT EXISTS confessions (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  confession TEXT
+);
+
+CREATE TABLE IF NOT EXISTS counters (
+  id SERIAL PRIMARY KEY,
+  name TEXT UNIQUE,
+  count INTEGER
+);

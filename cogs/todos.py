@@ -2,6 +2,11 @@ import discord
 import asyncpg
 from discord.ext import commands, menus
 from .utils.paginators import ViewMenuPages
+from .utils import View
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 class Todo:
@@ -25,6 +30,34 @@ class Todo:
             time_created=record['time_created'],
             time_completed=record['time_completed']
         )
+
+
+class EditNameModal(discord.ui.Modal):
+    def __init__(self, bot, todo, view):
+        super().__init__(title="Edit Todo Name")
+        self.bot = bot
+        self.todo = todo
+        self.view = view
+
+        self.new_name = discord.ui.TextInput(
+            label="New Name",
+            placeholder="Enter the new name for the todo",
+            default=todo.name,
+        )
+        self.add_item(self.new_name)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        new_name = self.new_name.value.lower()
+
+        query = 'SELECT COUNT(*) FROM todos WHERE name = $1'  
+        count = await self.bot.db.fetchval(query, new_name)
+        if count > 0:
+            await interaction.response.send_message(f'A todo with the name "{new_name}" already exists.', ephemeral=True)
+            return 
+
+        self.todo.name = new_name
+        self.view.update_todo_list()
+        await interaction.response.edit_message(embed=self.view.format_todo_list(), view=self.view)
 
 
 class TodoPageSource(menus.ListPageSource):
@@ -78,9 +111,6 @@ class TodoListView(ViewMenuPages):
         # Add sort by dropdown
         self.add_item(self.sort_by_select)
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.ctx.author.id
-
     async def handle_toggle_show_completed(self, interaction: discord.Interaction):
         self.source.show_completed = not self.source.show_completed
         self.source.entries = self.source.get_filtered_sorted_todos()
@@ -101,11 +131,10 @@ class TodoListView(ViewMenuPages):
         await self.handle_sort_by(interaction, select.values[0])
 
 
-class TodoEditView(discord.ui.View):
+class TodoEditView(View):
     def __init__(self, source, *, ctx, todo_name):
-        super().__init__(timeout=60)
+        super().__init__(bot=ctx.bot, owner=ctx.author)
         self.source = source
-        self.ctx = ctx
         self.todo_name = todo_name.lower()
         self.current_page = 0
         self.local_todos = self.source.entries.copy()
@@ -123,20 +152,17 @@ class TodoEditView(discord.ui.View):
         self.todos_to_display = todos[start_index:end_index]
         self.todo_index = todo_index - start_index
     
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.ctx.author.id
-    
     def format_todo_list(self) -> discord.Embed:
         lines = []
         for i, todo in enumerate(self.todos_to_display):
             if i == self.todo_index:
-                line = f"**`#{todo.priority}`** - `{todo.name}`"
+                line = f"**`#{todo.priority}`** - **{todo.name}**"
             else:
                 line = f"**#{todo.priority}** - {todo.name}"
             lines.append(line)
 
         return discord.Embed(
-            color=self.ctx.bot.DEFAULT_EMBED_COLOR,
+            color=self.bot.DEFAULT_EMBED_COLOR,
             description="\n".join(lines)
         )
 
@@ -156,6 +182,11 @@ class TodoEditView(discord.ui.View):
         max_priority = len(self.local_todos)
         await self.update_todo_priority(interaction, new_priority=max_priority)
 
+    async def handle_edit_name(self, interaction: discord.Interaction):
+        current_todo = self.todos_to_display[self.todo_index]
+        modal = EditNameModal(bot=self.bot, todo=current_todo, view=self)
+        await interaction.response.send_modal(modal)
+    
     async def update_todo_priority(self, interaction: discord.Interaction, new_priority: int):
         current_todo = self.todos_to_display[self.todo_index]
         current_priority = current_todo.priority
@@ -193,6 +224,10 @@ class TodoEditView(discord.ui.View):
     async def move_to_bottom_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.handle_move_to_bottom(interaction)
     
+    @discord.ui.button(emoji='\U0000270f\U0000fe0f', style=discord.ButtonStyle.secondary, row=0)
+    async def edit_name_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.handle_edit_name(interaction)
+    
     @discord.ui.button(label='Submit', style=discord.ButtonStyle.success, row=1)
     async def submit_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.apply_changes_to_db()
@@ -206,11 +241,11 @@ class TodoEditView(discord.ui.View):
 
     async def apply_changes_to_db(self):
         for todo in self.local_todos:
-            await self.ctx.bot.db.execute('''
+            await self.bot.db.execute('''
                 UPDATE todos
-                SET priority = $1
-                WHERE name = $2
-            ''', todo.priority, todo.name)
+                SET priority = $1, name = $2
+                WHERE id = $3
+            ''', todo.priority, todo.name, todo.id)
 
 
 
@@ -222,6 +257,20 @@ class TodoCog(commands.Cog, name='Todos'):
     
     async def cog_check(self, ctx):
         return ctx.author.guild_permissions.administrator or ctx.author.id == self.bot.owner_id 
+    
+    async def find_todo(self, todo_str, *, completed) -> Optional[Todo]:
+        if todo_str.isdigit():
+            priority = int(todo_str)
+            query = 'SELECT * FROM todos WHERE priority = $1 AND completed = $2'
+            todo = await self.bot.db.fetchrow(query, priority, completed)
+            if todo is not None:
+                return Todo.from_record(todo)
+
+        query = 'SELECT * FROM todos WHERE name = $1 AND completed = $2'
+        todo = await self.bot.db.fetchrow(query, todo_str, completed)
+        if todo is not None:
+            return Todo.from_record(todo)
+        return None
 
     @commands.group(name="todo", aliases=["todos"], invoke_without_command=True)
     async def todo_group(self, ctx):
@@ -246,11 +295,13 @@ class TodoCog(commands.Cog, name='Todos'):
     @todo_group.command(name="remove", aliases=["delete"])
     async def remove_todo_command(self, ctx, *, name: str):
         name = name.lower()
-        result = await self.bot.db.execute('DELETE FROM todos WHERE name = $1', name)
-        if result == 'DELETE 0':
+        todo = await self.find_todo(name, completed=False)
+        if todo is None:
             await ctx.send(f'Todo "{name}" not found')
-        else:
-            await ctx.send(f'Todo "{name}" removed.')
+            return 
+
+        await self.bot.db.execute('DELETE FROM todos WHERE id = $1', todo.id)
+        await ctx.send(f'Todo "{todo.name}" removed.')
 
     @todo_group.command(name="list", aliases=["show"])
     async def list_todos_command(self, ctx):
@@ -265,53 +316,53 @@ class TodoCog(commands.Cog, name='Todos'):
     async def complete_todo_command(self, ctx, *, name: str):
         name = name.lower()
 
-        row = await self.bot.db.fetchrow('SELECT priority FROM todos WHERE name = $1', name)
-        if row is None:
+        todo = await self.find_todo(name, completed=False)
+        if todo is None:
             await ctx.send(f'Todo "{name}" not found')
-            return
-
-        if row['priority'] is None:
-            await ctx.send(f'Todo "{name}" already completed.')
-            return
+            return 
 
         await self.bot.db.execute('''
             UPDATE todos
             SET completed = TRUE, time_completed = $1, priority = NULL
             WHERE name = $2
-        ''', discord.utils.utcnow(), name)
+        ''', discord.utils.utcnow(), todo.name)
         await self.bot.db.execute('''
             UPDATE todos 
             SET priority = priority - 1
             WHERE priority > $1
-        ''', row['priority'])
+        ''', todo.priority)
 
-        await ctx.send(f'Todo "{name}" completed.')
+        await ctx.send(f'Todo "{todo.name}" completed.')
     
     @todo_group.command(name='uncomplete', aliases=['unfinish'])
     async def uncomplete_todo_command(self, ctx, *, name: str):
         name = name.lower()
 
+        todo = await self.find_todo(name, completed=True)
+        if todo is None:
+            await ctx.send(f'Todo "{name}" not found')
+            return
+
         current_todo_count = await self.bot.db.fetchval('SELECT COUNT(*) FROM todos WHERE completed = FALSE')
         priority = current_todo_count + 1
 
-        result = await self.bot.db.execute('''
+        await self.bot.db.execute('''
             UPDATE todos
             SET completed = FALSE, time_completed = NULL, priority = $1
             WHERE name = $2
-        ''', name, priority)
-        if result == 'UPDATE 0':
-            await ctx.send(f'Todo "{name}" not found')
-        else:
-            await ctx.send(f'Todo "{name}" uncompleted.')
+        ''', todo.name, priority)
+        await ctx.send(f'Todo "{todo.name}" uncompleted.')
     
     @todo_group.command(name="edit")
     async def edit_todo_command(self, ctx, *, name: str):
-        todos = await self.bot.db.fetch('SELECT * FROM todos WHERE completed = FALSE ORDER BY priority')
-        if len(todos) == 0:
+        name = name.lower()
+        todo = await self.find_todo(name, completed=False)
+        if todo is None:
             return await ctx.send('No todos found.')
 
+        todos = await self.bot.db.fetch('SELECT * FROM todos WHERE completed = FALSE ORDER BY priority')
         source = TodoPageSource(self.bot, todos, show_completed=True, sort_by='priority')
-        view = TodoEditView(source, ctx=ctx, todo_name=name)
+        view = TodoEditView(source, ctx=ctx, todo_name=todo.name)
         await ctx.send(embed=view.format_todo_list(), view=view)
 
 

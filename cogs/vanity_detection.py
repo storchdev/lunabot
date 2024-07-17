@@ -21,6 +21,9 @@ class VanityDetection(commands.Cog):
     async def on_presence_update(self, before, after):
         if after.guild.id != self.bot.GUILD_ID:
             return 
+        
+        if before.status != after.status:
+            return
 
         if not self.has_vanity(before) and self.has_vanity(after):
             channel = self.bot.get_channel(self.bot.vars.get('vanity-channel-id'))
