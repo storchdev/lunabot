@@ -130,7 +130,7 @@ class TicketTypeMenu(View):
             self.ticket_type.add_option(label=option)
     
     async def interaction_check(self, inter):
-        end_time = await self.bot.get_cd('ticket', inter.user, 60)
+        end_time = await self.bot.user_cooldown_end('ticket', inter.user, 60)
         if end_time:
             layout = self.bot.get_layout('ticketcd')
             await layout.send(inter, None, ephemeral=True, repls={'timethingy': discord.utils.format_dt(end_time, 'R')})

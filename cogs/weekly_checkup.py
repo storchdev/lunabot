@@ -2,7 +2,7 @@ from discord.ext import commands, tasks
 import discord
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from .utils import sleep_until_next_sunday
+from .utils import next_sunday
 from typing import TYPE_CHECKING
 from num2words import num2words
 
@@ -44,12 +44,12 @@ class WeeklyCheckup(commands.Cog):
 
     @weekly_checkup.before_loop 
     async def before_weekly_checkup(self):
-        await sleep_until_next_sunday()
+        await discord.utils.sleep_until(next_sunday())
     
-    @commands.command()
-    async def test_weekly_checkup(self, ctx):
-        await self.weekly_checkup()
-        await ctx.send('Weekly checkup sent')
+    # @commands.command()
+    # async def test_weekly_checkup(self, ctx):
+    #     await self.weekly_checkup()
+    #     await ctx.send('Weekly checkup sent')
 
 
 async def setup(bot):

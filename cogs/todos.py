@@ -350,7 +350,7 @@ class TodoCog(commands.Cog, name='Todos'):
             UPDATE todos
             SET completed = FALSE, time_completed = NULL, priority = $1
             WHERE name = $2
-        ''', todo.name, priority)
+        ''', priority, todo.name)
         await ctx.send(f'Todo "{todo.name}" uncompleted.')
     
     @todo_group.command(name="edit")

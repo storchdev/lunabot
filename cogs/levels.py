@@ -9,6 +9,7 @@ import random
 import discord
 import datetime
 import math
+from .utils import next_sunday
 
 
 def get_xp(lvl: int):
@@ -113,19 +114,7 @@ class Levels(commands.Cog):
             
     @weekly_xp_task.before_loop
     async def before_weekly_xp(self):
-        # sleep until next sunday at 1am
-        now = datetime.datetime.now(ZoneInfo('US/Eastern'))
-
-        # Calculate days to add to get the next Sunday
-        # Sunday is 6 in Python's weekday(), where Monday is 0
-        days_to_add = (6 - now.weekday()) % 7
-        if days_to_add == 0 and now.hour >= 1:
-            # If today is Sunday and it's past 1 AM, move to next Sunday
-            days_to_add = 7
-
-        # Calculate the datetime for next Sunday at 1 AM
-        next_sunday_1am = now.replace(hour=1, minute=0, second=0, microsecond=0) + datetime.timedelta(days=days_to_add)
-        await discord.utils.sleep_until(next_sunday_1am)
+        await discord.utils.sleep_until(next_sunday())
 
     async def cog_load(self):
         query = 'select user_id, total_xp from xp'

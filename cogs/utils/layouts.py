@@ -142,20 +142,12 @@ class Layout:
                 send_func = msgble.followup.send
             else:
                 send_func = msgble.response.send_message
-        elif isinstance(msgble, discord.User) or isinstance(msgble, discord.Member):
-            if ctx is None:
-                ctx = LayoutContext(
-                    author=msgble
-                )
-            send_func = msgble.send
-        elif isinstance(msgble, discord.TextChannel):
+        else:
             if ctx is None:
                 ctx = LayoutContext(
                     channel=msgble
                 )
             send_func = msgble.send
-        else:
-            raise TypeError(f'Invalid messageable type {type(msgble)}')
 
         if repls is None:
             repls = {} 

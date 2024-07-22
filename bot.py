@@ -106,7 +106,7 @@ class LunaBot(commands.Bot):
         self.future_tasks[task_id] = task
         task.start()
 
-    async def get_cd(self, action, user, duration, *, update=True) -> Optional[datetime]:
+    async def user_cooldown_end(self, action, user, duration, *, update=True) -> Optional[datetime]:
         query = 'SELECT end_time FROM cooldowns WHERE action = $1 AND user_id = $2 ORDER BY end_time DESC'
         row = await self.db.fetchrow(query, action, user.id)
         if row is None or row['end_time'] < discord.utils.utcnow():

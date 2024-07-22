@@ -39,6 +39,7 @@ class Confess(commands.Cog):
     
     @commands.hybrid_command()
     async def confess(self, ctx, *, confession: str):
+        """Confess something anonymously."""
         if ctx.interaction is None:
             await ctx.message.delete()
         

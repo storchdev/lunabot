@@ -14,4 +14,3 @@ def staff_only():
         staff_role = ctx.guild.get_role(ctx.bot.vars.get('staff-role-id'))
         return staff_role in ctx.author.roles
     return commands.check(predicate)
-
