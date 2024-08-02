@@ -149,7 +149,7 @@ class CodeResponderAPI:
             embed = await self.toEmbed(embed)
         elif not isinstance(embed, discord.Embed):
             embed = await self.toEmbed(str(embed))
-        return Layout.fill_embed_one(embed, var, repl)
+        return Layout.fill_embed(embed, {var: repl}, special=False)
 
     async def fillText(self, string, var, repl):
         if not isinstance(string, str):
@@ -435,7 +435,7 @@ class CodeResponders(commands.Cog):
             await ctx.send("No coderesponder with this name exists.")
             return 
 
-        self.lookup.remove(name)
+        self.lookup.pop(name)
         for i in range(len(self.code_responders)):
             if self.code_responders[i].name == name:
                 del self.code_responders[i]

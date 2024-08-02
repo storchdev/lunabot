@@ -26,7 +26,7 @@ class LayoutContext:
         self.message = message
 
 
-_REPLS = {
+SPECIAL_REPLS = {
     'membercount': lambda ctx: ctx.guild.member_count,
     'mention': lambda ctx: ctx.author.mention,
     'username': lambda ctx: ctx.author.name,
@@ -52,47 +52,90 @@ class Layout:
     def __bool__(self):
         return bool(self.content) or bool(self.embed_names)
 
-    @staticmethod
-    def fill_text_one(text, key, value):
-        return text.replace('{' + key + '}', str(value))
+    # @staticmethod
+    # def fill_text_one(text, key, value):
+    #     return text.replace('{' + key + '}', str(value))
     
-    @staticmethod 
-    def fill_embed_one(embed, key, value):
-        embed = embed.copy()
-        for field in embed.fields:
-            field.name = Layout.fill_text_one(field.name, key, value)
-            field.value = Layout.fill_text_one(field.value, key, value)
+    # @staticmethod 
+    # def fill_embed_one(embed, key, value):
+    #     embed = embed.copy()
+    #     for field in embed.fields:
+    #         field.name = Layout.fill_text_one(field.name, key, value)
+    #         field.value = Layout.fill_text_one(field.value, key, value)
         
-        if embed.title: embed.title = Layout.fill_text_one(embed.title, key, value)
-        if embed.footer: embed.set_footer(text=Layout.fill_text_one(embed.footer.text, key, value))
-        if embed.author: embed.author.name = Layout.fill_text_one(embed.author.name, key, value)
-        if embed.description: embed.description = Layout.fill_text_one(embed.description, key, value)
+    #     if embed.title: embed.title = Layout.fill_text_one(embed.title, key, value)
+    #     if embed.footer: embed.set_footer(text=Layout.fill_text_one(embed.footer.text, key, value))
+    #     if embed.author: embed.author.name = Layout.fill_text_one(embed.author.name, key, value)
+    #     if embed.description: embed.description = Layout.fill_text_one(embed.description, key, value)
         
-        return embed
+    #     return embed
 
     @staticmethod 
-    def fill_text(ctx, text, **kwargs):
-        toreplace = re.findall(r'{(.*?)}', text)
-        for match in toreplace:
-            if match in _REPLS:
-                text = Layout.fill_text_one(text, match, _REPLS[match](ctx))
-        
-        for key, value in kwargs.items():
-            text = Layout.fill_text_one(text, key, value)
+    def fill_text(text: str, repls: dict, *, ctx=None, special=True):
 
+        if special and ctx is None:
+            raise ValueError('Context is required for special replacements!')
+
+        def replace_special(match):
+            inside = match.group(1) 
+            if inside in SPECIAL_REPLS:
+                return str(SPECIAL_REPLS[inside](ctx))
+            return f'{{{inside}}}' 
+        
+        def replace_single(match):
+            inside = match.group(1)
+            if inside in repls and not isinstance(repls[inside], list):
+                return str(repls[inside])
+            return f'{{{inside}}}' 
+
+        if special:
+            text = re.sub(r'{(.*?)}', replace_special, text) 
+        text = re.sub(r'{(.*?)}', replace_single, text) 
+        
+        def replace_repeating(match):
+            # example syntax: hi my name is {name}. i like [playing {sports} with {friend} |and|].
+            # sports is a list and friend is a string.
+            inside = match.group(1)
+            delimiter = match.group(2)
+            delimiter = re.sub(r'(enter|return|newline|\\n)', '\n', delimiter, re.IGNORECASE)
+            keys = re.findall(r'{(.*?)}', inside)
+
+            n = None    
+            for key in keys:
+                value = repls.get(key)
+                if value is None:
+                    continue
+
+                if n is None:
+                    n = len(value)
+                elif len(value) != n:
+                    raise ValueError(f'List {key} has different length than other lists!')
+
+            blocks = []
+            for i in range(n):
+                ith_repls = {}
+                for key in keys:
+                    value = repls.get(key)
+                    ith_repls[key] = value[i]
+
+                blocks.append(Layout.fill_text(inside, ith_repls, ctx=ctx, special=special))
+            
+            return delimiter.join(blocks)
+
+        text = re.sub(r'\[(.*?)\s?\|((?:[^|\\]|\\.)*)\|\s?\]', replace_repeating, text, flags=re.DOTALL)
         return text
 
     @staticmethod
-    def fill_embed(ctx, _embed, **kwargs):
+    def fill_embed(_embed, repls: dict, *, ctx=None, special=True):
         embed = _embed.copy()
         for field in embed.fields:
-            field.name = Layout.fill_text(ctx, field.name, **kwargs)
-            field.value = Layout.fill_text(ctx, field.value, **kwargs)
+            field.name = Layout.fill_text(field.name, repls, ctx=ctx, special=special)
+            field.value = Layout.fill_text(field.value, repls, ctx=ctx, special=special)
 
-        if embed.title: embed.title = Layout.fill_text(ctx, embed.title, **kwargs)
-        if embed.footer: embed.set_footer(text=Layout.fill_text(ctx, embed.footer.text, **kwargs))
-        if embed.author: embed.author.name = Layout.fill_text(ctx, embed.author.name, **kwargs)
-        if embed.description: embed.description = Layout.fill_text(ctx, embed.description, **kwargs)
+        if embed.title: embed.title = Layout.fill_text(embed.title, repls, ctx=ctx, special=special)
+        if embed.footer: embed.set_footer(text=Layout.fill_text(embed.footer.text, repls, ctx=ctx, special=special))
+        if embed.author: embed.author.name = Layout.fill_text(embed.author.name, repls, ctx=ctx, special=special)
+        if embed.description: embed.description = Layout.fill_text(embed.description, repls, ctx=ctx, special=special)
 
         return embed
 
@@ -118,7 +161,7 @@ class Layout:
     def to_json(self, *, indent=4):
         return json.dumps(self.to_dict(), indent=indent)
     
-    async def send(self, msgble: discord.abc.Messageable, ctx: Optional[Union[commands.Context, LayoutContext]] = None, *, repls: Optional[dict] = None, **kwargs) -> Optional[discord.Message]:
+    async def send(self, msgble: discord.abc.Messageable, ctx: Optional[Union[commands.Context, LayoutContext]] = None, *, repls: Optional[dict] = None, special: Optional[bool] = True, **kwargs) -> Optional[discord.Message]:
         if isinstance(msgble, discord.Message):
             if ctx is None:
                 ctx = LayoutContext(
@@ -153,13 +196,13 @@ class Layout:
             repls = {} 
 
         if self.content:
-            content = self.fill_text(ctx, self.content, **repls)
+            content = self.fill_text(self.content, repls, ctx=ctx, special=special)
         else:
             content = None 
         
         embeds = []
         for embed in self.embeds:
-            embeds.append(self.fill_embed(ctx, embed, **repls))
+            embeds.append(self.fill_embed(embed, repls, ctx=ctx, special=special))
 
         if not isinstance(msgble, discord.Interaction):
             cleaned_kwargs = {'mention_author': kwargs.get('mention_author', False), 

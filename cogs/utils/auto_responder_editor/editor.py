@@ -264,9 +264,9 @@ class SendMessageEditor(View):
         self.reply = False 
         self.ping_on_reply = True 
         self.delete_after = None 
+        super().__init__(timeout=timeout, parent_view=parent_view)
         self.layout = Layout(self.bot)
 
-        super().__init__(timeout=timeout, parent_view=parent_view)
         self.type = 'SendMessageEditor'
         self.clear_items()
         self.add_items()
@@ -475,7 +475,6 @@ class AddReactionView(View):
 class RestrictionsView(View):
     def __init__(self, parent_view: AutoResponderEditor, *, timeout: float = 600):
         self.setting = None
-        self.restrictions = {}
         super().__init__(timeout=timeout, parent_view=parent_view)
         self.clear_items()
         self.add_items()
@@ -485,11 +484,11 @@ class RestrictionsView(View):
 
         if self.setting:
             if self.setting.endswith('channels'):
-                self.add_item(ChannelSelect(self))
+                self.add_item(ChannelSelect())
             elif self.setting.endswith('roles'):
-                self.add_item(RoleSelect(self))
+                self.add_item(RoleSelect())
             elif self.setting.endswith('users'):
-                self.add_item(UserSelect(self))
+                self.add_item(UserSelect())
 
         self.add_item(self.cancel)
 
@@ -514,32 +513,26 @@ class RestrictionsView(View):
 
 
 class UserSelect(ui.UserSelect):
-    def __init__(self, parent_view: RestrictionsView):
-        self.parent_view = parent_view
+    def __init__(self):
         super().__init__(max_values=25)
 
     async def callback(self, interaction: discord.Interaction):
-        self.original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
-        self.original_view.update()
-        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
+        self.view.parent_view.restrictions[self.view.setting] = [obj.id for obj in self.values]
+        await interaction.response.edit_message(view=self.view.parent_view, embed=self.view.original_view.embed)
     
+class RoleSelect(ui.RoleSelect):
+    def __init__(self):
+        super().__init__(max_values=25)
+
+    async def callback(self, interaction: discord.Interaction):
+        self.view.parent_view.restrictions[self.view.setting] = [obj.id for obj in self.values]
+        await interaction.response.edit_message(view=self.view.parent_view, embed=self.view.original_view.embed)
 
 class ChannelSelect(ui.ChannelSelect):
-    def __init__(self, parent_view: RestrictionsView):
-        self.parent_view = parent_view
+    def __init__(self):
         super().__init__(max_values=25)
 
     async def callback(self, interaction: discord.Interaction):
-        self.original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
-        self.original_view.update()
-        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
-
-class RoleSelect(ui.RoleSelect):
-    def __init__(self, parent_view: RestrictionsView):
-        self.parent_view = parent_view
-        super().__init__(max_values=25)
-
-    async def callback(self, interaction: discord.Interaction):
-        self.original_view.restrictions[self.parent_view.setting] = [obj.id for obj in self.values]
-        self.original_view.update()
-        await interaction.response.edit_message(view=self.original_view, embed=self.original_view.embed)
+        self.view.parent_view.restrictions[self.view.setting] = [obj.id for obj in self.values]
+        await interaction.response.edit_message(view=self.view.parent_view, embed=self.view.original_view.embed)
+       

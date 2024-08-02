@@ -5,12 +5,33 @@ import json
 from io import BytesIO, StringIO
 from discord import ui 
 from discord.utils import escape_markdown
-from .utils import EmbedEditor
+from .utils import EmbedEditor, View
 import discord 
 from typing import Optional, Literal
 import importlib 
 import aiohttp 
+import dateparser
 
+
+class DTStyleButton(discord.ui.Button): 
+    
+    def __init__(self, label):
+        super().__init__(label=label)
+
+    async def callback(self, interaction: discord.Interaction):
+        md = self.view.mds[int(self.label)-1]
+        await interaction.response.edit_message(content=md, view=None)
+        self.view.stop()
+
+class DTStyleChooser(View):
+
+    def __init__(self, ctx, mds):
+        super().__init__(bot=ctx.bot, owner=ctx.author)
+        self.mds = mds
+
+        for i in range(len(mds)):
+            self.add_item(DTStyleButton(str(i+1)))
+    
 
 class StickerFlags(commands.FlagConverter):
     name: str
@@ -212,6 +233,21 @@ class Tools(commands.Cog, description='storchs tools'):
                 ret += 1
 
         await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
+
+    @commands.command()
+    async def timethingy(self, ctx, *, date_str=None):
+        if date_str is None:
+            dt = discord.utils.utcnow()
+        else:
+            dt = await asyncio.to_thread(dateparser.parse, date_str, settings={'TIMEZONE': 'US/Central', 'RETURN_AS_TIMEZONE_AWARE': True})
+            if dt is None:
+                await ctx.send('Invalid date string.')
+                return
+        styles = 'tTdDfFR'
+        mds = [discord.utils.format_dt(dt, s) for s in styles]
+        content = '\n'.join(f'**{i}** - {md}' for i, md in enumerate(mds, 1))
+        view = DTStyleChooser(ctx, mds)
+        view.message = await ctx.send(content, view=view)
 
 
 async def setup(bot):

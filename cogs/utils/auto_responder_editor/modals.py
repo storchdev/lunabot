@@ -100,9 +100,9 @@ class CreateLayoutModal(SendMessageEditorBaseModal, title='Enter Message Fields'
         if self.content.value is None and self.embed_names.value is None:
             raise InvalidModalField('You must enter text or an embed name!')
         names = []
-        if self.embed_names.value is not None:
+        if self.embed_names.value: 
             for name in self.embed_names.value.split('\n'):
-                name = name.lower()
+                name = name.lower().strip()
                 if name not in self.parent_view.bot.embeds:
                     raise InvalidModalField(f'Embed {name} does not exist!')
                 names.append(name)
@@ -117,7 +117,7 @@ class ChooseLayoutModal(SendMessageEditorBaseModal, title='Enter Layout'):
         self.parent_view = parent_view 
 
     def update_parent(self):
-        name = self.layout_name.value.lower()
+        name = self.layout_name.value.lower().strip()
         if name not in self.parent_view.bot.layouts:
             raise InvalidModalField(f'Layout {name} does not exist!')
         

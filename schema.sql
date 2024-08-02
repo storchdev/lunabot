@@ -115,3 +115,24 @@ CREATE TABLE IF NOT EXISTS queues (
   name TEXT UNIQUE,
   items JSONB
 );
+
+CREATE TABLE IF NOT EXISTS balances (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT UNIQUE,
+  balance INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS user_items (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  item_id BIGINT,
+  amount INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS shop_items (
+  id SERIAL PRIMARY KEY,
+  name TEXT UNIQUE,
+  common_name TEXT,
+  price INTEGER,
+  description TEXT
+);

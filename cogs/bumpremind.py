@@ -3,11 +3,29 @@ import discord
 from datetime import datetime, timedelta
 import logging 
 from .utils import LayoutContext
+from zoneinfo import ZoneInfo
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from bot import LunaBot
 
+
+def is_luna_available():
+    # check if it's between 1pm and 3am US/Central 
+    central = ZoneInfo('US/Central')
+    now = datetime.now(central)
+    return now.hour >= 13 or now.hour < 3
+
+def is_storch_available():
+    tz = ZoneInfo('Asia/Shanghai')
+    now = datetime.now(tz)
+    return now.hour >= 7 
+
+
+SCHEDULE_CHECKS = [
+    (718475543061987329, is_storch_available),
+    (496225545529327616, is_luna_available),
+]
 
 class BumpRemind(commands.Cog):
 
@@ -27,8 +45,11 @@ class BumpRemind(commands.Cog):
     async def send(self, user_id):
         channel = self.bot.get_channel(self.bot.vars.get('bot-channel-id'))
         layout = self.bot.get_layout('bumpremind')
-        ctx = LayoutContext(author=channel.guild.get_member(user_id))
-        await layout.send(channel, ctx)
+
+        mentions = [f'<@{user_id}>' for user_id, check in SCHEDULE_CHECKS if check()]
+        mentions = 'ㆍ'.join(mentions)
+        # ctx = LayoutContext(repls={'mentions': mentions})
+        await layout.send(channel, repls={'mentions': mentions})
         query = 'DELETE FROM bump_remind'
         await self.bot.db.execute(query)
 

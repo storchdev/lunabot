@@ -14,7 +14,7 @@ THRESHOLD = 3
 ART_HOF_EMOTE = '<a:LC_star_jump_spin:1147776861154316328>'
 
 
-class ArtHof(commands.Cog):
+class Art(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot 
@@ -26,22 +26,34 @@ class ArtHof(commands.Cog):
                 embed.set_image(url=a.url)
                 break
 
-        embed = Layout.fill_embed_one(embed, 'mention', message.author.mention)
-        embed = Layout.fill_embed_one(embed, 'messagelink', message.jump_url)
-        embed = Layout.fill_embed_one(embed, 'text', message.content)
-        embed = Layout.fill_embed_one(embed, 'stars', stars)
+        embed = Layout.fill_embed(embed, {
+            'mention': message.author.mention,
+            'messagelink': message.jump_url,
+            'text': message.content,
+            'stars': stars
+        }, special=False)
         return embed 
 
     @commands.Cog.listener()
     async def on_message(self, msg):
-        if msg.channel.id not in ART_CHANNEL_IDS:
-            return
         if msg.author.bot:
             return
-        await msg.add_reaction(ART_HOF_EMOTE)
-        await msg.add_reaction("<a:ML_sparkles:899826759313293432>")
-        await msg.add_reaction("<a:LC_lilac_heart_NF2U_DNS:1046191564055138365>")
-        await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
+        if msg.channel.id in ART_CHANNEL_IDS:
+            await msg.add_reaction(ART_HOF_EMOTE)
+            await msg.add_reaction("<a:ML_sparkles:899826759313293432>")
+            await msg.add_reaction("<a:LC_lilac_heart_NF2U_DNS:1046191564055138365>")
+            await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
+        
+        elif msg.channel.id == self.bot.vars.get('fanart-channel-id'):
+            emotes = [
+                "<a:LC_lilac_heart_NF2U_DNS:1046191564055138365>",
+                "<a:ML_sparkles:899826759313293432>",
+                "<a:ML_kiss:923327145164546108>",
+            ]
+            for emote in emotes:
+                await msg.add_reaction(emote)
+            await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
+
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -116,4 +128,4 @@ class ArtHof(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(ArtHof(bot))
+    await bot.add_cog(Art(bot))
