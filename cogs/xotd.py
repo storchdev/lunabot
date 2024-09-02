@@ -10,6 +10,7 @@ from .utils import SimplePages
 from .utils import next_day
 from typing import TYPE_CHECKING
 from asyncspotify import Client, ClientCredentialsFlow
+from .utils import user_cd_except_staff
 
 
 if TYPE_CHECKING:
@@ -100,12 +101,13 @@ class XoTD(commands.Cog):
         await discord.utils.sleep_until(next_day())
 
     @commands.hybrid_command(name='add-qotd')
+    @user_cd_except_staff(86400)
     async def add_qotd(self, ctx, *, question: str):
         """Adds a question to the queue to be posted as the QoTD."""
-        end_time = await self.bot.user_cooldown_end('qotd', ctx.author, 86400)
-        if end_time:
-            await ctx.send(f'You are on cooldown for adding questions. Try again {discord.utils.format_dt(end_time, "R")}.', ephemeral=True)
-            return 
+        # end_time = await self.bot.get_cooldown_end('qotd', 86400, obj=ctx.author)
+        # if end_time:
+        #     await ctx.send(f'You are on cooldown for adding questions. Try again {discord.utils.format_dt(end_time, "R")}.', ephemeral=True)
+        #     return 
 
         self.questions.append({'question': question, 'author_id': ctx.author.id})
         await self.bot.db.execute('UPDATE queues SET items = $1 WHERE name = $2', json.dumps(self.questions), 'qotd')
@@ -116,9 +118,10 @@ class XoTD(commands.Cog):
         await channel.send(f'A new question was added to the queue!\n\nQ: {question}\nUser: ||{ctx.author.mention}||')
 
     @commands.hybrid_command(name='add-sotd')
+    @user_cd_except_staff(86400)
     async def add_sotd(self, ctx, *, spotify_url: str):
         """Adds a song to the queue to be posted as the SoTD."""
-        end_time = await self.bot.user_cooldown_end('sotd', ctx.author, 86400)
+        end_time = await self.bot.get_cooldown_end('sotd', 86400, obj=ctx.author)
         if end_time:
             await ctx.send(f'You are on cooldown for adding songs. Try again {discord.utils.format_dt(end_time, "R")}.', ephemeral=True)
             return 

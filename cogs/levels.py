@@ -2,7 +2,7 @@ from discord.ext import commands, tasks
 from zoneinfo import ZoneInfo
 import json 
 from num2words import num2words
-from .utils import generate_rank_card, SimplePages
+from .utils import generate_rank_card, SimplePages, Layout, LayoutContext
 from io import BytesIO
 import time
 import random
@@ -39,24 +39,16 @@ class Levels(commands.Cog):
             75: 923096798078324756,
             100: 923096803958747187
         }
-        self.blacklisted_channels = [
-            899112780840468561,
-            1093318315792945243,
-            899119063496785950,
-            899119100536705084,
-            1023276761087234098,
-            1073847932828258384,
-            964728745451728946,
-            933877494598225930,
-            1096583202254110761,
-            1104219541992648764,
-            1104219647663931453,
-            1106805421630574612,
-            1106805666997358623,
-            1106805702619578518 ,
-            1106819476093149274,
-            899513989061554257,
-            901687732819091487,
+        self.whitelisted_channels = [
+            899108709903532032,
+            1202778473471680512,
+            1191555710291554395,
+            1191555765241131059,
+            1191558551127199784,
+            1191558039636025485,
+            1191979119173447841,
+            1191558432713625812,
+            1193061987240910898,
         ]
         self.xp_multipliers = {
             913086743035658292: 1.2,
@@ -125,28 +117,28 @@ class Levels(commands.Cog):
         for row in rows:
             self.msg_counts[row['user_id']] = row['count']
 
-    async def dump_xp(self):
-        for user_id, total_xp in self.xp_cache.items():
-            query = '''INSERT INTO xp (user_id, "total_xp") 
-                        VALUES ($1, $2)
-                        ON CONFLICT (user_id)
-                        DO UPDATE SET total_xp = $2
-                    '''
-            await self.bot.db.execute(query, user_id, total_xp) 
+    # async def dump_xp(self):
+    #     for user_id, total_xp in self.xp_cache.items():
+    #         query = '''INSERT INTO xp (user_id, "total_xp") 
+    #                     VALUES ($1, $2)
+    #                     ON CONFLICT (user_id)
+    #                     DO UPDATE SET total_xp = $2
+    #                 '''
+    #         await self.bot.db.execute(query, user_id, total_xp) 
         
-    async def dump_msg_counts(self):
-        for user_id, count in self.msg_counts.items():
-            query = '''INSERT INTO msg_count (user_id, count) 
-                        VALUES ($1, $2)
-                        ON CONFLICT (user_id)
-                        DO UPDATE SET count = $2
-                    '''
-            await self.bot.db.execute(query, user_id, count)
+    # async def dump_msg_counts(self):
+    #     for user_id, count in self.msg_counts.items():
+    #         query = '''INSERT INTO msg_count (user_id, count) 
+    #                     VALUES ($1, $2)
+    #                     ON CONFLICT (user_id)
+    #                     DO UPDATE SET count = $2
+    #                 '''
+    #         await self.bot.db.execute(query, user_id, count)
 
     async def cog_unload(self):
         self.weekly_xp_task.cancel()
-        await self.dump_xp()
-        await self.dump_msg_counts()
+        # await self.dump_xp()
+        # await self.dump_msg_counts()
     
     async def freeze_lb(self):
         await self.bot.db.execute('DROP TABLE IF EXISTS xp_copy')
@@ -173,12 +165,15 @@ class Levels(commands.Cog):
                     await message.author.remove_roles(role)
 
         if old_level != new_level:
-            # TODO: make this a layout
-            embed = discord.Embed(title='❀ㆍㆍLevel Up﹗⁺ ₍ <a:LC_lilac_heart_NF2U_DNS:1046191564055138365> ₎', color=0xcab7ff)
-            embed.description = f'> ♡﹒﹒**Psst!** Tysm for being active here with us, you are now level {new_level}. Keep sending messages to gain more levels, which can gain you some **epic perks**. Tired of receiving these level up messages?? Go [here](https://discord.com/channels/899108709450543115/1106225161562230925) to remove access to this channel; just react to that message again to regain access. <a:LC_star_burst:1147790893064142989> ✿❀'
-            embed.set_footer(text='⁺﹒Type ".myperks" to view our full list of available perks, including perks for our active members﹒⁺')
-            channel = self.bot.get_channel(1137942143562940436)
-            await channel.send(f'⁺﹒{message.author.mention}﹗𖹭﹒⁺', embed=embed)
+            # embed = discord.Embed(title='❀ㆍㆍLevel Up﹗⁺ ₍ <a:LC_lilac_heart_NF2U_DNS:1046191564055138365> ₎', color=0xcab7ff)
+            # embed.description = f'> ♡﹒﹒**Psst!** Tysm for being active here with us, you are now level {new_level}. Keep sending messages to gain more levels, which can gain you some **epic perks**. Tired of receiving these level up messages?? Go [here](https://discord.com/channels/899108709450543115/1106225161562230925) to remove access to this channel; just react to that message again to regain access. <a:LC_star_burst:1147790893064142989> ✿❀'
+            # embed.set_footer(text='⁺﹒Type ".myperks" to view our full list of available perks, including perks for our active members﹒⁺')
+            # channel = self.bot.get_channel(1137942143562940436)
+            # await channel.send(f'⁺﹒{message.author.mention}﹗𖹭﹒⁺', embed=embed)
+            channel = self.bot.get_var_channel('levelup')
+            layout = self.bot.get_layout('levelup')
+            ctx = LayoutContext(author=message.author) 
+            await layout.send(channel, ctx, repls={'level': new_level})
 
         self.xp_cooldowns[message.author.id] = time.time() + 15
 
@@ -201,42 +196,44 @@ class Levels(commands.Cog):
         if message.guild.id != self.main_guild_id:
             return 
 
-        if message.channel.id not in self.blacklisted_channels and not message.author.bot:
-            self.msg_counts[message.author.id] = self.msg_counts.get(message.author.id, 0) + 1
-            count = self.msg_counts[message.author.id]
+        if message.channel.id not in self.whitelisted_channels or message.author.bot:
+            return 
 
-            query = '''INSERT INTO msg_count (user_id, count) 
+        self.msg_counts[message.author.id] = self.msg_counts.get(message.author.id, 0) + 1
+        count = self.msg_counts[message.author.id]
+
+        query = '''INSERT INTO msg_count (user_id, count) 
+                    VALUES ($1, $2)
+                    ON CONFLICT (user_id)
+                    DO UPDATE SET count = $2
+                '''
+        await self.bot.db.execute(query, message.author.id, count)
+
+        if message.author.id not in self.xp_cooldowns or self.xp_cooldowns[message.author.id] < time.time():
+            authorroles = [role.id for role in message.author.roles]
+            increment = random.randint(20, 25)
+            for role_id, multi in self.xp_multipliers.items():
+                if role_id in authorroles:
+                    increment *= multi 
+            increment = round(increment)
+            old = self.xp_cache.get(message.author.id)
+            if old is None:
+                self.xp_cache[message.author.id] = increment 
+                new = increment
+                old = 0
+            else:
+                self.xp_cache[message.author.id] += increment
+                new = old + increment 
+
+            query = '''INSERT INTO xp (user_id, "total_xp") 
                         VALUES ($1, $2)
                         ON CONFLICT (user_id)
-                        DO UPDATE SET count = $2
+                        DO UPDATE SET total_xp = $2
                     '''
-            await self.bot.db.execute(query, message.author.id, count)
+            await self.bot.db.execute(query, message.author.id, new) 
 
-            if message.author.id not in self.xp_cooldowns or self.xp_cooldowns[message.author.id] < time.time():
-                authorroles = [role.id for role in message.author.roles]
-                increment = random.randint(20, 25)
-                for role_id, multi in self.xp_multipliers.items():
-                    if role_id in authorroles:
-                        increment *= multi 
-                increment = round(increment)
-                old = self.xp_cache.get(message.author.id)
-                if old is None:
-                    self.xp_cache[message.author.id] = increment 
-                    new = increment
-                    old = 0
-                else:
-                    self.xp_cache[message.author.id] += increment
-                    new = old + increment 
-
-                query = '''INSERT INTO xp (user_id, "total_xp") 
-                            VALUES ($1, $2)
-                            ON CONFLICT (user_id)
-                            DO UPDATE SET total_xp = $2
-                        '''
-                await self.bot.db.execute(query, message.author.id, new) 
-
-                new_level, old_level = get_level(new), get_level(old)
-                await self.add_leveled_roles(message, old_level, new_level, authorroles)
+            new_level, old_level = get_level(new), get_level(old)
+            await self.add_leveled_roles(message, old_level, new_level, authorroles)
 
     @commands.hybrid_command(name='rank')
     async def _rank(self, ctx, *, member: discord.Member = None):
@@ -251,7 +248,8 @@ class Levels(commands.Cog):
                 self.xp_cache[ctx.author.id] = 0
                 xp = 0
 
-            rank = len([v for v in self.xp_cache.values() if v > xp]) + 1
+            xps_no_luna = [v for k, v in self.xp_cache.items() if k != self.bot.vars.get('luna-id')] 
+            rank = len([v for v in xps_no_luna if v > xp]) + 1
             mx = xp
             current_level = get_level(mx)
 
@@ -262,28 +260,35 @@ class Levels(commands.Cog):
             av_file = BytesIO()
             await m.display_avatar.with_format('png').save(av_file)
 
-            t1 = time.perf_counter()
             file = await self.bot.loop.run_in_executor(None, generate_rank_card, current_level, av_file, pc)
-            t2 = time.perf_counter()
 
-            # TODO: make this a layout
-            embed = discord.Embed(title='❀ㆍㆍYour Rank﹗⁺ ₍ <a:LCD_flower_spin:1147757953064128512> ₎', color=0xcab7ff)
-            embed.description = (f'''
-> ⁺ <a:Lumi_arrow_R:927733713163403344>﹒__Rank__ :: {num2words(rank, to='ordinal_num')}﹒⁺
-> ⁺ <a:Lumi_arrow_R:927733713163403344>﹒__XP__ :: {xp}﹒⁺
-> ⁺ <a:Lumi_arrow_R:927733713163403344>﹒__Needed XP__ :: {full - mx}﹒⁺
-            ''')
-            embed.set_footer(text='⁺﹒Type ".myperks" to view our full list of available perks, including perks for our active members﹒⁺')
+            layout = self.bot.get_layout('rankcommand')
+            embed = layout.embeds[0].copy()
             embed.set_image(url='attachment://rank.gif')
-            total = t2 - t1 
-            await ctx.send(f'Render time: `{round(total, 3)}s`', embed=embed, file=discord.File(fp=file, filename='rank.gif'))
+            embed = Layout.fill_embed(embed, {
+                'ordinal': num2words(rank, to='ordinal_num'),
+                'totalxp': xp,
+                'neededxp': full - mx
+            }, special=False)
+            await ctx.send(embed=embed, file=discord.File(fp=file, filename='rank.gif'))
+
+#             embed = discord.Embed(title='❀ㆍㆍYour Rank﹗⁺ ₍ <a:LCD_flower_spin:1147757953064128512> ₎', color=0xcab7ff)
+#             embed.description = (f'''
+# > ⁺ <a:Lumi_arrow_R:927733713163403344>﹒__Rank__ :: {num2words(rank, to='ordinal_num')}﹒⁺
+# > ⁺ <a:Lumi_arrow_R:927733713163403344>﹒__XP__ :: {xp}﹒⁺
+# > ⁺ <a:Lumi_arrow_R:927733713163403344>﹒__Needed XP__ :: {full - mx}﹒⁺
+#             ''')
+#             embed.set_footer(text='⁺﹒Type ".myperks" to view our full list of available perks, including perks for our active members﹒⁺')
+#             total = t2 - t1 
+#             await ctx.send(f'Render time: `{round(total, 3)}s`', embed=embed, file=discord.File(fp=file, filename='rank.gif'))
 
 
     @commands.command(aliases=['leaaderboard'])
     async def lb(self, ctx):
         """Shows the XP leaderboard."""
 
-        pairs = sorted(self.xp_cache.items(), key=lambda x: x[1], reverse=True)
+        pairs_no_luna = [pair for pair in self.xp_cache.items() if pair[0] != self.bot.vars.get('luna-id')]
+        pairs = sorted(pairs_no_luna, key=lambda x: x[1], reverse=True)
 
         i = 0
         while i < len(pairs):

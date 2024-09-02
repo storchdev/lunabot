@@ -6,7 +6,7 @@ import re
 from .utils.auto_responder_editor import AutoResponderEditor
 from typing import Literal, Optional, List, TYPE_CHECKING
 import asyncio 
-from .utils import Layout, Cooldown, SimplePages, AutoResponder, AutoResponderAction
+from .utils import Layout, Cooldown, SimplePages, AutoResponder, AutoResponderAction, LayoutContext
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -46,11 +46,11 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
             if ar.bl_channels and msg.channel.id in ar.bl_channels:
                 continue 
                 
-            if ar.cooldown:
-                bucket = ar.cooldown.get_bucket(msg)
-                retry_after = bucket.get_retry_after()
-                if retry_after:
-                    continue
+            # if ar.cooldown:
+            #     bucket = ar.cooldown.get_bucket(msg)
+            #     retry_after = bucket.get_retry_after()
+            #     if retry_after:
+            #         continue
 
             content = msg.content.lower()
 
@@ -84,10 +84,18 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
             return 
 
         ar = await self.ar_check(msg)
-        if ar:
-            for action in ar.actions:
-                await action.execute(msg)
-
+        if not ar:
+            return 
+        if ar.cooldown:
+            end_time = await self.bot.get_cooldown_end(f'autoresponder {ar.name}', ar.cooldown.per, rate=ar.cooldown.rate, obj=msg.author)
+            if end_time is not None: 
+                if ar.on_cooldown_layout_name:
+                    layout = self.bot.get_layout(ar.on_cooldown_layout_name)
+                    ctx = LayoutContext(message=msg)
+                    await layout.send(msg.channel, ctx, repls={'timestamp': int(end_time.timestamp())})
+                return
+        for action in ar.actions:
+            await action.execute(msg)
 
     @commands.hybrid_group(name='autoresponder', aliases=['ar'], invoke_without_command=True)
     @app_commands.default_permissions()
@@ -119,8 +127,9 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
                        actions,
                        restrictions, 
                        cooldown,
+                       on_cd_layout_name,
                        author_id
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7) 
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
                     ON CONFLICT (name) 
                     DO NOTHING
                 '''
@@ -131,6 +140,7 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
             editor.jsonify_actions(),
             editor.jsonify_restrictions(),
             editor.jsonify_cooldown(),
+            editor.on_cooldown_layout_name,
             ctx.author.id
         )
         ar = AutoResponder(
@@ -139,7 +149,8 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
             editor.detection, 
             editor.actions, 
             editor.restrictions, 
-            editor.cooldown
+            editor.cooldown,
+            editor.on_cooldown_layout_name
         )
 
         self.auto_responders.append(ar)
@@ -185,7 +196,8 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
                             detection = $3,
                             actions = $4,
                             restrictions = $5,
-                            cooldown = $6   
+                            cooldown = $6,
+                            on_cd_layout_name = $7
                     WHERE name = $1
                 '''
         await self.bot.db.execute(query,
@@ -194,7 +206,8 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
             editor.detection, 
             editor.jsonify_actions(),
             editor.jsonify_restrictions(),
-            editor.jsonify_cooldown()
+            editor.jsonify_cooldown(),
+            editor.on_cooldown_layout_name
         )
         ar = AutoResponder(
             name, 
@@ -202,7 +215,8 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
             editor.detection, 
             editor.actions, 
             editor.restrictions, 
-            editor.cooldown
+            editor.cooldown,
+            editor.on_cooldown_layout_name
         )
 
         old_ar = self.name_lookup.pop(name)

@@ -33,6 +33,7 @@ class View(discord.ui.View):
         if self.bot:
             self.bot.views.add(self)
 
+        self.message = None
         self.cancelled = True
         self.final_interaction = None
 
@@ -72,6 +73,10 @@ class View(discord.ui.View):
         async def on_timeout():
             if self.bot:
                 self.bot.views.discard(self)
+            
+            if self.message:
+                await self.message.edit(view=None)
+
             await original_on_timeout()
 
         return on_timeout
@@ -97,5 +102,5 @@ class Cooldown:
         return json.dumps({
             'rate': self.rate,
             'per': self.per,
-            'type': self.typestr
+            'bucket_type': self.typestr
         }, indent=4)

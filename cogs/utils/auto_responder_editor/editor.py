@@ -31,6 +31,7 @@ class AutoResponderEditor(View):
         self.actions = [] 
         self.restrictions = {}
         self.cooldown: Optional[Cooldown] = None
+        self.on_cooldown_layout_name = None
 
         if ar is not None:
             self.trigger = ar.trigger
@@ -38,6 +39,7 @@ class AutoResponderEditor(View):
             self.actions = ar.actions
             self.restrictions = ar.restrictions
             self.cooldown = ar.cooldown
+            self.on_cooldown_layout_name = ar.on_cooldown_layout_name
 
         self.message: discord.Message = None
         self.final_interaction: discord.Interaction = None
@@ -220,6 +222,7 @@ class AddActionView(View):
         discord.SelectOption(label='Remove Roles', value='remove_roles'),
         discord.SelectOption(label='Add Reactions', value='add_reactions'),
         discord.SelectOption(label='Delete Trigger', value='delete_trigger_message'),
+        discord.SelectOption(label='Edit Balance', value='edit_balance'),
         discord.SelectOption(label='Sleep', value='sleep'),
     ], row=0)
     async def set_action(self, interaction, select):
@@ -244,6 +247,8 @@ class AddActionView(View):
             self.parent_view.actions.append(AutoResponderAction(self.bot, 'delete_trigger_message'))
             self.parent_view.update() 
             await interaction.response.edit_message(view=self.parent_view, embed=self.parent_view.embed)
+        elif action_type == 'edit_balance':
+            await interaction.response.send_message('Not implemented yet!', ephemeral=True)
         elif action_type == 'sleep':
             modal = SleepModal(self)
             await interaction.response.send_modal(modal)

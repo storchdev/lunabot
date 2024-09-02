@@ -2,6 +2,7 @@ from discord.ext import commands
 import discord
 from .utils import staff_only
 from .utils import View, LayoutContext
+from datetime import datetime
 
 from typing import TYPE_CHECKING 
 
@@ -37,15 +38,15 @@ class Confess(commands.Cog):
     def __init__(self, bot):
         self.bot: 'LunaBot' = bot
     
-    @commands.hybrid_command()
+    @commands.hybrid_group()
     async def confess(self, ctx, *, confession: str):
         """Confess something anonymously."""
         if ctx.interaction is None:
             await ctx.message.delete()
         
         channel = self.bot.get_var_channel('confess')
-        query = 'INSERT INTO confessions (confession, user_id) VALUES ($1, $2) RETURNING id'
-        confession_id = await self.bot.db.fetchval(query, confession, ctx.author.id)
+        query = 'INSERT INTO confessions (confession, user_id, channel_id) VALUES ($1, $2, $3) RETURNING id'
+        confession_id = await self.bot.db.fetchval(query, confession, ctx.author.id, channel.id)
 
         layout = self.bot.get_layout('confess')
         repls = {
@@ -53,8 +54,43 @@ class Confess(commands.Cog):
             'message': confession
         }
         msg = await layout.send(channel, repls=repls)
+
+        query = 'UPDATE confessions SET message_id = $1 WHERE id = $2'
+        await self.bot.db.execute(query, msg.id, confession_id)
         await ctx.send(f'Confession sent! View it in {msg.jump_url}', ephemeral=True)
     
+    @confess.command(name='delete')
+    async def confess_delete(self, ctx, number: int):
+        """Delete a confession you made."""
+
+        query = 'SELECT channel_id, message_id FROM confessions WHERE id = $1 AND user_id = $2' 
+        row = await self.bot.db.fetchrow(query, number, ctx.author.id)
+        if row is None:
+            return await ctx.send('Confession not found.', ephemeral=True)
+        
+        # temporary fix
+        elif row['channel_id'] is None:
+            channel = self.bot.get_channel(933877494598225930)
+            found = False
+            after = datetime.fromtimestamp(1721754100)
+            before = datetime.fromtimestamp(1724893500)
+            async for msg in channel.history(after=after, before=before, limit=None): 
+                if msg.author.id == self.bot.user.id and msg.embeds and msg.embeds[0].description.startswith(f'> \u207a <a:ML_heart_point:917958056409706497>\ufe52**Confession #{number}'):
+                    await msg.delete()
+                    found = True
+                    break
+            if not found:
+                return await ctx.send('Confession message not found.', ephemeral=True)
+        
+        else:
+            channel = self.bot.get_channel(row['channel_id'])
+            msg = await channel.fetch_message(row['message_id'])
+            await msg.delete()
+
+        query = 'DELETE FROM confessions WHERE id = $1 AND user_id = $2'
+        await self.bot.db.execute(query, number, ctx.author.id)
+        await ctx.send('Confession deleted.', ephemeral=True)
+
     @commands.command()
     @staff_only()
     async def confesslog(self, ctx, number: int):

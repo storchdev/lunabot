@@ -39,7 +39,7 @@ class LunaBot(commands.Bot):
         # return
         self.add_check(guild_only)
         await self.load_extension("jishaku")
-        priority = ['cogs.db', 'cogs.vars']
+        priority = ['cogs.db', 'cogs.vars', 'cogs.tools']
         for cog in priority:
             await self.load_extension(cog)
             logging.info(f'Loaded cog {cog}')
@@ -106,19 +106,52 @@ class LunaBot(commands.Bot):
         self.future_tasks[task_id] = task
         task.start()
 
-    async def user_cooldown_end(self, action, user, duration, *, update=True) -> Optional[datetime]:
-        query = 'SELECT end_time FROM cooldowns WHERE action = $1 AND user_id = $2 ORDER BY end_time DESC'
-        row = await self.db.fetchrow(query, action, user.id)
-        if row is None or row['end_time'] < discord.utils.utcnow():
+    async def get_cooldown_end(self, action: str, duration: float, *, rate: int = 1, obj: Optional[Union[discord.Member, discord.TextChannel]] = None, update=True) -> Optional[datetime]:
+        if isinstance(obj, discord.Member):
+            bucket = 'user'
+        elif isinstance(obj, discord.TextChannel):
+            bucket = 'channel'
+        else:
+            bucket = 'global'
 
-            if update:
-                query = 'INSERT INTO cooldowns (action, user_id, end_time) VALUES ($1, $2, $3) ON CONFLICT (action, user_id) DO UPDATE SET end_time = $3'
-                end_time = discord.utils.utcnow() + timedelta(seconds=duration)
-                await self.db.execute(query, action, user.id, end_time)
+        if obj:
+            obj_id = obj.id
+        else:
+            obj_id = None
 
-            return None
 
-        return row['end_time'] 
+        # query = 'UPDATE cooldowns SET count = count + 1 WHERE action = $1 AND object_id = $2 AND bucket = $3 AND end_time > NOW() RETURNING end_time'
+        # row = await self.db.fetchrow(query, action, obj_id, bucket)
+        # if row is not None:
+        #     return row['end_time']
+            
+        query = 'SELECT count, end_time FROM cooldowns WHERE action = $1 AND object_id = $2 AND bucket = $3'
+        row = await self.db.fetchrow(query, action, obj_id, bucket)
+        time_ok = True 
+        count_ok = True
+
+        if row is not None:
+            time_ok = row['end_time'] < discord.utils.utcnow()
+            count_ok = row['count'] < rate
+
+            if not time_ok and not count_ok:
+                return row['end_time']
+
+            if not time_ok:
+                query = 'UPDATE cooldowns SET count = count + 1 WHERE action = $1 AND object_id = $2'
+                await self.db.execute(query, action, obj_id)
+
+        if update and time_ok:
+            query = """INSERT INTO cooldowns (action, object_id, bucket, end_time, count) 
+                       VALUES ($1, $2, $3, $4, 1) 
+                       ON CONFLICT (action, object_id)
+                       DO UPDATE SET end_time = $4, count = 1 
+                    """
+            end_time = discord.utils.utcnow() + timedelta(seconds=duration)
+            await self.db.execute(query, action, obj_id, bucket, end_time)
+        
+
+        return None
     
     def get_var_channel(self, name: str) -> discord.TextChannel:
         name = name + '-channel-id'

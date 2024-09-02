@@ -183,6 +183,7 @@ class CooldownModal(AutoResponderEditorBaseModal, title='Edit Cooldown'):
     bucket = ui.TextInput(label='Bucket (g=global, c=channel, u=user)', default='g', required=True)
     per = ui.TextInput(label='Duration of cooldown', required=True)
     rate = ui.TextInput(label='Number of uses per duration', default='1', required=True)
+    layout = ui.TextInput(label='Layout to send when on cooldown', required=False)
 
     def __init__(self, parent_view: 'AutoResponderEditor'):
         super().__init__(parent_view)
@@ -201,6 +202,8 @@ class CooldownModal(AutoResponderEditorBaseModal, title='Edit Cooldown'):
         
         self.per.default = str(self.parent_view.cooldown.per)
         self.rate.default = str(self.parent_view.cooldown.rate)
+        
+        self.layout.default = self.parent_view.on_cooldown_layout_name
 
     def update_parent(self): 
         
@@ -225,3 +228,9 @@ class CooldownModal(AutoResponderEditorBaseModal, title='Edit Cooldown'):
             raise InvalidModalField('Bucket must be g, c, or u!')
 
         self.parent_view.cooldown = utils.Cooldown(rate, per, bucket)
+
+        layout_name = str(self.layout)
+        if layout_name:
+            self.parent_view.on_cooldown_layout_name = layout_name
+        else:
+            self.parent_view.on_cooldown_layout_name = None

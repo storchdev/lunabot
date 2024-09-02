@@ -1,4 +1,5 @@
 from typing import Optional 
+import random
 import discord 
 from discord.ext import commands
 import discord 
@@ -80,6 +81,15 @@ class AutoResponderAction:
         
         if status:
             await msg.channel.send('\n'.join(status))
+    
+    async def edit_balance(self, msg: discord.Message):
+        if self.kwargs['random']:
+            amount = random.randint(self.kwargs['min'], self.kwargs['max'])
+        else:
+            amount = self.kwargs['amount']
+        
+        query = 'UPDATE balances SET balance = balance + $1 WHERE user_id = $2'
+        await self.bot.db.execute(query, amount, msg.author.id)
 
     async def execute(self, msg: discord.Message):
         if self.type == 'send_message':
@@ -94,10 +104,12 @@ class AutoResponderAction:
             await self.add_reactions(msg)
         elif self.type == 'sleep':
             await asyncio.sleep(self.kwargs['duration'])
+        elif self.type == 'edit_balance':
+            await self.edit_balance(msg)
 
 
 class AutoResponder:
-    def __init__(self, name, trigger: str, detection: str, actions: List[AutoResponderAction], restrictions: dict, cooldown: Optional[Cooldown] = None):
+    def __init__(self, name: str, trigger: str, detection: str, actions: List[AutoResponderAction], restrictions: dict, cooldown: Optional[Cooldown] = None, on_cooldown_layout_name: Optional[str] = None):
         self.name = name
         self.trigger = trigger 
         self.detection = detection 
@@ -112,12 +124,14 @@ class AutoResponder:
         self.bl_channels = restrictions.get('blacklisted_channels', [])
 
         #TODO: use db for cooldown once an api is available
-        if cooldown:
-            self.cooldown = commands.CooldownMapping.from_cooldown(
-                cooldown.rate, cooldown.per, cooldown.type
-            )
-        else:
-            self.cooldown = None
+        # if cooldown:
+        #     self.cooldown = commands.CooldownMapping.from_cooldown(
+        #         cooldown.rate, cooldown.per, cooldown.type
+        #     )
+        # else:
+        #     self.cooldown = None
+        self.cooldown = cooldown
+        self.on_cooldown_layout_name = on_cooldown_layout_name
 
     @classmethod 
     def from_db_row(cls, bot, row):
@@ -141,7 +155,8 @@ class AutoResponder:
             row['detection'],
             actions,
             json.loads(row['restrictions']),
-            cooldown
+            cooldown,
+            row['on_cd_layout_name']
         )
 
     def __eq__(self, other):

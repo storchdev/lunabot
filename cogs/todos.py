@@ -300,6 +300,14 @@ class TodoCog(commands.Cog, name='Todos'):
             await ctx.send(f'Todo "{name}" not found')
             return 
 
+        # Update priorities of todos with lower priority
+
+        await self.bot.db.execute('''
+            UPDATE todos
+            SET priority = priority - 1
+            WHERE priority > $1
+        ''', todo.priority)
+
         await self.bot.db.execute('DELETE FROM todos WHERE id = $1', todo.id)
         await ctx.send(f'Todo "{todo.name}" removed.')
 
@@ -364,6 +372,29 @@ class TodoCog(commands.Cog, name='Todos'):
         source = TodoPageSource(self.bot, todos, show_completed=True, sort_by='priority')
         view = TodoEditView(source, ctx=ctx, todo_name=todo.name)
         await ctx.send(embed=view.format_todo_list(), view=view)
+    
+    @todo_group.command(name="swap")
+    async def swap_todos_command(self, ctx, todo1: str, todo2: str):
+        todo1 = todo1.lower()
+        todo2 = todo2.lower()
+
+        todo1 = await self.find_todo(todo1, completed=False)
+        todo2 = await self.find_todo(todo2, completed=False)
+
+        if todo1 is None or todo2 is None:
+            return await ctx.send('One or more todos not found.')
+
+        await self.bot.db.execute('''
+            UPDATE todos
+            SET priority = $1
+            WHERE id = $2
+        ''', todo2.priority, todo1.id)
+        await self.bot.db.execute('''
+            UPDATE todos
+            SET priority = $1
+            WHERE id = $2
+        ''', todo1.priority, todo2.id)
+        await ctx.send(f'Todos "{todo1.name}" and "{todo2.name}" swapped.')
 
 
 async def setup(bot):

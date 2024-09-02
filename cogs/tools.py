@@ -7,7 +7,7 @@ from discord import ui
 from discord.utils import escape_markdown
 from .utils import EmbedEditor, View
 import discord 
-from typing import Optional, Literal
+from typing import Optional, Literal, Union
 import importlib 
 import aiohttp 
 import dateparser
@@ -202,9 +202,12 @@ class Tools(commands.Cog, description='storchs tools'):
 
         await ctx.send(f'Sticker `{sticker.name}` created.')
 
+    @commands.command()
+    async def grabtimestamp(self, ctx, obj: Union[discord.Message]):
+        await ctx.send(obj.created_at.timestamp())
 
     @commands.command()
-    async def sync(ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
+    async def sync(self, ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
         if not guilds:
             if spec == "~":
                 synced = await ctx.bot.tree.sync(guild=ctx.guild)

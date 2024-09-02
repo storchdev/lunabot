@@ -11,15 +11,23 @@ if TYPE_CHECKING:
 
 
 def is_luna_available():
-    # check if it's between 1pm and 3am US/Central 
     central = ZoneInfo('US/Central')
     now = datetime.now(central)
-    return now.hour >= 13 or now.hour < 3
+
+    # if it's a weekday
+    if now.weekday() < 5:
+        # 7am to 11pm
+        return 7 <= now.hour < 23
+    else:
+        # 11am to 3am
+        return now.hour < 3 or now.hour >= 11 
 
 def is_storch_available():
-    tz = ZoneInfo('Asia/Shanghai')
+    tz = ZoneInfo('US/Eastern')
     now = datetime.now(tz)
-    return now.hour >= 7 
+    # 11pm to 7am 
+
+    return now.hour < 7 or now.hour >= 23
 
 
 SCHEDULE_CHECKS = [

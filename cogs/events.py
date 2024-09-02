@@ -26,6 +26,9 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
+        if member.guild.id != self.bot.GUILD_ID:
+            return 
+
         layout = self.bot.get_layout('welc')
         ctx = LayoutContext(author=member)
         channel = self.bot.get_channel(self.bot.vars.get('welc-channel-id'))
