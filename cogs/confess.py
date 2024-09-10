@@ -38,9 +38,14 @@ class Confess(commands.Cog):
     def __init__(self, bot):
         self.bot: 'LunaBot' = bot
     
-    @commands.hybrid_group()
-    async def confess(self, ctx, *, confession: str):
+    @commands.hybrid_group(invoke_without_command=True)
+    async def confess(self, ctx):
         """Confess something anonymously."""
+        pass
+
+    @confess.command(name='send')
+    async def confess_send(self, ctx, *, confession: str):
+        """Send a confession anonymously."""
         if ctx.interaction is None:
             await ctx.message.delete()
         

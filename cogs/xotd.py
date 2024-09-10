@@ -121,10 +121,6 @@ class XoTD(commands.Cog):
     @user_cd_except_staff(86400)
     async def add_sotd(self, ctx, *, spotify_url: str):
         """Adds a song to the queue to be posted as the SoTD."""
-        end_time = await self.bot.get_cooldown_end('sotd', 86400, obj=ctx.author)
-        if end_time:
-            await ctx.send(f'You are on cooldown for adding songs. Try again {discord.utils.format_dt(end_time, "R")}.', ephemeral=True)
-            return 
 
         name, artist = await fetch_song(spotify_url) 
         self.songs.append({'name': name, 'artist': artist, 'url': spotify_url, 'author_id': ctx.author.id})

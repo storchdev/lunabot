@@ -31,6 +31,7 @@ class Misc(commands.Cog):
     
     @commands.hybrid_command()
     async def topic(self, ctx):
+        """Get a random topic to talk about"""
         with open('cogs/static/topics.json') as f:
             topics = json.load(f)
             topics.append(topics.pop(0))
@@ -43,6 +44,7 @@ class Misc(commands.Cog):
     
     @commands.hybrid_command()
     async def polyjuice(self, ctx, member: discord.Member, *, sentence: str):
+        """Send a message as another user"""
         if ctx.interaction is None:
             await ctx.message.delete()
         else:
@@ -59,6 +61,7 @@ class Misc(commands.Cog):
 
     @commands.hybrid_command(name='8ball')
     async def _8ball(self, ctx, *, question: str):
+        """Ask the magic 8ball a question"""
         answer = random.choice(self._8ball_answers)
         answer = f'*{answer}*'
         layout = self.bot.get_layout('8ball')
@@ -66,6 +69,7 @@ class Misc(commands.Cog):
     
     @commands.hybrid_command(name='qna')
     async def qna(self, ctx, *, question: str):
+        """Ask a question to the QnA channel"""
         channel = self.bot.get_var_channel('qna') 
         layout = self.bot.get_layout('qna')
         msg = await layout.send(channel, repls={'question': question})
