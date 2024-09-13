@@ -21,7 +21,8 @@ __all__ = (
     'RoboPages',
     'TagView',
     'LayoutChooserOrEditor',
-    'ChannelSelectView'
+    'ChannelSelectView',
+    'ConfirmView'
 )
 
 
@@ -462,3 +463,23 @@ class ChannelSelectView(View):
         self.final_interaction = inter
         self.stop()
     
+
+class ConfirmView(View):
+    
+    def __init__(self, ctx):
+        super().__init__(timeout=300, bot=ctx.bot, owner=ctx.author)
+        self.final_interaction = None
+        self.choice = None
+
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+    async def yes(self, interaction, button):
+        self.final_interaction = interaction
+        self.cancelled = False
+        self.choice = True
+        self.stop()
+
+    @discord.ui.button(label='No', style=discord.ButtonStyle.red)
+    async def no(self, interaction, button):
+        self.final_interaction = interaction
+        self.choice = False
+        self.stop()

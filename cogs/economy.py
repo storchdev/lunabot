@@ -5,6 +5,7 @@ import discord
 from typing import TYPE_CHECKING
 import random
 from .utils import LayoutContext
+from .utils.checks import staff_only
 import time
 
 if TYPE_CHECKING:
@@ -22,7 +23,7 @@ class Currency(commands.Cog):
         self.low_drop = 1000 
         self.high_drop = 5000
         self.pick_limit = 1
-        self.picks = 0
+        self.pickers = set()
 
     async def add_balance(self, user_id, amount):
         # update and return 
@@ -45,7 +46,7 @@ class Currency(commands.Cog):
             'itemdescs': descs
         })
     
-    @commands.hybrid_command(aliases=['balance'])
+    @commands.hybrid_group(aliases=['balance'])
     async def bal(self, ctx, member: discord.Member = None):
         """Check your balance"""
         if member is None:
@@ -57,8 +58,23 @@ class Currency(commands.Cog):
         bal = await self.bot.db.fetchval(query, member.id)
         await layout.send(ctx, LayoutContext(author=member), repls={'balance': bal})
     
+    @bal.command(name='add')
+    @staff_only()
+    async def bal_add(self, ctx, member: discord.Member, amount: int):
+        """Add balance to a user"""
+        await self.add_balance(member.id, amount)
+        await ctx.send(f'Added {amount}{self.lunara} to {member.mention}.')
+    
+    @bal.command(name='remove')
+    @staff_only()
+    async def bal_remove(self, ctx, member: discord.Member, amount: int):
+        """Remove balance from a user"""
+        await self.add_balance(member.id, -amount)
+        await ctx.send(f'Removed {amount}{self.lunara} from {member.mention}.')
+
+    
     @staticmethod
-    def check_for_drop(message_count, max_messages=50):
+    def check_for_drop(message_count, max_messages=100, steepness=0.1, cap=0.1):
         """
         This function simulates a drop happening based on the message count. 
         As the message count increases, the probability of a drop happening increases.
@@ -66,10 +82,10 @@ class Currency(commands.Cog):
         """
 
         # Sigmoid function to scale probability between 0 and 1
-        probability = 1 / (1 + math.exp(-0.2 * (message_count - max_messages/2)))
+        probability = 1 / (1 + math.exp(-steepness * (message_count - max_messages/2)))
 
         # Clamp probability to 0-1 range
-        probability = min(max(probability, 0), 1)
+        probability = min(probability, cap)
 
         # Randomly return True or False based on the probability
         return random.random() < probability
@@ -81,16 +97,18 @@ class Currency(commands.Cog):
         
         if msg.channel.id != self.bot.vars.get('general-channel-id'):
             return 
-        
-        self.msg_count += 1
+
+        if not self.drop_active: 
+            self.msg_count += 1
+
         if self.check_for_drop(self.msg_count):
             self.msg_count = 0 
+            self.pickers.clear()
             layout = self.bot.get_layout('drop') 
             temp = await layout.send(msg.channel, LayoutContext(message=msg), repls={'low': self.low_drop, 'high': self.high_drop})
             self.drop_active = True
             await asyncio.sleep(30)
             self.drop_active = False
-            self.picks = 0
             await temp.delete()
                     
         if 'welc' in msg.content.lower():
@@ -99,7 +117,7 @@ class Currency(commands.Cog):
                 await (self.bot.get_layout('welccd')).send(msg.channel, LayoutContext(message=msg), delete_after=7)
                 return
 
-            gained = 500 
+            gained = 100 
             bal = await self.add_balance(msg.author.id, gained)
             layout = self.bot.get_layout('welcreward')
             await layout.send(msg.channel, LayoutContext(message=msg), repls={'gained': gained, 'balance': bal}, delete_after=7) 
@@ -118,12 +136,12 @@ class Currency(commands.Cog):
             await layout.send(ctx, LayoutContext(message=ctx.message), delete_after=7)
             return 
 
-        if self.picks >= self.pick_limit:
+        if ctx.author.id in self.pickers:
             layout = self.bot.get_layout('drop/limit')
             await layout.send(ctx, LayoutContext(message=ctx.message), delete_after=7)
             return
 
-        self.picks += 1 
+        self.pickers.add(ctx.author.id)
 
         amount = random.randint(self.low_drop, self.high_drop)
         await self.add_balance(ctx.author.id, amount)
@@ -133,7 +151,13 @@ class Currency(commands.Cog):
             layout = self.bot.get_layout('drop/2kto4k')
         else:
             layout = self.bot.get_layout('drop/4kto5k')
-        await layout.send(ctx, LayoutContext(message=ctx.message), repls={'amount': amount})
+
+        msg = await layout.send(ctx, LayoutContext(message=ctx.message), repls={'amount': amount})
+        await asyncio.sleep(10)
+        await msg.delete()
+        await ctx.message.delete()
+    
+
         
 
 

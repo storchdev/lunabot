@@ -16,6 +16,8 @@ def is_staff(ctx):
     luna_id = ctx.bot.vars.get('luna-id')
     return staff_role in ctx.author.roles or ctx.author.id == luna_id
 
+def is_admin(ctx):
+    return ctx.author.guild_permissions.administrator or ctx.author.id in ctx.bot.owner_ids
 
 def staff_only():
     return commands.check(is_staff)

@@ -11,6 +11,8 @@ from .utils import next_day
 from typing import TYPE_CHECKING
 from asyncspotify import Client, ClientCredentialsFlow
 from .utils import user_cd_except_staff
+import re
+from .utils import ConfirmView
 
 
 if TYPE_CHECKING:
@@ -119,15 +121,38 @@ class XoTD(commands.Cog):
 
     @commands.hybrid_command(name='add-sotd')
     @user_cd_except_staff(86400)
-    async def add_sotd(self, ctx, *, spotify_url: str):
+    async def add_sotd(self, ctx, *, data: str):
         """Adds a song to the queue to be posted as the SoTD."""
 
-        name, artist = await fetch_song(spotify_url) 
+        data = data.strip(' \n').split('\n')
+        if len(data) != 3:
+            await ctx.send('The format is:\n\n`Song Name\nArtist\nSpotify URL`', ephemeral=True)
+            return 
+        
+        spotify_url = data[2]
+        if not re.match(r'https://open\.spotify\.com/track/[A-Za-z0-9]{22}(\?si=[A-Za-z0-9_-]+)?', spotify_url):
+            await ctx.send('Invalid Spotify URL.', ephemeral=True)
+            return 
+
+        view = ConfirmView(ctx)
+        await ctx.send(f'Confirm this information?\n\nSong: {data[0]}\nArtist: {data[1]}\nURL: {spotify_url}', view=view)
+        await view.wait()
+
+        if view.choice is None:
+            return
+        
+        if view.choice is False:
+            await view.final_interaction.response.edit_message(content='Cancelled.', view=None)
+            return 
+
+        name = data[0]
+        artist = data[1]
+        # name, artist = await fetch_song(spotify_url) 
         self.songs.append({'name': name, 'artist': artist, 'url': spotify_url, 'author_id': ctx.author.id})
         await self.bot.db.execute('UPDATE queues SET items = $1 WHERE name = $2', json.dumps(self.songs), 'sotd')
 
         md = get_post_date(len(self.songs))
-        await ctx.send(f'Your song was added to queue! It will be posted {md}. Note that songs are reviewed, and those that fail to follow the server rules will be removed.', ephemeral=True)
+        await view.final_interaction.response.edit_message(content=f'Your song was added to queue! It will be posted {md}. Note that songs are reviewed, and those that fail to follow the server rules will be removed.', view=None)
         channel = self.bot.get_var_channel('queue-log')
         await channel.send(f'A new song was added to the queue!\n\nSong: {spotify_url}\nUser: ||{ctx.author.mention}||')
 
