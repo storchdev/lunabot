@@ -129,10 +129,12 @@ CREATE TABLE IF NOT EXISTS user_items (
   amount INTEGER
 );
 
+
 CREATE TABLE IF NOT EXISTS shop_items (
-  id SERIAL PRIMARY KEY,
-  name TEXT UNIQUE,
+  id INTEGER PRIMARY KEY,
+  name_id TEXT UNIQUE,
   common_name TEXT,
   price INTEGER,
-  description TEXT
+  description TEXT,
+  properties JSONB
 );
