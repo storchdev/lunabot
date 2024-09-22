@@ -161,7 +161,7 @@ class Layout:
     def to_json(self, *, indent=4):
         return json.dumps(self.to_dict(), indent=indent)
     
-    async def send(self, msgble: discord.abc.Messageable, ctx: Optional[Union[commands.Context, LayoutContext]] = None, *, repls: Optional[dict] = None, special: Optional[bool] = True, **kwargs) -> Optional[discord.Message]:
+    async def send(self, msgble: Union[discord.abc.Messageable, discord.Interaction], ctx: Optional[Union[commands.Context, LayoutContext]] = None, *, repls: Optional[dict] = None, special: Optional[bool] = True, **kwargs) -> Optional[discord.Message]:
         if isinstance(msgble, discord.Message):
             if ctx is None:
                 ctx = LayoutContext(
@@ -215,3 +215,38 @@ class Layout:
         except discord.Forbidden:
             pass 
         
+    async def edit(self, editable: Union[discord.Message, discord.Interaction], ctx: Optional[Union[commands.Context, LayoutContext]] = None, *, repls: Optional[dict] = None, special: Optional[bool] = True, **kwargs):
+
+        if isinstance(editable, discord.Message):
+            if ctx is None:
+                ctx = LayoutContext(
+                    message=editable
+                )
+            edit_func = editable.edit
+        elif isinstance(editable, discord.Interaction):
+            if ctx is None:
+                ctx = LayoutContext(
+                    author=editable.user,
+                    channel=editable.channel,
+                )
+            edit_func = editable.response.edit_message
+        else:
+            raise ValueError('Editable must be a message or interaction.')
+
+        if repls is None:
+            repls = {} 
+
+        if self.content:
+            content = self.fill_text(self.content, repls, ctx=ctx, special=special)
+        else:
+            content = None 
+        
+        embeds = []
+        for embed in self.embeds:
+            embeds.append(self.fill_embed(embed, repls, ctx=ctx, special=special))
+
+        if 'view' in kwargs and kwargs['view'] is None:
+            cleaned_kwargs = {'view': None}
+
+        return await edit_func(content=content, embeds=embeds, **cleaned_kwargs)
+
