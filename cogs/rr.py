@@ -152,10 +152,10 @@ class RRView2(ui.View):
 
         super().__init__(timeout=None)
 
-        self.ez.add_option(label='No limit', value=-1)
+        self.ez.add_option(label='No limit', value='-1')
         
         for i in range(1, length):
-            self.ez.add_option(label=str(i), value=i)
+            self.ez.add_option(label=str(i), value=str(i))
 
         self.ctx = ctx 
         self.limit = None
@@ -348,6 +348,8 @@ class RR(commands.Cog, name='Reaction Roles'):
         joever = False 
         while not joever:
             msg = await self.bot.wait_for('message', check=check)
+            if msg.content.lower() == 'cancel':
+                return
             try:
                 stuff = await parsemap(ctx, msg.content)
                 joever = True
@@ -385,7 +387,7 @@ class RR(commands.Cog, name='Reaction Roles'):
         msgid = rrmsg.id
 
         query = 'INSERT INTO rrs (channel_id, message_id, map, max_sel, req_role_id, no_role_msg, req_time, no_time_msg) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)'
-        await self.bot.db.execute(query, channel.id, msgid, json.dumps(stuff), view2.limit, view3.role.id if view3.role else None, view3.role_denymsg, view3.seconds, view3.time_denymsg)
+        await self.bot.db.execute(query, channel.id, msgid, json.dumps(stuff), int(view2.limit), view3.role.id if view3.role else None, view3.role_denymsg, view3.seconds, view3.time_denymsg)
         await ctx.send('Successfully added reaction role :white_check_mark:')
 
     @commands.hybrid_command()
