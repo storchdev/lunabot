@@ -79,6 +79,28 @@ class Embeds(commands.Cog, description='Create, save, and edit your own embeds.'
         self.bot.embeds[name] = embed
         await ctx.send(f'Added your embed {name}!')
 
+    @embed.command(aliases=['dupe', 'dup', 'duplicate', 'cpy', 'cp'])
+    @app_commands.default_permissions()
+    async def copy(self, ctx, old_name, *, new_name):
+        """Duplicates an embed"""
+        old_name = old_name.lower()
+        new_name = new_name.lower()
+        if old_name not in self.bot.embeds:
+            await ctx.send('There is no embed with that name.', ephemeral=True)
+            return 
+
+        if new_name in self.bot.embeds:
+            await ctx.send('There is already an embed with that name.', ephemeral=True)
+            return
+        
+        embed = self.bot.embeds[old_name]
+        data = json.dumps(embed.to_dict(), indent=4)
+        query = 'INSERT INTO embeds (creator_id, name, embed) VALUES ($1, $2, $3)'
+        await self.bot.db.execute(query, ctx.author.id, new_name, data)
+        self.bot.embeds[new_name] = discord.Embed.from_dict(json.loads(data))
+
+        await ctx.send(f'Duplicated the embed `{old_name}` to `{new_name}`!')
+    
     @embed.command(aliases=['add'])
     @app_commands.default_permissions()
     async def create(self, ctx, *, name):
