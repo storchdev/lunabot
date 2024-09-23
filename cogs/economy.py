@@ -1,16 +1,124 @@
-from discord.ext import commands
+from discord.ext import commands, menus
 import math 
 import asyncio 
 import discord
+from typing import List, Tuple, Dict, Optional, Union
 from typing import TYPE_CHECKING
 import random
-from .utils import LayoutContext
+from .utils import LayoutContext, Layout
 from .utils.checks import staff_only
 import time
+from fuzzywuzzy import fuzz
+from .utils import RoboPages
+from bot import LunaBot
+import json 
+
 
 if TYPE_CHECKING:
     from bot import LunaBot
-    
+
+
+class BaseItem:
+    def __init__(self, id: int, name_id: str, display_name: str, price: int, properties: Dict):
+        self.id = id 
+        self.name_id = name_id
+        self.display_name = display_name
+        self.price = price
+        self.properties = properties
+
+        self.description = properties.get('description', 'No description available.')
+        self.sellable = properties.get('sellable', True)
+        self.tradable = properties.get('tradable', True)
+        self.perks_needed = properties.get('perks_needed', [])
+
+    def as_list(self) -> List[str]:
+        return [self.name_id, self.display_name]
+
+    def use(self, **kwargs):
+        raise NotImplementedError()
+
+
+class WeLoveYouRoleItem(BaseItem):
+    async def use(self, ctx, member: discord.Member):
+        role = discord.Object(ctx.bot.vars.get('wly-role-id'))
+        if role in member.roles:
+            return False
+
+        await member.add_roles(role)
+        return True
+
+
+class ShopPageSource(menus.ListPageSource):
+    def __init__(self, ctx, items: List[BaseItem]):
+        self.ctx = ctx
+        super().__init__(items, per_page=5)
+
+    async def format_page(self, menu, entries: List[BaseItem]):
+        embed = self.ctx.bot.embeds.get('shop')
+        if not embed:
+            return "No shop embed found."
+
+        itemnames = []
+        itemdescs = []
+        for entry in entries:
+            itemnames.append(entry.display_name)
+            itemdescs.append(entry.description)
+
+        embed = Layout.fill_embed(embed, {'itemnames': itemnames, 'itemdescs': itemdescs}, ctx=self.ctx)
+        return embed
+
+    def fuzzy_find(self, query: str, threshold: int = 70) -> List[BaseItem]:
+        results = []
+        
+        # Iterate over each item and compare the query to both the display_name and qualified_name
+        for item in self.entries:
+            for name in item.as_list():
+                similarity = fuzz.ratio(query.lower(), name.lower())
+                if similarity > threshold:
+                    results.append((item, similarity))
+                    break
+
+        # Sort results by similarity ratio in decreasing order
+        results.sort(key=lambda x: x[1], reverse=True)
+
+        # Return only the items, not the similarity scores
+        return [item for item, _ in results]
+
+
+class QueryModal(discord.ui.Modal):
+    def __init__(self, shop: 'ShopMenu'):
+        super().__init__(title="Search Items")
+        self.shop = shop
+        self.query = discord.ui.TextInput(label="Enter your search query")
+
+        self.add_item(self.query)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        query = self.query.value
+        results = self.shop.source.fuzzy_find(query)
+        if results:
+            await interaction.response.send_message(f"Found {len(results)} item(s) matching '{query}':", ephemeral=True)
+            await self.shop.update_items(interaction, results)
+        else:
+            await interaction.response.send_message(f"No items found matching '{query}'.", ephemeral=True)
+
+
+class ShopMenu(RoboPages):
+    def __init__(self, source: ShopPageSource, ctx):
+        super().__init__(source, ctx=ctx)
+        self.add_item(self.search_button)
+
+    async def update_items(self, interaction, items: List[BaseItem]):
+        new_source = ShopPageSource(self.ctx, items)
+        self.source = new_source
+        self.current_page = 0
+        await self.show_page(interaction, self.current_page)
+
+    @discord.ui.button(label='Search', style=discord.ButtonStyle.green)
+    async def search_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = QueryModal(self)
+        await interaction.response.send_modal(modal)
+
 
 class Currency(commands.Cog):
     """The description for Currency goes here."""
@@ -24,6 +132,19 @@ class Currency(commands.Cog):
         self.high_drop = 5000
         self.pick_limit = 1
         self.pickers = set()
+        self.items = []
+    
+    async def cog_load(self):
+        classes = {
+            'weloveyourole': WeLoveYouRoleItem
+        }
+
+        query = 'SELECT * FROM shop_items'
+        rows = await self.bot.db.fetch(query)
+        for row in rows:
+            cls = classes.get(row['name_id'], BaseItem)
+            item = cls(row['id'], row['name_id'], row['display_name'], row['price'], json.loads(row['properties']))
+            self.items.append(item)
 
     async def add_balance(self, user_id, amount):
         # update and return 
@@ -34,17 +155,14 @@ class Currency(commands.Cog):
     @commands.hybrid_command()
     async def shop(self, ctx):
         """View the shop"""
-        rows = await self.bot.db.fetch('SELECT * FROM shop_items')
-        names = []
-        descs = []
-        for row in rows:
-            names.append(row['common_name'])
-            descs.append(row['description'])
-        layout = self.bot.get_layout('shop')
-        await layout.send(ctx, repls={
-            'itemnames': names,
-            'itemdescs': descs
-        })
+        itemnames = []
+        itemdescs = []
+        for item in self.items:
+            itemnames.append(item.display_name)
+            itemdescs.append(item.description)
+
+        menu = ShopMenu(ShopPageSource(ctx, self.items), ctx)
+        await menu.start()
     
     @commands.hybrid_group(aliases=['balance'])
     async def bal(self, ctx, member: discord.Member = None):
