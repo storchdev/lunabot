@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS user_items (
 CREATE TABLE IF NOT EXISTS shop_items (
   id INTEGER PRIMARY KEY,
   name_id TEXT UNIQUE,
-  common_name TEXT,
+  display_name TEXT,
   price INTEGER,
   properties JSONB
 );
