@@ -135,6 +135,5 @@ CREATE TABLE IF NOT EXISTS shop_items (
   name_id TEXT UNIQUE,
   common_name TEXT,
   price INTEGER,
-  description TEXT,
   properties JSONB
 );
