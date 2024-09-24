@@ -126,7 +126,8 @@ CREATE TABLE IF NOT EXISTS user_items (
   id SERIAL PRIMARY KEY,
   user_id BIGINT,
   item_id BIGINT,
-  amount INTEGER
+  amount INTEGER,
+  UNIQUE(user_id, item_id)
 );
 
 
