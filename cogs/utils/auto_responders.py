@@ -76,6 +76,7 @@ class AutoResponderAction:
         for emoji in emojis:
             try:
                 await msg.add_reaction(emoji)
+                await asyncio.sleep(0.5)  # fix ratelimiting
             except discord.HTTPException:
                 status.append(f'Unknown emoji: {emoji}')
         
