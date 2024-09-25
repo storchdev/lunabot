@@ -19,11 +19,12 @@ if TYPE_CHECKING:
 
 
 class BaseItem:
-    def __init__(self, id: int, name_id: str, display_name: str, price: int, properties: Dict):
-        self.id = id 
+    def __init__(self, number_id: int, name_id: str, display_name: str, price: int, stock: int, properties: Dict):
+        self.number_id = number_id 
         self.name_id = name_id
         self.display_name = display_name
         self.price = price
+        self.stock = stock
         self.properties = properties
 
         self.description = properties.get('description', 'No description available.')
@@ -32,7 +33,7 @@ class BaseItem:
         self.perks_needed = properties.get('perks_needed', [])
 
     def as_list(self) -> List[str]:
-        return [self.name_id, self.display_name]
+        return [str(self.number_id), self.name_id, self.display_name]
 
     def use(self, **kwargs):
         raise NotImplementedError()
@@ -60,11 +61,25 @@ class ShopPageSource(menus.ListPageSource):
 
         itemnames = []
         itemdescs = []
+        emojis = []
+        state = True 
+
         for entry in entries:
             itemnames.append(entry.display_name)
             itemdescs.append(entry.description)
 
-        embed = Layout.fill_embed(embed, {'itemnames': itemnames, 'itemdescs': itemdescs}, ctx=self.ctx)
+            if state:
+                emojis.append(self.ctx.bot.vars.get('heart-point-emoji'))
+            else:
+                emojis.append(self.ctx.bot.vars.get('heart-point-purple-emoji'))
+            state = not state
+
+        repls = {
+            'itemnames': itemnames,
+            'itemdescs': itemdescs,
+            'emojis': emojis
+        }
+        embed = Layout.fill_embed(embed, repls, ctx=self.ctx)
         return embed
 
     def fuzzy_find(self, query: str, threshold: int = 70) -> List[BaseItem]:
@@ -133,25 +148,53 @@ class Currency(commands.Cog):
         self.pick_limit = 1
         self.pickers = set()
         self.items = []
-    
-    async def cog_load(self):
-        classes = {
+        self.item_classes = {
             'weloveyourole': WeLoveYouRoleItem
         }
-
+    
+    async def cog_load(self):
         query = 'SELECT * FROM shop_items'
         rows = await self.bot.db.fetch(query)
         for row in rows:
-            cls = classes.get(row['name_id'], BaseItem)
-            item = cls(row['id'], row['name_id'], row['display_name'], row['price'], json.loads(row['properties']))
+            cls = self.item_classes.get(row['name_id'])
+            if cls is None:
+                raise Exception(f'item {row["name_id"]} has no class')
+            item = cls(row['number_id'], row['name_id'], row['display_name'], row['price'], row['stock'], json.loads(row['properties']))
             self.items.append(item)
+
+    def get_item_from_str(self, item_str: str) -> 'BaseItem':
+        for item in self.items:
+            if item_str in item.as_list():
+                return item
+        return None 
+
+    async def get_stock(self, item_name_id: str):
+        pass
+
+    async def update_stock(self, item_name_id: str, change: int):
+        pass
 
     async def add_balance(self, user_id, amount):
         # update and return 
         query = 'INSERT INTO balances (user_id, balance) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET balance = balances.balance + $2 RETURNING balance'
         return await self.bot.db.fetchval(query, user_id, amount)
 
+    async def add_item(self, user_id: str, item_name_id: str, amount: int = 1):
+        query = 'INSERT INTO user_items (user_id, item_name_id, amount) VALUES ($1, $2, $3) ON CONFLICT (user_id, item_name_id) DO UPDATE SET amount = user_items.amount + $3'
+        await self.bot.db.execute(query, user_id, item_name_id, amount)
+    
+    async def remove_item(self, user_id: str, item_name_id: str, amount: int = 1):
+        query = 'UPDATE user_items SET amount = user_items.amount - $3 WHERE user_id = $1 AND item_name_id = $2'
+        await self.bot.db.execute(query, user_id, item_name_id, amount)
+    
+    async def get_balance(self, user_id):
+        query = 'SELECT balance FROM balances WHERE user_id = $1'
+        bal = await self.bot.db.fetchval(query, user_id)
+        if bal is None:
+            bal = 0
 
+        return bal
+    
     @commands.hybrid_command()
     async def shop(self, ctx):
         """View the shop"""
@@ -164,16 +207,40 @@ class Currency(commands.Cog):
         menu = ShopMenu(ShopPageSource(ctx, self.items), ctx)
         await menu.start()
     
+    
+    @commands.hybrid_command(aliases=['purchase'])
+    async def buy(self, ctx, *, item: str):
+        """Buy an item from the shop"""
+        item = item.lower()
+        for shop_item in self.items:
+            if item in shop_item.as_list():
+                break
+        else:
+            await ctx.send('item suggestion layout')
+            return
+
+        bal = await self.get_balance(ctx.author.id)
+
+        if bal < shop_item.price or shop_item.stock == 0:
+            layout = self.bot.get_layout('buy/failure')
+            await layout.send(ctx)
+            return 
+
+        await self.add_balance(ctx.author.id, -shop_item.price)
+        await self.add_item(ctx.author.id, shop_item.name_id)
+        layout = self.bot.get_layout('shop/purchased')
+        await layout.send(ctx, LayoutContext(message=ctx.message), repls={'item': shop_item.display_name})
+    
+    @commands.hybrid_command(aliases=['consume'])
+    async def use(self, ctx, *, item: str)
+    
     @commands.hybrid_group(aliases=['balance'])
     async def bal(self, ctx, member: discord.Member = None):
         """Check your balance"""
         if member is None:
             member = ctx.author
-        # initialize balance if not exists    
-        await self.add_balance(member.id, 0)
+        bal = await self.get_balance(member.id)
         layout = self.bot.get_layout('bal')
-        query = 'SELECT balance FROM balances WHERE user_id = $1'
-        bal = await self.bot.db.fetchval(query, member.id)
         await layout.send(ctx, LayoutContext(author=member), repls={'balance': bal})
     
     @bal.command(name='add')
@@ -190,7 +257,6 @@ class Currency(commands.Cog):
         await self.add_balance(member.id, -amount)
         await ctx.send(f'Removed {amount}{self.lunara} from {member.mention}.')
 
-    
     @staticmethod
     def check_for_drop(message_count, max_messages=100, steepness=0.1, cap=0.1):
         """
