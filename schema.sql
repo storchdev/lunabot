@@ -125,16 +125,17 @@ CREATE TABLE IF NOT EXISTS balances (
 CREATE TABLE IF NOT EXISTS user_items (
   id SERIAL PRIMARY KEY,
   user_id BIGINT,
-  item_id BIGINT,
+  item_name_id TEXT,
   amount INTEGER,
   UNIQUE(user_id, item_id)
 );
 
 
 CREATE TABLE IF NOT EXISTS shop_items (
-  id INTEGER PRIMARY KEY,
+  number_id INTEGER PRIMARY KEY,
   name_id TEXT UNIQUE,
   display_name TEXT,
   price INTEGER,
-  properties JSONB
+  properties JSONB,
+  stock INTEGER DEFAULT -1
 );
