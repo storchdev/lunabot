@@ -5,13 +5,117 @@ import json
 from io import BytesIO, StringIO
 from discord import ui 
 from discord.utils import escape_markdown
-from .utils import EmbedEditor, View
+from .utils import EmbedEditor, View, ConfirmView
 import discord 
-from typing import Optional, Literal, Union
+from typing import Optional, Literal, Union, List
 import importlib 
 import aiohttp 
 import dateparser
 
+
+class JumpModal(ui.Modal):
+    index = discord.ui.TextInput(label='Index')
+
+    def __init__(self, view):
+        super().__init__(title='Jump to index')
+        self.view = view
+
+    async def on_submit(self, interaction):
+        try:
+            index = int(self.index.value)
+        except ValueError:
+            return await interaction.response.send_message('Invalid index', ephemeral=True)
+        if index < 0 or index >= len(self.view.roles):
+            return await interaction.response.send_message(f'Index out of range; Please enter a number between 0 and {len(self.view.roles)-1}', ephemeral=True)
+
+        self.view.index = index
+        self.view.role = self.view.roles[index]
+        await self.view.update_message(interaction)
+
+
+class CleanRoleView(View):
+    def __init__(self, ctx, roles: List[discord.Role]):
+        super().__init__(bot=ctx.bot, owner=ctx.author)
+        self.ctx = ctx
+        self.roles = sorted(filter(lambda r: r.is_assignable(), roles), key=lambda r: r.position)
+        self.index = 0
+        self.role = self.roles[self.index]
+
+    def get_embed(self):
+        embed = discord.Embed(
+            title=self.role.name,
+        )
+        embed.add_field(name='Index', value=self.index)
+        embed.add_field(name='Members', value=len(self.role.members), inline=False)
+        embed.add_field(name='Created at', value=discord.utils.format_dt(self.role.created_at, 'R'))
+        return embed 
+
+    async def update_message(self,interaction=None):
+        embed = self.get_embed()
+        if interaction:
+            await interaction.response.edit_message(embed=embed)
+        else:
+            await self.message.edit(embed=embed)
+
+    @discord.ui.button(label='Previous')
+    async def previous(self, interaction, button):
+        if self.index == 0:
+            return await interaction.response.defer()
+        self.index -= 1
+        self.role = self.roles[self.index]
+        await self.update_message(interaction)
+
+    @discord.ui.button(label='Next')
+    async def next(self, interaction, button):
+        if self.index == len(self.roles) - 1:
+            return await interaction.response.defer()
+        self.index += 1
+        self.role = self.roles[self.index]
+        await self.update_message(interaction)
+
+    @discord.ui.button(label='Jump') 
+    async def jump(self, interaction, button):
+        await interaction.response.send_modal(JumpModal(self))
+
+    @discord.ui.button(label='View members',row=1)
+    async def view_members(self, interaction, button):
+        members = ''
+        for member in self.role.members:
+            if len(members + member.mention + '\n') > 2000:
+                break
+            members += member.mention + '\n'
+
+        await interaction.response.send_message(members, ephemeral=True)
+    
+    @discord.ui.button(label='Accidental delete prevention', row=2, disabled=True)
+    async def _(self, interaction, button):
+        pass
+    @discord.ui.button(label='Accidental delete prevention', row=3, disabled=True)
+    async def __(self, interaction, button):
+        pass
+
+    @discord.ui.button(label='Delete',row=4, style=discord.ButtonStyle.danger)
+    async def delete(self, interaction, button):
+        if len(self.role.members) > 10:
+            confirmview = ConfirmView(self.ctx)
+            await interaction.response.send_message('Are you sure you want to delete this role?', view=confirmview)
+            await confirmview.wait()
+            if confirmview.choice is True:
+                self.roles.remove(self.role)
+                self.role = self.roles[self.index]
+                await confirmview.final_interaction.response.defer()
+                await self.role.delete()
+                await self.update_message()
+            else:
+                await confirmview.final_interaction.response.edit_message(content='Cancelled', view=None)
+        else:
+            await interaction.response.defer()
+            await self.role.delete()
+            self.roles.remove(self.role)
+            self.role = self.roles[self.index]
+            await self.update_message()
+
+    
 
 class DTStyleButton(discord.ui.Button): 
     
@@ -251,6 +355,12 @@ class Tools(commands.Cog, description='storchs tools'):
         content = '\n'.join(f'**{i}** - {md}' for i, md in enumerate(mds, 1))
         view = DTStyleChooser(ctx, mds)
         view.message = await ctx.send(content, view=view)
+    
+    @commands.command()
+    async def cleanroles(self, ctx):
+        roles = ctx.guild.roles
+        view = CleanRoleView(ctx, roles)
+        view.message = await ctx.send(embed=view.get_embed(), view=view)
 
 
 async def setup(bot):
