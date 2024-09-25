@@ -232,7 +232,8 @@ class Currency(commands.Cog):
         await layout.send(ctx, LayoutContext(message=ctx.message), repls={'item': shop_item.display_name})
     
     @commands.hybrid_command(aliases=['consume'])
-    async def use(self, ctx, *, item: str)
+    async def use(self, ctx, *, item: str):
+        pass
     
     @commands.hybrid_group(aliases=['balance'])
     async def bal(self, ctx, member: discord.Member = None):
