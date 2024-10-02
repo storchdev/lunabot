@@ -68,22 +68,23 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
         if len(rows) == 0:
             return 
 
-        user_ids = [int(row['user_id']) for row in rows]
+        members = []
+        guild = self.bot.get_guild(self.bot.GUILD_ID)
+        for row in rows:
+            member = guild.get_member(row['user_id'])
+            if member:
+                members.append(member)
 
         mentions_list = []
 
-        for user_id in user_ids: 
-            guild = self.bot.get_guild(self.bot.GUILD_ID)
-            member = guild.get_member(user_id)
-            if member is None:
-                continue 
-
+        for member in members:
             mentions_list.append(member.mention)
             role = guild.get_role(self.bot.vars.get('bday-role-id'))
             await member.add_roles(role)
-            await self.bot.schedule_future_task('remove_role', discord.utils.utcnow() + timedelta(days=7), user_id=user_id, role_id=role.id)
+            await self.bot.schedule_future_task('remove_role', discord.utils.utcnow() + timedelta(days=7), user_id=member.id, role_id=role.id)
 
         mentions_str = 'ㆍ'.join(mentions_list) + 'ㆍ'
+
         channel = self.bot.get_channel(self.bot.vars.get('bday-channel-id'))  
         layout = self.bot.get_layout('bday')
         ctx = LayoutContext(author=member)

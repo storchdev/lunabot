@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS user_items (
   user_id BIGINT,
   item_name_id TEXT,
   amount INTEGER,
-  UNIQUE(user_id, item_id)
+  UNIQUE(user_id, item_name_id)
 );
 
 
@@ -138,4 +138,21 @@ CREATE TABLE IF NOT EXISTS shop_items (
   price INTEGER,
   properties JSONB,
   stock INTEGER DEFAULT -1
+);
+
+
+CREATE TABLE IF NOT EXISTS joins (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  guild_id BIGINT,
+  member_count INTEGER,
+  time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);  
+
+CREATE TABLE IF NOT EXISTS leaves (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  guild_id BIGINT,
+  member_count INTEGER,
+  time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

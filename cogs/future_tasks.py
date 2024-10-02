@@ -58,6 +58,9 @@ class FutureTask:
     def cancel(self):
         if self.task:
             self.task.cancel()
+    
+    def __repr__(self):
+        return f'<FutureTask id={self.id} action={self.action} dt={self.dt} kwargs={self.kwargs}>'
 
 
 class FutureTasksCog(commands.Cog):
@@ -77,7 +80,8 @@ class FutureTasksCog(commands.Cog):
         await self.spawn_tasks()
 
     async def cog_unload(self):
-        for task in self.bot.future_tasks.values():
+        for task_id in self.bot.future_tasks:
+            task = self.bot.future_tasks.pop(task_id)
             task.cancel()   
 
 

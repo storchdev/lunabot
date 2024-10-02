@@ -18,6 +18,16 @@ if TYPE_CHECKING:
     from bot import LunaBot
 
 
+class AddItemFlags(commands.FlagConverter):
+    number_id: int
+    name_id: str
+    display_name: str
+    description: str
+    price: int
+    stock: int = -1
+    sellable: bool = True 
+    tradable: bool = True
+
 class BaseItem:
     def __init__(self, number_id: int, name_id: str, display_name: str, price: int, stock: int, properties: Dict):
         self.number_id = number_id 
@@ -35,19 +45,23 @@ class BaseItem:
     def as_list(self) -> List[str]:
         return [str(self.number_id), self.name_id, self.display_name]
 
-    def use(self, **kwargs):
+    def use(self):
         raise NotImplementedError()
 
 
 class WeLoveYouRoleItem(BaseItem):
-    async def use(self, ctx, member: discord.Member):
+    async def use(self, ctx, **kwargs):
         role = discord.Object(ctx.bot.vars.get('wly-role-id'))
-        if role in member.roles:
+        if role in ctx.author.roles:
             return False
 
-        await member.add_roles(role)
+        await ctx.author.add_roles(role)
         return True
 
+class TestItem(BaseItem):
+    async def use(self, ctx, member: discord.Member):
+        await ctx.send(f'{member.mention} - test item used')
+        return True 
 
 class ShopPageSource(menus.ListPageSource):
     def __init__(self, ctx, items: List[BaseItem]):
@@ -149,7 +163,8 @@ class Currency(commands.Cog):
         self.pickers = set()
         self.items = []
         self.item_classes = {
-            'weloveyourole': WeLoveYouRoleItem
+            'weloveyourole': WeLoveYouRoleItem,
+            'test': TestItem
         }
     
     async def cog_load(self):
@@ -212,10 +227,8 @@ class Currency(commands.Cog):
     async def buy(self, ctx, *, item: str):
         """Buy an item from the shop"""
         item = item.lower()
-        for shop_item in self.items:
-            if item in shop_item.as_list():
-                break
-        else:
+        shop_item = self.get_item_from_str(item)
+        if item is None:
             await ctx.send('item suggestion layout')
             return
 
@@ -228,12 +241,27 @@ class Currency(commands.Cog):
 
         await self.add_balance(ctx.author.id, -shop_item.price)
         await self.add_item(ctx.author.id, shop_item.name_id)
-        layout = self.bot.get_layout('shop/purchased')
+        layout = self.bot.get_layout('buy/success')
         await layout.send(ctx, LayoutContext(message=ctx.message), repls={'item': shop_item.display_name})
     
     @commands.hybrid_command(aliases=['consume'])
     async def use(self, ctx, *, item: str):
-        pass
+        """Use an item in your inventory"""
+        item = item.lower()
+        shop_item = self.get_item_from_str(item)
+        if shop_item is None:
+            await ctx.send('item suggestion layout')
+            return
+        
+        query = 'SELECT amount FROM user_items WHERE user_id = $1 AND item_name_id = $2'
+        amount = await self.bot.db.fetchval(query, ctx.author.id, shop_item.name_id)
+        if amount is None or amount == 0:
+            layout = self.bot.get_layout('usernoitem')
+            await layout.send(ctx)
+            return
+        
+        await self.remove_item(ctx.author.id, shop_item.name_id)
+        await shop_item.use(ctx, ctx.author)
     
     @commands.hybrid_group(aliases=['balance'])
     async def bal(self, ctx, member: discord.Member = None):
@@ -342,8 +370,20 @@ class Currency(commands.Cog):
         await msg.delete()
         await ctx.message.delete()
     
+    @commands.command()
+    @commands.is_owner()
+    async def additem(self, ctx, *, flags: AddItemFlags):
+        properties = {
+            'sellable': flags.sellable,
+            'tradable': flags.tradable
+        }
+        query = 'INSERT INTO shop_items (number_id, name_id, display_name, price, stock, properties) VALUES ($1, $2, $3, $4, $5, $6)'
+        await self.bot.db.execute(query, flags.number_id, flags.name_id, flags.display_name, flags.price, flags.stock, json.dumps(properties))
+        await ctx.send('Item added.')
 
-        
+    @additem.error
+    async def additem_error(self, ctx, error):
+        raise error
 
 
 async def setup(bot):

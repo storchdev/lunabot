@@ -1,6 +1,6 @@
 from discord.ext import commands 
 import discord  
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import logging 
 from .utils import LayoutContext
 from zoneinfo import ZoneInfo
@@ -11,23 +11,43 @@ if TYPE_CHECKING:
 
 
 def is_luna_available():
-    central = ZoneInfo('US/Central')
-    now = datetime.now(central)
+    return True 
 
-    # if it's a weekday
-    if now.weekday() < 5:
-        # 7am to 11pm
-        return 7 <= now.hour < 23
-    else:
-        # 11am to 3am
-        return now.hour < 3 or now.hour >= 11 
+    # central = ZoneInfo('US/Central')
+    # now = datetime.now(central)
 
-def is_storch_available():
-    tz = ZoneInfo('US/Eastern')
-    now = datetime.now(tz)
-    # 11pm to 7am 
+    # # if it's a weekday
+    # if now.weekday() < 5:
+    #     # 7am to 11pm
+    #     return 7 <= now.hour < 23
+    # else:
+    #     # 11am to 3am
+    #     return now.hour < 3 or now.hour >= 11 
 
-    return now.hour < 7 or now.hour >= 23
+def is_storch_available(dt=None):
+    if dt is None:
+        dt = datetime.now()
+
+    # Convert the datetime to US/Eastern timezone
+    dt = dt.astimezone(ZoneInfo('US/Eastern'))
+
+    # Get the current time and day of the week
+    current_time = dt.time()
+    current_day = dt.weekday()  # Monday is 0 and Sunday is 6
+
+    # Define the time ranges
+    weekday_start = time(6, 0)  # 6:00 AM
+    weekday_end = time(23, 0)   # 11:00 PM
+    weekend_start = time(8, 0)  # 8:00 AM
+    weekend_end = time(1, 0)    # 1:00 AM (next day)
+
+    if current_day < 4 or current_day == 6:  # Weekdays (Monday to Friday)
+        return weekday_start <= current_time <= weekday_end
+    else:  # Weekends (Saturday and Sunday)
+        # Handle time range that crosses midnight
+        if current_time >= weekend_start or current_time <= weekend_end:
+            return True
+        return False
 
 
 SCHEDULE_CHECKS = [
