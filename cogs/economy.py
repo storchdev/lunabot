@@ -1,4 +1,5 @@
 from discord.ext import commands, menus
+from discord import app_commands
 import math 
 import asyncio 
 import discord
@@ -17,6 +18,23 @@ import json
 if TYPE_CHECKING:
     from bot import LunaBot
 
+def search_item(items: List['BaseItem'], query: str, threshold: int = 70) -> List['BaseItem']:
+    results = []
+    
+    # Iterate over each item and compare the query to both the display_name and qualified_name
+    for item in items:
+        for name in item.as_list():
+            similarity = fuzz.ratio(query.lower(), name.lower())
+            if similarity > threshold:
+                results.append((item, similarity))
+                break
+
+    # Sort results by similarity ratio in decreasing order
+    results.sort(key=lambda x: x[1], reverse=True)
+
+    # Return only the items, not the similarity scores
+    return [item for item, _ in results]
+
 
 class AddItemFlags(commands.FlagConverter):
     number_id: int
@@ -29,15 +47,16 @@ class AddItemFlags(commands.FlagConverter):
     tradable: bool = True
 
 class BaseItem:
-    def __init__(self, number_id: int, name_id: str, display_name: str, price: int, stock: int, properties: Dict):
+    def __init__(self, number_id: int, name_id: str, display_name: str, price: int, sell_price: Optional[int], stock: int, description: str, properties: Dict):
         self.number_id = number_id 
         self.name_id = name_id
         self.display_name = display_name
         self.price = price
+        self.sell_price = sell_price if sell_price else round(price * 0.8)
         self.stock = stock
+        self.description = description if description else 'No description available.'
         self.properties = properties
 
-        self.description = properties.get('description', 'No description available.')
         self.sellable = properties.get('sellable', True)
         self.tradable = properties.get('tradable', True)
         self.perks_needed = properties.get('perks_needed', [])
@@ -62,6 +81,7 @@ class TestItem(BaseItem):
     async def use(self, ctx, member: discord.Member):
         await ctx.send(f'{member.mention} - test item used')
         return True 
+
 
 class ShopPageSource(menus.ListPageSource):
     def __init__(self, ctx, items: List[BaseItem]):
@@ -96,22 +116,7 @@ class ShopPageSource(menus.ListPageSource):
         embed = Layout.fill_embed(embed, repls, ctx=self.ctx)
         return embed
 
-    def fuzzy_find(self, query: str, threshold: int = 70) -> List[BaseItem]:
-        results = []
-        
-        # Iterate over each item and compare the query to both the display_name and qualified_name
-        for item in self.entries:
-            for name in item.as_list():
-                similarity = fuzz.ratio(query.lower(), name.lower())
-                if similarity > threshold:
-                    results.append((item, similarity))
-                    break
-
-        # Sort results by similarity ratio in decreasing order
-        results.sort(key=lambda x: x[1], reverse=True)
-
-        # Return only the items, not the similarity scores
-        return [item for item, _ in results]
+    
 
 
 class QueryModal(discord.ui.Modal):
@@ -124,7 +129,8 @@ class QueryModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         query = self.query.value
-        results = self.shop.source.fuzzy_find(query)
+        results = search_item(self.shop.source.entries, query)
+
         if results:
             await interaction.response.send_message(f"Found {len(results)} item(s) matching '{query}':", ephemeral=True)
             await self.shop.update_items(interaction, results)
@@ -166,15 +172,22 @@ class Currency(commands.Cog):
             'weloveyourole': WeLoveYouRoleItem,
             'test': TestItem
         }
-    
+
+    def is_verified(self, member: discord.Member):
+        return member.guild.get_role(self.bot.vars.get('verified-role-id')) in member.roles
+
+    async def cog_check(self, ctx):
+        return self.is_verified(ctx.author)
+
     async def cog_load(self):
         query = 'SELECT * FROM shop_items'
         rows = await self.bot.db.fetch(query)
         for row in rows:
             cls = self.item_classes.get(row['name_id'])
             if cls is None:
-                raise Exception(f'item {row["name_id"]} has no class')
-            item = cls(row['number_id'], row['name_id'], row['display_name'], row['price'], row['stock'], json.loads(row['properties']))
+                cls = TestItem
+                # raise Exception(f'item {row["name_id"]} has no class')
+            item = cls(row['number_id'], row['name_id'], row['display_name'], row['price'], row['sell_price'], row['stock'], row['description'], json.loads(row['properties']))
             self.items.append(item)
 
     def get_item_from_str(self, item_str: str) -> 'BaseItem':
@@ -184,10 +197,16 @@ class Currency(commands.Cog):
         return None 
 
     async def get_stock(self, item_name_id: str):
-        pass
+        item = self.get_item_from_str(item_name_id)
+        if item:
+            return item.stock
+        return None 
 
     async def update_stock(self, item_name_id: str, change: int):
-        pass
+        item = self.get_item_from_str(item_name_id)
+        item.stock += change
+        query = 'UPDATE shop_items SET stock = stock + $1 WHERE name_id = $2'
+        await self.bot.db.execute(query, change, item_name_id)
 
     async def add_balance(self, user_id, amount):
         # update and return 
@@ -224,13 +243,23 @@ class Currency(commands.Cog):
     
     
     @commands.hybrid_command(aliases=['purchase'])
+    @app_commands.describe(item='The item you want to buy')
     async def buy(self, ctx, *, item: str):
         """Buy an item from the shop"""
         item = item.lower()
         shop_item = self.get_item_from_str(item)
-        if item is None:
-            await ctx.send('item suggestion layout')
+        if shop_item is None:
+
+            suggestions = [it.display_name for it in search_item(self.items, item)]
+
+            if suggestions:
+                layout = self.bot.get_layout('itemsuggestions')
+                await layout.send(ctx, repls={'suggestions': suggestions})
+            else:
+                layout = self.bot.get_layout('itemnosuggestions')
+                await layout.send(ctx)
             return
+
 
         bal = await self.get_balance(ctx.author.id)
 
@@ -245,12 +274,20 @@ class Currency(commands.Cog):
         await layout.send(ctx, LayoutContext(message=ctx.message), repls={'item': shop_item.display_name})
     
     @commands.hybrid_command(aliases=['consume'])
+    @app_commands.describe(item='The item you want to use')
     async def use(self, ctx, *, item: str):
         """Use an item in your inventory"""
         item = item.lower()
         shop_item = self.get_item_from_str(item)
         if shop_item is None:
-            await ctx.send('item suggestion layout')
+            suggestions = [it.display_name for it in search_item(self.items, item)]
+
+            if suggestions:
+                layout = self.bot.get_layout('itemsuggestions')
+                await layout.send(ctx, repls={'suggestions': suggestions})
+            else:
+                layout = self.bot.get_layout('itemnosuggestions')
+                await layout.send(ctx)
             return
         
         query = 'SELECT amount FROM user_items WHERE user_id = $1 AND item_name_id = $2'
@@ -263,7 +300,8 @@ class Currency(commands.Cog):
         await self.remove_item(ctx.author.id, shop_item.name_id)
         await shop_item.use(ctx, ctx.author)
     
-    @commands.hybrid_group(aliases=['balance'])
+    @commands.hybrid_command(aliases=['balance'])
+    @app_commands.describe(member='The member you want to check the balance of')
     async def bal(self, ctx, member: discord.Member = None):
         """Check your balance"""
         if member is None:
@@ -272,14 +310,14 @@ class Currency(commands.Cog):
         layout = self.bot.get_layout('bal')
         await layout.send(ctx, LayoutContext(author=member), repls={'balance': bal})
     
-    @bal.command(name='add')
+    @commands.command(name='addbal')
     @staff_only()
     async def bal_add(self, ctx, member: discord.Member, amount: int):
         """Add balance to a user"""
         await self.add_balance(member.id, amount)
         await ctx.send(f'Added {amount}{self.lunara} to {member.mention}.')
     
-    @bal.command(name='remove')
+    @commands.command(name='removebal')
     @staff_only()
     async def bal_remove(self, ctx, member: discord.Member, amount: int):
         """Remove balance from a user"""
@@ -310,6 +348,9 @@ class Currency(commands.Cog):
         
         if msg.channel.id != self.bot.vars.get('general-channel-id'):
             return 
+        
+        if not self.is_verified(msg.author):
+            return
 
         if not self.drop_active: 
             self.msg_count += 1
@@ -370,6 +411,45 @@ class Currency(commands.Cog):
         await msg.delete()
         await ctx.message.delete()
     
+    @commands.hybrid_command()
+    @app_commands.describe(item='The item you want to view')
+    async def iteminfo(self, ctx, *, item):
+        item = item.lower()
+        shop_item = self.get_item_from_str(item)
+        if shop_item is None:
+            suggestions = [it.display_name for it in search_item(self.items, item)]
+
+            if suggestions:
+                layout = self.bot.get_layout('itemsuggestions')
+                await layout.send(ctx, repls={'suggestions': suggestions})
+            else:
+                layout = self.bot.get_layout('itemnosuggestions')
+                await layout.send(ctx)
+            return
+
+        layout = self.bot.get_layout('iteminfo')
+
+
+        repls = {
+            'item': shop_item.display_name,
+            'numberid': shop_item.number_id,
+            'nameid': shop_item.name_id,
+            'price': shop_item.price,
+            'sellprice': shop_item.sell_price,
+            'stock': '∞' if shop_item.stock == -1 else shop_item.stock,
+            'istradable': 'Yes' if shop_item.tradable else 'No',
+            'reqs': [],
+            'desc': shop_item.description
+        }
+        #todo: deal with perks later
+        reqs = []
+        if len(reqs) == 0:
+            repls['maybenone'] = 'None!'
+        else:
+            repls['maybenone'] = ''
+
+        await layout.send(ctx, LayoutContext(message=ctx.message), repls=repls)
+
     @commands.command()
     @commands.is_owner()
     async def additem(self, ctx, *, flags: AddItemFlags):
@@ -377,8 +457,8 @@ class Currency(commands.Cog):
             'sellable': flags.sellable,
             'tradable': flags.tradable
         }
-        query = 'INSERT INTO shop_items (number_id, name_id, display_name, price, stock, properties) VALUES ($1, $2, $3, $4, $5, $6)'
-        await self.bot.db.execute(query, flags.number_id, flags.name_id, flags.display_name, flags.price, flags.stock, json.dumps(properties))
+        query = 'INSERT INTO shop_items (number_id, name_id, display_name, price, stock, properties, description) VALUES ($1, $2, $3, $4, $5, $6, $7)'
+        await self.bot.db.execute(query, flags.number_id, flags.name_id, flags.display_name, flags.price, flags.stock, json.dumps(properties), flags.description)
         await ctx.send('Item added.')
 
     @additem.error
