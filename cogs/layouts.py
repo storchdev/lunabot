@@ -66,6 +66,13 @@ class Layouts(commands.Cog):
         await self.bot.db.execute(query, ctx.author.id, embed_name, None, data)
         self.bot.layouts[embed_name] = Layout(self.bot, embed_name, None, [embed_name])
         await ctx.send(f'Added your layout `{embed_name}`!')
+    
+    @layout.command()
+    @app_commands.default_permissions()
+    async def fromembedmany(self, ctx, *, embed_names):
+        embed_names = embed_names.strip().lower().split('\n')
+        for embed_name in embed_names:
+            await ctx.invoke(self.fromembed, embed_name=embed_name)
 
     @layout.command()
     @app_commands.default_permissions()
