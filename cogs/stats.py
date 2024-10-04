@@ -26,7 +26,7 @@ class StatsFlags(commands.FlagConverter):
     
 
 
-def plot_data_sync(data, stat, start, end, tick):
+def plot_data_sync(data, stat=None):
     """
     Plot data synchronously.
     :param data: A dictionary with join, leave, and net data.
@@ -39,7 +39,7 @@ def plot_data_sync(data, stat, start, end, tick):
     x_values = []
     y_values = []
 
-    for time, value in data[stat]:
+    for time, value in data:
         x_values.append(time)
         y_values.append(value)
 
@@ -52,16 +52,22 @@ def plot_data_sync(data, stat, start, end, tick):
     colors = {
         'joins': '#59ff91',
         'leaves': '#f55858',
-        'net': 'yellow'
+        'net': 'yellow',
+        None: '#cab7ff'
     }
 
     # Plot the data
     ax.plot(x_values, y_values, color=colors[stat], marker='o')  # Use colors for the line and markers
 
     # Set title and labels
-    ax.set_title(f"{stat.capitalize()} Rate Over Time", color='cyan')
+    if stat:
+        ax.set_title(f"{stat.capitalize()} Rate Over Time", color='cyan')
+        ax.set_ylabel("Rate", color='cyan')
+    else:
+        ax.set_title('Absolute Member Count Over Time', color='cyan')
+        ax.set_ylabel("Member Count", color='cyan')
+
     ax.set_xlabel("Time", color='cyan')
-    ax.set_ylabel("Rate", color='cyan')
 
     # Customize the axes
     ax.spines['top'].set_color('white')
@@ -142,7 +148,36 @@ class Stats(commands.Cog):
             member.id, member.guild.id, member_count, discord.utils.utcnow()
         )
 
-    async def generate_data_points(self, start, end, tick):
+    async def generate_absolute_data(self, start, end, guild_id):
+        """
+        Generate absolute member counts data from the database.
+        :param start: Start time for the data range.
+        :param end: End time for the data range.
+        :return: A list of tuples containing (timestamp, member_count).
+        """
+        # Create a connection to the database
+        # Query to get the member counts at each timestamp
+        query = """
+        SELECT time, member_count FROM (
+            SELECT time, member_count
+            FROM joins
+            WHERE time BETWEEN $1 AND $2 AND guild_id = $3
+            UNION
+            SELECT time, member_count
+            FROM leaves
+            WHERE time BETWEEN $1 AND $2 AND guild_id = $3
+        ) AS combined
+        ORDER BY time;
+        """
+
+        # Fetch the results
+        results = await self.bot.db.fetch(query, start, end, guild_id)
+
+        # Convert results to a list of tuples
+        absolute_data = [(row['time'], row['member_count']) for row in results]
+        return absolute_data
+
+    async def generate_rate_data(self, stat, start, end, tick, guild_id):
         """
         Generate data points for the plot by querying the database.
         :param start: Start time for the data range.
@@ -150,41 +185,78 @@ class Stats(commands.Cog):
         :param tick: Time delta for each point.
         :return: A dictionary containing join and leave data points.
         """
-        data = {'joins': [], 'leaves': [], 'net': []}
-
+        data = []
         current_time = start
 
         while current_time < end:
             next_time = current_time + tick
             join_count = await self.bot.db.fetchval(
-                'SELECT COUNT(*) FROM joins WHERE time >= $1 AND time < $2', 
-                current_time, next_time
+                'SELECT COUNT(*) FROM joins WHERE time >= $1 AND time < $2 AND guild_id = $3', 
+                current_time, next_time, guild_id
             )
             leave_count = await self.bot.db.fetchval(
-                'SELECT COUNT(*) FROM leaves WHERE time >= $1 AND time < $2', 
-                current_time, next_time
+                'SELECT COUNT(*) FROM leaves WHERE time >= $1 AND time < $2 AND guild_id = $3', 
+                current_time, next_time, guild_id
             )
-            
-            data['joins'].append((current_time + tick / 2, join_count))
-            data['leaves'].append((current_time + tick / 2, leave_count))
-            data['net'].append((current_time + tick / 2, join_count - leave_count))
+
+            if stat == 'joins': 
+                data.append((current_time + tick / 2, join_count))
+            elif stat == 'leaves':
+                data.append((current_time + tick / 2, leave_count)) 
+            elif stat == 'net':
+                data.append((current_time + tick / 2, join_count - leave_count))
 
             current_time = next_time
 
         return data
+    
+    async def get_total_joins(self, start, end, guild_id):
+        query = 'SELECT COUNT(*) FROM joins WHERE time BETWEEN $1 AND $2 AND guild_id = $3'
+        total_joins = await self.bot.db.fetchval(query, start, end, guild_id)
+        return total_joins
+    
+    async def get_total_leaves(self, start, end, guild_id):
+        query = 'SELECT COUNT(*) FROM leaves WHERE time BETWEEN $1 AND $2 AND guild_id = $3'
+        total_leaves = await self.bot.db.fetchval(query, start, end, guild_id)
+        return total_leaves
+
+    async def generate_base_embed(self, start, end, guild_id):
+        embed = discord.Embed(
+            title='Stats',
+            color=0xcab7ff
+        )
+        joins = await self.get_total_joins(start, end, guild_id)
+        leaves = await self.get_total_leaves(start, end, guild_id)
+        net = joins - leaves
+        embed.add_field(name='Start', value=discord.utils.format_dt(start, 'R'), inline=True)
+        embed.add_field(name='End', value=discord.utils.format_dt(end, 'R'), inline=True)
+        embed.add_field(name='Joins', value=joins, inline=False)
+        embed.add_field(name='Leaves', value=leaves, inline=True)
+        embed.add_field(name='Net', value=net, inline=True)
+
+        netpersecond = net / (end - start).total_seconds()
+        netperweek = netpersecond * 604800
+        netperday = netpersecond * 86400
+        netperhour = netpersecond * 3600
+        value = f'{netperhour:.2f} per hour\n{netperday:.2f} per day\n{netperweek:.2f} per week'
+        embed.add_field(name='Net Rates', value=value, inline=False)
+
+        embed.set_image(url='attachment://plot.png')
+
+        return embed
 
     @commands.command()
     async def stats(self, ctx, *, flags: StatsFlags):
         stat = flags.stat
-        start = parse(flags.start)
-        end = parse(flags.end)
+        start = parse(flags.start, settings={'TIMEZONE': 'US/Central', 'RETURN_AS_TIMEZONE_AWARE': True})
+        end = parse(flags.end, settings={'TIMEZONE': 'US/Central', 'RETURN_AS_TIMEZONE_AWARE': True})
 
         if end <= start:
             await ctx.send("End time must be after start time.")
             return
         
-        if end > datetime.now():
-            end = datetime.now()
+        if end > discord.utils.utcnow():
+            end = discord.utils.utcnow()
         
         tick = flags.tick
         ticks = flags.ticks
@@ -196,13 +268,33 @@ class Stats(commands.Cog):
 
         #  GENERATE DATA POINTS FOR THE PLOT BY QUERYING THE DATABASE
         tick = timedelta(seconds=tick)
-        data = await self.generate_data_points(start, end, tick)
-        buf = await asyncio.to_thread(plot_data_sync, data, stat, start, end, tick)
-        await ctx.send(file=discord.File(buf, filename='plot.png'))
+        data = await self.generate_rate_data(stat, start, end, tick, ctx.guild.id)
+        buf = await asyncio.to_thread(plot_data_sync, data, stat)
+        file = discord.File(buf, filename='plot.png')
+        embed = await self.generate_base_embed(start, end, ctx.guild.id)
+
+        await ctx.send(file=file, embed=embed)
 
 
-    # @commands.command()
-    # async def absstats(self, ctx, *, flags: StatsFlags):
+    @commands.command()
+    async def absstats(self, ctx, *, flags: StatsFlags):
+        start = parse(flags.start, settings={'TIMEZONE': 'US/Central', 'RETURN_AS_TIMEZONE_AWARE': True})
+        end = parse(flags.end, settings={'TIMEZONE': 'US/Central', 'RETURN_AS_TIMEZONE_AWARE': True})
+
+        if end <= start:
+            await ctx.send("End time must be after start time.")
+            return
+        
+        if end > discord.utils.utcnow():
+            end = discord.utils.utcnow()
+
+        absolute_data = await self.generate_absolute_data(start, end, ctx.guild.id)
+        buf = await asyncio.to_thread(plot_data_sync, absolute_data)
+        file = discord.File(buf, filename='plot.png')
+        embed = await self.generate_base_embed(start, end, ctx.guild.id)
+
+        await ctx.send(file=file, embed=embed)
+
     @commands.command(name="fakedata")
     @staff_only()
     async def insert_fake_data(self, ctx):
