@@ -136,8 +136,10 @@ CREATE TABLE IF NOT EXISTS shop_items (
   name_id TEXT UNIQUE,
   display_name TEXT,
   price INTEGER,
+  sell_price INTEGER,
   properties JSONB,
-  stock INTEGER DEFAULT -1
+  stock INTEGER DEFAULT -1,
+  description TEXT
 );
 
 
