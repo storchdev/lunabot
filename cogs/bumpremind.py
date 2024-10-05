@@ -59,16 +59,25 @@ class BumpRemind(commands.Cog):
 
     def __init__(self, bot):
         self.bot: 'LunaBot' = bot 
+        self.cant_bump_name = 'cant-bumpㆍ🔴'
+        self.can_bump_name = 'can-bumpㆍ🟢'
  
     async def cog_load(self):
         query = 'SELECT user_id, next_bump FROM bump_remind'
         row = await self.bot.db.fetchrow(query)
         if row is None:
             return
+        
+        channel = self.bot.get_var_channel('bump-status')
+
         if row['next_bump'] > discord.utils.utcnow():
             self.bot.loop.create_task(self.task(row['user_id'], row['next_bump']))
+            if channel.name != self.cant_bump_name:
+                await channel.edit(name=self.cant_bump_name)
         else:
             await self.send(row['user_id'])
+            if channel.name != self.can_bump_name:
+                await channel.edit(name=self.can_bump_name)
 
     async def send(self, user_id):
         channel = self.bot.get_channel(self.bot.vars.get('bot-channel-id'))
@@ -84,6 +93,8 @@ class BumpRemind(commands.Cog):
     async def task(self, user_id, end_time):
         await discord.utils.sleep_until(end_time)
         await self.send(user_id)
+        channel = self.bot.get_var_channel('bump-status')
+        await channel.edit(name=self.can_bump_name)
 
     @commands.Cog.listener()
     async def on_message(self, msg):
@@ -102,6 +113,10 @@ class BumpRemind(commands.Cog):
         self.bot.loop.create_task(self.task(user_id, end_time))
         query = 'INSERT INTO bump_remind (user_id, next_bump) VALUES ($1, $2)'
         await self.bot.db.execute(query, user_id, end_time)
+
+        channel = self.bot.get_var_channel('bump-status')
+        if channel.name != self.cant_bump_name:
+            await channel.edit(name=self.cant_bump_name)
 
 
 async def setup(bot):
