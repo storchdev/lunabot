@@ -57,7 +57,12 @@ def plot_data_sync(data, stat=None):
     }
 
     # Plot the data
-    ax.plot(x_values, y_values, color=colors[stat], marker='o')  # Use colors for the line and markers
+    if stat is None:
+        marker = None
+    else:
+        marker = 'o'
+
+    ax.plot(x_values, y_values, color=colors[stat], marker=marker)  # Use colors for the line and markers
 
     # Set title and labels
     if stat:
@@ -76,7 +81,8 @@ def plot_data_sync(data, stat=None):
     ax.spines['bottom'].set_color('white')
 
     ax.tick_params(axis='both', colors='cyan')  # Set tick colors to cyan
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d\n%H:%M', tz=timezone('US/Central')))
+    ax.xaxis_date()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%a %-m/%-d\n%-I:%M %p', tz=timezone('US/Central')))
     
     # Remove axis labels (but keep ticks and numbers)
     ax.set_xlabel("")  # Remove x-axis label
@@ -87,7 +93,7 @@ def plot_data_sync(data, stat=None):
     ax.xaxis.grid(True, color='white', linestyle='--', linewidth=0.5)  # Add a white grid
 
     # Rotate the x axis labels.
-    fig.autofmt_xdate()
+    # fig.autofmt_xdate()
 
     # Save the plot to a BytesIO object.
     buf = BytesIO()
