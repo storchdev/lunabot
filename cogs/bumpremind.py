@@ -3,7 +3,9 @@ import discord
 from datetime import datetime, timedelta, time
 import logging 
 from .utils import LayoutContext
+from .utils.checks import staff_only
 from zoneinfo import ZoneInfo
+from dateparser import parse 
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -11,7 +13,8 @@ if TYPE_CHECKING:
 
 
 def is_luna_available():
-    return True 
+    return False   # remove this line later
+    # return True 
 
     # central = ZoneInfo('US/Central')
     # now = datetime.now(central)
@@ -61,6 +64,7 @@ class BumpRemind(commands.Cog):
         self.bot: 'LunaBot' = bot 
         self.cant_bump_name = 'cant-bumpㆍ🔴'
         self.can_bump_name = 'can-bumpㆍ🟢'
+        self.task = None
  
     async def cog_load(self):
         query = 'SELECT user_id, next_bump FROM bump_remind'
@@ -71,7 +75,7 @@ class BumpRemind(commands.Cog):
         channel = self.bot.get_var_channel('bump-status')
 
         if row['next_bump'] > discord.utils.utcnow():
-            self.bot.loop.create_task(self.task(row['user_id'], row['next_bump']))
+            self.task = self.bot.loop.create_task(self.task_coro(row['user_id'], row['next_bump']))
             if channel.name != self.cant_bump_name:
                 await channel.edit(name=self.cant_bump_name)
         else:
@@ -90,11 +94,12 @@ class BumpRemind(commands.Cog):
         query = 'DELETE FROM bump_remind'
         await self.bot.db.execute(query)
 
-    async def task(self, user_id, end_time):
+    async def task_coro(self, user_id, end_time):
         await discord.utils.sleep_until(end_time)
         await self.send(user_id)
         channel = self.bot.get_var_channel('bump-status')
         await channel.edit(name=self.can_bump_name)
+        self.task = None
 
     @commands.Cog.listener()
     async def on_message(self, msg):
@@ -110,13 +115,40 @@ class BumpRemind(commands.Cog):
 
         user_id = msg.interaction.user.id 
         end_time = discord.utils.utcnow() + timedelta(hours=2)
-        self.bot.loop.create_task(self.task(user_id, end_time))
+        self.task = self.bot.loop.create_task(self.task_coro(user_id, end_time))
         query = 'INSERT INTO bump_remind (user_id, next_bump) VALUES ($1, $2)'
         await self.bot.db.execute(query, user_id, end_time)
 
         channel = self.bot.get_var_channel('bump-status')
         if channel.name != self.cant_bump_name:
             await channel.edit(name=self.cant_bump_name)
+    
+    @commands.command()
+    @staff_only()
+    async def reset_bump(self, ctx, *, time: str = None):
+        query = 'DELETE FROM bump_remind'
+        await self.bot.db.execute(query)
+
+        if self.task is not None:
+            self.task.cancel()
+            self.task = None
+
+        channel = self.bot.get_var_channel('bump-status')
+        if time is None:
+            await channel.edit(name=self.can_bump_name)
+        else:
+            parsed_time = parse(time, settings={'TIMEZONE': 'US/Central', 'RETURN_AS_TIMEZONE_AWARE': True})
+            if parsed_time is None:
+                await ctx.send('Invalid time format.')
+                return
+            query = 'INSERT INTO bump_remind (user_id, next_bump) VALUES ($1, $2)'
+            await self.bot.db.execute(query, ctx.author.id, parsed_time)
+
+            self.task = self.bot.loop.create_task(self.task_coro(ctx.author.id, parsed_time))
+
+            await channel.edit(name=self.cant_bump_name)
+
+        await ctx.send('Bump reminder reset.')
 
 
 async def setup(bot):

@@ -10,7 +10,14 @@ import discord
 from typing import Optional, Literal, Union, List
 import importlib 
 import aiohttp 
+from fuzzywuzzy import fuzz
+from pkgutil import iter_modules
 import dateparser
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 class JumpModal(ui.Modal):
@@ -147,7 +154,7 @@ class StickerFlags(commands.FlagConverter):
 class Tools(commands.Cog, description='storchs tools'):
     
     def __init__(self, bot):
-        self.bot = bot 
+        self.bot: 'LunaBot' = bot 
     
     async def cog_check(self, ctx):
         return ctx.author.guild_permissions.administrator or ctx.author.id == self.bot.owner_id
@@ -208,33 +215,43 @@ class Tools(commands.Cog, description='storchs tools'):
         await ctx.send(embed=view.current_embed)
         await view.message.delete()
         
-    @commands.command()
-    async def r(self, ctx):
-        with open('cogs/settings.json') as f:
-            settings = json.load(f)
-        modules = settings['active_modules']
-        cogs = settings['active_cogs']
-        info = []
-        for mname in modules:
-            await self.reload_module(mname, info)
-        for cog in cogs:
-            await self.reload_cog(cog, info)
+    # @commands.command()
+    # async def r(self, ctx):
+    #     with open('cogs/settings.json') as f:
+    #         settings = json.load(f)
+    #     modules = settings['active_modules']
+    #     cogs = settings['active_cogs']
+    #     info = []
+    #     for mname in modules:
+    #         await self.reload_module(mname, info)
+    #     for cog in cogs:
+    #         await self.reload_cog(cog, info)
     
-        await ctx.send('\n'.join(info))
+    #     await ctx.send('\n'.join(info))
 
     @commands.command()
-    async def rc(self, ctx, *cogs):
-        info = []
-        for cog in cogs:
-            await self.reload_cog(cog, info)
-        await ctx.send('\n'.join(info))
+    async def r(self, ctx: commands.Context, *cogs):
+        """really lazy reload with fuzzy find + jsk"""
+        cog_names = []
+        for lazycog in cogs:
+            max_ratio = 0
+            best_cog = None
+            for cog in [m.name for m in iter_modules(['cogs'])]:
+                ratio = fuzz.ratio(cog, lazycog)
+                if ratio > max_ratio:
+                    max_ratio = ratio
+                    best_cog = cog
+            cog_names.append('cogs.'+best_cog)
+        
+        await ctx.invoke(self.bot.get_command('jsk reload'), cog_names)
+
     
-    @commands.command()
-    async def rm(self, ctx, *modules):
-        info = []
-        for mname in modules:
-            await self.reload_module(mname, info)
-        await ctx.send('\n'.join(info))
+    # @commands.command()
+    # async def rm(self, ctx, *modules):
+    #     info = []
+    #     for mname in modules:
+    #         await self.reload_module(mname, info)
+    #     await ctx.send('\n'.join(info))
 
 
     @commands.command()
