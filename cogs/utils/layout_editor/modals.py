@@ -2,7 +2,12 @@ import discord
 
 
 class TextModal(discord.ui.Modal, title='Set Layout Text'):
-    text = discord.ui.TextInput(label='Enter text', max_length=2000, required=False)
+    text = discord.ui.TextInput(
+        label='Enter text', 
+        style=discord.TextStyle.long, 
+        max_length=2000, 
+        required=False
+    )
 
     def __init__(self, parent_view, text, **kwargs):
         super().__init__(**kwargs)

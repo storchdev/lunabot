@@ -10,6 +10,7 @@ from cogs.utils.errors import InvalidURL
 from cogs.future_tasks import FutureTask
 from datetime import datetime, timedelta
 import discord 
+from pkgutil import iter_modules
 
 
 class LunaBot(commands.Bot):
@@ -40,14 +41,16 @@ class LunaBot(commands.Bot):
         self.add_check(guild_only)
         await self.load_extension("jishaku")
         priority = ['cogs.db', 'cogs.vars', 'cogs.tools']
+        not_cogs = ['cogs.utils']
+
         for cog in priority:
             await self.load_extension(cog)
             logging.info(f'Loaded cog {cog}')
-        for fname in os.listdir('cogs'):
-            if not fname.endswith('.py'):
-                continue
-            cog = 'cogs.'+fname[:-3]
+        
+        for cog in [m.name for m in iter_modules(['cogs'], prefix='cogs.')]:
             if cog in priority:
+                continue
+            if cog in not_cogs:
                 continue
             await self.load_extension(cog)
             logging.info(f'Loaded cog {cog}')

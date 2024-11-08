@@ -13,19 +13,18 @@ if TYPE_CHECKING:
 
 
 def is_luna_available():
-    return False   # remove this line later
-    # return True 
+    return True 
 
-    # central = ZoneInfo('US/Central')
-    # now = datetime.now(central)
+    central = ZoneInfo('US/Central')
+    now = datetime.now(central)
 
-    # # if it's a weekday
-    # if now.weekday() < 5:
-    #     # 7am to 11pm
-    #     return 7 <= now.hour < 23
-    # else:
-    #     # 11am to 3am
-    #     return now.hour < 3 or now.hour >= 11 
+    # if it's a weekday
+    if now.weekday() < 5:
+        # 7am to 11pm
+        return 7 <= now.hour < 23
+    else:
+        # 11am to 3am
+        return now.hour < 3 or now.hour >= 11 
 
 def is_storch_available(dt=None):
     if dt is None:
@@ -62,8 +61,8 @@ class BumpRemind(commands.Cog):
 
     def __init__(self, bot):
         self.bot: 'LunaBot' = bot 
-        self.cant_bump_name = 'cant-bumpㆍ🔴'
-        self.can_bump_name = 'can-bumpㆍ🟢'
+        self.cant_bump_name = '🔴'
+        self.can_bump_name = '🟢'
         self.task = None
  
     async def cog_load(self):
@@ -123,7 +122,7 @@ class BumpRemind(commands.Cog):
         if channel.name != self.cant_bump_name:
             await channel.edit(name=self.cant_bump_name)
     
-    @commands.command()
+    @commands.command(name='bumpreset', aliases=['resetbump', 'bump-reset', 'reset-bump'])
     @staff_only()
     async def reset_bump(self, ctx, *, time: str = None):
         query = 'DELETE FROM bump_remind'

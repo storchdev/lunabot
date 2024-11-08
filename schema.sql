@@ -122,26 +122,54 @@ CREATE TABLE IF NOT EXISTS balances (
   balance INTEGER
 );
 
+-- DROP TABLE user_items;
+-- DROP TABLE shop_items;
+-- DROP TABLE item_reqs;
+-- DROP TABLE item_categories;
+
 CREATE TABLE IF NOT EXISTS user_items (
   id SERIAL PRIMARY KEY,
   user_id BIGINT,
   item_name_id TEXT,
-  amount INTEGER,
+  state TEXT,
+  time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS item_use_times (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  item_name_id TEXT,
+  time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, item_name_id)
 );
 
-
 CREATE TABLE IF NOT EXISTS shop_items (
-  number_id INTEGER PRIMARY KEY,
-  name_id TEXT UNIQUE,
+  name_id TEXT PRIMARY KEY,
+  number_id INTEGER UNIQUE,
   display_name TEXT,
   price INTEGER,
-  sell_price INTEGER,
-  properties JSONB,
+  sell_price INTEGER DEFAULT NULL,
   stock INTEGER DEFAULT -1,
+  usable BOOLEAN,
+  activatable BOOLEAN,
+  category TEXT,
   description TEXT
 );
 
+CREATE TABLE IF NOT EXISTS item_categories (
+  name TEXT PRIMARY KEY,
+  display_name TEXT,
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS item_reqs( 
+  item_name_id TEXT,
+  type TEXT,  
+  description TEXT,
+  name TEXT,
+  kwargs JSONB,
+  UNIQUE(item_name_id, type, name)
+);
 
 CREATE TABLE IF NOT EXISTS joins (
   id SERIAL PRIMARY KEY,
@@ -156,5 +184,12 @@ CREATE TABLE IF NOT EXISTS leaves (
   user_id BIGINT,
   guild_id BIGINT,
   member_count INTEGER,
+  time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS message_data (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  channel_id BIGINT,
   time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

@@ -74,6 +74,9 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
             member = guild.get_member(row['user_id'])
             if member:
                 members.append(member)
+        
+        if len(members) == 0:
+            return
 
         mentions_list = []
 
