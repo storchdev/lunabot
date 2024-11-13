@@ -1,25 +1,26 @@
-from discord.ext import commands, menus
-from discord import app_commands
-import math 
 import asyncio 
-import discord
-from typing import List, Tuple, Dict, Optional, Union
-from typing import TYPE_CHECKING
+import math 
 import random
+import json 
+
+import discord
+from discord import app_commands
+from discord.ext import commands, menus
+
 from ..utils import LayoutContext, Layout
 from ..utils.checks import staff_only
-from ..utils import RoboPages
-from bot import LunaBot
-import json 
 from . import items
-from .helpers import search_item
+from .items import ItemCategory, ItemReq
+from .inv import InvMainPageSource, InvMainPages
+from .search import search_item 
+from .shop import ShopMainView
 
+from typing import List, Tuple, Dict, Optional, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .items import BaseItem
     from bot import LunaBot
-
-
 
 
 class AddItemFlags(commands.FlagConverter):
@@ -38,107 +39,61 @@ class AddItemFlags(commands.FlagConverter):
     trade_reqs: str = '[]'
 
 
-class BaseRequirement:
-    def __init__(self, item: 'BaseItem', req_type: str, description: str, args: dict):
-        self.item = item
-        self.req_type = req_type
-        self.description = description
-        self.args = args
-    
-    def __str__(self):
-        return self.description
-
-    async def is_met(self):
-        raise NotImplementedError()
-
-class BuyRequirement(BaseRequirement):
-    async def is_met(self, member: discord.Member):
-        if self.req_type == 'has_role':
-            role_id = self.args.get('role_id')
-            role = member.guild.get_role(role_id)
-            if role is None:
-                return False
-            return role in member.roles
-        # add more  
-        return False 
-
-class SellRequirement(BaseRequirement):
-    async def is_met(self, member: discord.Member):
-        return True
-
-class TradeRequirement(BaseRequirement):
-    async def is_met(self, other_item: 'BaseItem', member: discord.Member, other_member: discord.Member):
-        return True
 
 
-class ShopPageSource(menus.ListPageSource):
-    def __init__(self, ctx, items: List['BaseItem']):
-        self.ctx = ctx
-        super().__init__(items, per_page=5)
+# class ShopPageSource(menus.ListPageSource):
+#     def __init__(self, ctx, items: List['BaseItem']):
+#         self.ctx = ctx
+#         super().__init__(items, per_page=5)
 
-    async def format_page(self, menu, entries: List['BaseItem']):
-        embed = self.ctx.bot.embeds.get('shop')
-        if not embed:
-            return "No shop embed found."
+#     async def format_page(self, menu, entries: List['BaseItem']):
+#         embed = self.ctx.bot.embeds.get('shop')
+#         if not embed:
+#             return "No shop embed found."
 
-        itemnames = []
-        itemdescs = []
-        emojis = []
-        state = True 
+#         itemnames = []
+#         itemdescs = []
+#         emojis = []
+#         state = True 
 
-        for entry in entries:
-            itemnames.append(entry.display_name)
-            itemdescs.append(entry.description)
+#         for entry in entries:
+#             itemnames.append(entry.display_name)
+#             itemdescs.append(entry.description)
 
-            if state:
-                emojis.append(self.ctx.bot.vars.get('heart-point-emoji'))
-            else:
-                emojis.append(self.ctx.bot.vars.get('heart-point-purple-emoji'))
-            state = not state
+#             if state:
+#                 emojis.append(self.ctx.bot.vars.get('heart-point-emoji'))
+#             else:
+#                 emojis.append(self.ctx.bot.vars.get('heart-point-purple-emoji'))
+#             state = not state
 
-        repls = {
-            'itemnames': itemnames,
-            'itemdescs': itemdescs,
-            'emojis': emojis
-        }
-        embed = Layout.fill_embed(embed, repls, ctx=self.ctx)
-        return embed
-
-
-class QueryModal(discord.ui.Modal):
-    def __init__(self, shop: 'ShopMenu'):
-        super().__init__(title="Search Items")
-        self.shop = shop
-        self.query = discord.ui.TextInput(label="Enter your search query")
-
-        self.add_item(self.query)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        query = self.query.value
-        results = search_item(self.shop.source.entries, query)
-
-        if results:
-            await interaction.response.send_message(f"Found {len(results)} item(s) matching '{query}':", ephemeral=True)
-            await self.shop.update_items(interaction, results)
-        else:
-            await interaction.response.send_message(f"No items found matching '{query}'.", ephemeral=True)
+#         repls = {
+#             'itemnames': itemnames,
+#             'itemdescs': itemdescs,
+#             'emojis': emojis
+#         }
+#         embed = Layout.fill_embed(embed, repls, ctx=self.ctx)
+#         return embed
 
 
-class ShopMenu(RoboPages):
-    def __init__(self, source: ShopPageSource, ctx):
-        super().__init__(source, ctx=ctx)
-        self.add_item(self.search_button)
 
-    async def update_items(self, interaction, items: List['BaseItem']):
-        new_source = ShopPageSource(self.ctx, items)
-        self.source = new_source
-        self.current_page = 0
-        await self.show_page(interaction, self.current_page)
 
-    @discord.ui.button(label='Search', style=discord.ButtonStyle.green)
-    async def search_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        modal = QueryModal(self)
-        await interaction.response.send_modal(modal)
+# class ShopMenu(RoboPages):
+#     def __init__(self, source: ShopPageSource, ctx):
+#         super().__init__(source, ctx=ctx)
+#         self.add_item(self.search_button)
+
+#     async def update_items(self, interaction, items: List['BaseItem']):
+#         new_source = ShopPageSource(self.ctx, items)
+#         self.source = new_source
+#         self.current_page = 0
+#         await self.show_page(interaction, self.current_page)
+
+#     @discord.ui.button(label='Search', style=discord.ButtonStyle.green)
+#     async def search_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+#         modal = QueryModal(self)
+#         await interaction.response.send_modal(modal)
+
+
 
 
 class Economy(commands.Cog):
@@ -163,54 +118,43 @@ class Economy(commands.Cog):
         return self.is_verified(ctx.author)
 
     async def create_tables(self):
-        DROP_TABLES = False
-        if DROP_TABLES:
-            query = 'DROP TABLE IF EXISTS user_items, shop_items, item_categories, item_reqs'
-            await self.bot.db.execute(query)
-
         schema = '''
             CREATE TABLE IF NOT EXISTS user_items (
-            id SERIAL PRIMARY KEY,
-            user_id BIGINT,
-            item_name_id TEXT,
-            state TEXT,
-            time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS item_use_times (
-            id SERIAL PRIMARY KEY,
-            user_id BIGINT,
-            item_name_id TEXT,
-            time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(user_id, item_name_id)
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT,
+                item_name_id TEXT,
+                state TEXT,
+                item_count INTEGER,
+                time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, item_name_id)
             );
 
             CREATE TABLE IF NOT EXISTS shop_items (
-            name_id TEXT PRIMARY KEY,
-            number_id INTEGER UNIQUE,
-            display_name TEXT,
-            price INTEGER,
-            sell_price INTEGER,
-            stock INTEGER DEFAULT -1,
-            usable BOOLEAN,
-            activatable BOOLEAN,
-            category TEXT,
-            description TEXT
+                name_id TEXT PRIMARY KEY,
+                number_id INTEGER UNIQUE,
+                display_name TEXT,
+                price INTEGER,
+                sell_price INTEGER DEFAULT NULL,
+                stock INTEGER DEFAULT -1,
+                usable BOOLEAN,
+                activatable BOOLEAN,
+                category TEXT,
+                description TEXT
             );
 
             CREATE TABLE IF NOT EXISTS item_categories (
-            name TEXT PRIMARY KEY,
-            display_name TEXT,
-            description TEXT
+                name TEXT PRIMARY KEY,
+                display_name TEXT,
+                description TEXT
             );
 
             CREATE TABLE IF NOT EXISTS item_reqs( 
-            item_name_id TEXT,
-            type TEXT,  --buy, sell, trade
-            description TEXT,
-            name TEXT,
-            kwargs JSONB,
-            UNIQUE(item_name_id, type, name)
+                item_name_id TEXT,
+                type TEXT,  
+                description TEXT,
+                name TEXT,
+                UNIQUE(item_name_id, type, name)
             );
         '''
         await self.bot.db.execute(schema)
@@ -221,9 +165,16 @@ class Economy(commands.Cog):
         await self.create_tables()
         query = 'SELECT * FROM item_categories'
         rows = await self.bot.db.fetch(query)
-        self.categories = {row['name']: {'display_name': row['display_name'], 'description': row['description']} for row in rows}
+        self.categories = {
+            row["name"]: ItemCategory(
+                row["name"],
+                row["display_name"],
+                row["description"]
+            ) 
+            for row in rows
+        }
 
-        query = 'SELECT * FROM shop_items'
+        query = 'SELECT * FROM shop_items ORDER BY number_id ASC'
         rows = await self.bot.db.fetch(query)
 
         classes = [item_cls for item_cls in items.__dict__.values() if isinstance(item_cls, type)]
@@ -237,6 +188,14 @@ class Economy(commands.Cog):
                     break
             else:
                 item_cls = items.BaseItem
+            
+            reqs = []
+            query = 'SELECT * FROM item_reqs WHERE item_name_id = $1'
+            req_rows = await self.bot.db.fetch(query, row["name_id"])
+            for req_row in req_rows:
+                reqs.append(ItemReq(req_row["type"], req_row["description"], req_row["name"]))
+            
+            reqs.sort(key=lambda r: r.sort_order )
 
             item = item_cls(
                 row['number_id'], 
@@ -247,35 +206,35 @@ class Economy(commands.Cog):
                 row['stock'], 
                 row['usable'],
                 row['activatable'],
-                row['category'],
+                self.categories[row['category']],
                 row['description'], 
-                [],
-                [],
-                []
+                reqs,
+                # [],
+                # [],
+                # [],
             )
 
-            query = 'SELECT * FROM item_reqs WHERE item_name_id = $1'
-            rows = await self.bot.db.fetch(query, item.name_id)
-            for row in rows:
-                if row['type'] == 'buy':
-                    lst = item.buy_reqs
-                    cls = BuyRequirement
-                elif row['type'] == 'sell':
-                    lst = item.sell_reqs
-                    cls = SellRequirement
-                elif row['type'] == 'trade':
-                    lst = item.trade_reqs
-                    cls = TradeRequirement
-                else:
-                    raise Exception(f'invalid req type {row["type"]}')
+            # query = 'SELECT * FROM item_reqs WHERE item_name_id = $1'
+            # rows = await self.bot.db.fetch(query, item.name_id)
+            # for row in rows:
+            #     if row['type'] == 'buy':
+            #         lst = item.buy_reqs
+            #         cls = BuyRequirement
+            #     elif row['type'] == 'sell':
+            #         lst = item.sell_reqs
+            #         cls = SellRequirement
+            #     elif row['type'] == 'trade':
+            #         lst = item.trade_reqs
+            #         cls = TradeRequirement
+            #     else:
+            #         raise Exception(f'invalid req type {row["type"]}')
 
-                lst.append(cls(
-                    item, 
-                    row['name'], 
-                    row['description'], 
-                    json.loads(row['kwargs'])
-                ))
-
+            #     lst.append(cls(
+            #         item, 
+            #         row['name'], 
+            #         row['description'],
+            #     ))
+            
             self.items.append(item)
 
     def get_item_from_str(self, item_str: str) -> 'BaseItem':
@@ -301,18 +260,39 @@ class Economy(commands.Cog):
         query = 'INSERT INTO balances (user_id, balance) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET balance = balances.balance + $2 RETURNING balance'
         return await self.bot.db.fetchval(query, user_id, amount)
 
-    async def add_item(self, user_id: str, item_name_id: str, state: str = None, amount: int = 1):
-        query = 'INSERT INTO user_items (user_id, item_name_id, state) VALUES ($1, $2, $3)'
-        for _ in range(amount):
-            await self.bot.db.execute(query, user_id, item_name_id, state)
-    
-    async def remove_item(self, user_id: str, item_name_id: str, state: str = None, amount: int = 1):
-        if state is None:
-            query = 'DELETE FROM user_items WHERE user_id = $1 AND item_name_id = $2 LIMIT $3'
-            await self.bot.db.execute(query, user_id, item_name_id, amount)
+    async def add_item(self, user_id: str, item: 'BaseItem', amount: int = 1, *, update_stock=True):
+        if item.activatable:
+            query = "SELECT item_count FROM user_items WHERE user_id = $1 AND item_name_id = $2"
+            count = await self.bot.db.fetchval(query, user_id, item.name_id)
+            if count and count >= 1:
+                return "over limit" 
+            state = "inactive"
         else:
-            query = 'DELETE FROM user_items WHERE user_id = $1 AND item_name_id = $2 AND state = $4 LIMIT $3'
-            await self.bot.db.execute(query, user_id, item_name_id, amount, state)
+            state = None
+
+        query = '''
+                    INSERT INTO user_items 
+                        (user_id, item_name_id, state, item_count) 
+                    VALUES ($1, $2, $3, $4) 
+                    ON CONFLICT (user_id, item_name_id) DO UPDATE 
+                    SET item_count = user_items.item_count + EXCLUDED.item_count
+                '''
+        await self.bot.db.execute(query, user_id, item.name_id, state, amount)
+
+        if update_stock:
+            query = "UPDATE shop_items SET stock = stock - 1 WHERE name_id = $1 AND stock != -1"
+            await self.bot.db.execute(query, item.name_id)
+    
+    async def remove_item(self, user_id: str, item: 'BaseItem', amount: int = 1, *, update_stock=True):
+        query = "UPDATE user_items SET item_count = item_count - $3 WHERE user_id = $1 AND item_name_id = $2 RETURNING item_count"
+        count = await self.bot.db.fetchval(query, user_id, item.name_id, amount)
+        if count <= 0:
+            query = "DELETE FROM user_items WHERE user_id = $1 AND item_name_id = $2"
+            await self.bot.db.execute(query, user_id, item.name_id)
+        
+        if update_stock:
+            query = "UPDATE shop_items SET stock = stock + 1 WHERE name_id = $1 AND stock != -1"
+            await self.bot.db.execute(query, item.name_id)
 
     
     async def get_balance(self, user_id):
@@ -327,45 +307,55 @@ class Economy(commands.Cog):
         query = 'INSERT INTO item_use_times (user_id, item_name_id) VALUES ($1, $2) ON CONFLICT (user_id, item_name_id) DO UPDATE SET time_used = CURRENT_TIMESTAMP'
         await self.bot.db.execute(query, user_id, item_name_id)
     
-    @commands.hybrid_command()
-    async def shop(self, ctx):
-        """View the shop"""
-        itemnames = []
-        itemdescs = []
-        for item in self.items:
-            itemnames.append(item.display_name)
-            itemdescs.append(item.description)
+    @commands.hybrid_command(name='inv', aliases=['inventory'])
+    async def inv(self, ctx):
+        """Checks your inventory."""
 
-        menu = ShopMenu(ShopPageSource(ctx, self.items), ctx)
-        await menu.start()
-    
+        query = "SELECT * FROM user_items WHERE user_id = $1 ORDER BY time_acquired DESC"
+        rows = await self.bot.db.fetch(query, ctx.author.id)
+
+        entries = []
+
+        for row in rows:
+            entries.append({
+                "item_name_id": row["item_name_id"],
+                "count": row["item_count"],
+                "state": row["state"],
+                "time_acquired": row["time_acquired"],
+                "time_used": row["time_used"],
+                "item": self.get_item_from_str(row["item_name_id"]),
+            })
+
+        source = InvMainPageSource(self.bot, entries)
+        view = InvMainPages(source, ctx=ctx)
+        await view.start()
+
+    @commands.hybrid_command(name='shop')
+    async def shop(self, ctx):
+        """Checks your shop."""
+        view = ShopMainView(self.items, ctx=ctx)
+        await ctx.send(embed=view.embed, view=view)
     
     @commands.hybrid_command(aliases=['purchase'])
     @app_commands.describe(item='The item you want to buy')
     async def buy(self, ctx, *, item: str):
         """Buy an item from the shop"""
         item = item.lower()
-        shop_item = self.get_item_from_str(item)
-        if shop_item is None:
-            
-            items = search_item(self.items, item)
-
-            if items:
-                display_names = [it.display_name for it in items]
-                name_ids = [it.name_id for it in items]
-                layout = self.bot.get_layout('itemsuggestions')
-                await layout.send(ctx, repls={
-                    'displaynames': display_names, 
-                    'nameids': name_ids
-                })
-            else:
-                layout = self.bot.get_layout('itemnosuggestions')
-                await layout.send(ctx)
+        shop_item = await self.get_item_or_send_suggestions(item)
+        if not shop_item:
             return
 
         if not await shop_item.is_buyable(ctx.author):
-            await ctx.send('buy requirements layout')
+            await ctx.send('you dont have buy requirements')
             return 
+
+        if shop_item.activatable:
+            query = 'SELECT item_count FROM user_items WHERE user_id = $1 AND item_name_id = $2'
+            count = await self.bot.db.fetchval(query, ctx.author.id, shop_item.name_id)
+            if count and count >= 1:
+                layout = self.bot.get_layout('you can only have one of this item')
+                await layout.send(ctx)
+                return
 
         bal = await self.get_balance(ctx.author.id)
 
@@ -373,13 +363,17 @@ class Economy(commands.Cog):
             layout = self.bot.get_layout('buy/failure')
             await layout.send(ctx)
             return 
-
+        
+        await self.add_item(ctx.author.id, shop_item)
         await self.add_balance(ctx.author.id, -shop_item.price)
-        await self.add_item(ctx.author.id, shop_item.name_id)
+        
+        if shop_item.stock != -1:
+            shop_item.stock -= 1
+        
         layout = self.bot.get_layout('buy/success')
         await layout.send(ctx, LayoutContext(message=ctx.message), repls={'item': shop_item.display_name})
 
-    async def get_item_or_send_suggestions(self, ctx, item: str):
+    async def get_item_or_send_suggestions(self, ctx, item: str)-> Optional['BaseItem']:
         shop_item = self.get_item_from_str(item)
         if shop_item is None:
             items = search_item(self.items, item)
@@ -399,14 +393,44 @@ class Economy(commands.Cog):
             return False
         return shop_item
 
-    @commands.hybrid_command(aliases=['consume'])
+    @commands.hybrid_command(name='sell')
+    @app_commands.describe(item='The item you want to sell')
+    async def sell(self, ctx, *, item: str):
+        """Sell an item from your inventory"""
+        shop_item = await self.get_item_or_send_suggestions(ctx, item)
+        if not shop_item:
+            return
+
+        if not await shop_item.is_sellable(ctx.author):
+            layout = self.bot.get_layout('sell/failure')
+
+        query = 'SELECT * FROM user_items WHERE user_id = $1 AND item_name_id = $2'
+        temp = await self.bot.db.fetchval(query, ctx.author.id, shop_item.name_id)
+        if temp is None:
+            layout = self.bot.get_layout('usernoitem')
+            await layout.send(ctx)
+            return
+        
+        query = 'SELECT state FROM user_items WHERE user_id = $1 AND item_name_id = $2'
+        state = await self.bot.db.fetchval(query, ctx.author.id, shop_item.name_id)
+        if state == 'active':
+            layout = self.bot.get_layout('sell/active')
+            await layout.send(ctx)
+            return
+
+        await self.remove_item(ctx.author.id, shop_item)
+        await self.add_balance(ctx.author.id, shop_item.sell_price)
+        layout = self.bot.get_layout('sell/success')
+        await layout.send(ctx)
+    
+    @commands.hybrid_command(name='use', aliases=['consume'])
     @app_commands.describe(item='The item you want to use')
     async def use(self, ctx, *, item: str):
         """Use an item in your inventory"""
         shop_item = await self.get_item_or_send_suggestions(ctx, item)
 
         if not shop_item.usable:
-            await ctx.send('item not usable layout')
+            await ctx.send('item not usable')
             return 
 
         query = 'SELECT id FROM user_items WHERE user_id = $1 AND item_name_id = $2'
@@ -416,7 +440,7 @@ class Economy(commands.Cog):
             await layout.send(ctx)
             return
         
-        await self.remove_item(ctx.author.id, shop_item.name_id)
+        await self.remove_item(ctx.author.id, shop_item)
         status = await shop_item.use(ctx)
         if status:
             await self.update_item_use_time(ctx.author.id, shop_item.name_id)
@@ -431,7 +455,7 @@ class Economy(commands.Cog):
             return 
 
         if not shop_item.activatable:
-            await ctx.send('item not activatable layout')
+            await ctx.send('item not activatable')
             return
 
         query = 'SELECT id FROM user_items WHERE user_id = $1 AND item_name_id = $2'
@@ -455,7 +479,7 @@ class Economy(commands.Cog):
             return 
 
         if not shop_item.activatable:
-            await ctx.send('item not activatable layout')
+            await ctx.send('item not activatable')
             return
 
         query = 'SELECT id FROM user_items WHERE user_id = $1 AND item_name_id = $2'
@@ -496,7 +520,7 @@ class Economy(commands.Cog):
         await ctx.send(f'Removed {amount}{self.lunara} from {member.mention}.')
 
     @staticmethod
-    def check_for_drop(message_count, max_messages=100, steepness=0.1, cap=0.1):
+    def check_for_drop(message_count, max_messages=150, steepness=0.1, cap=0.05):
         """
         This function simulates a drop happening based on the message count. 
         As the message count increases, the probability of a drop happening increases.
@@ -580,15 +604,18 @@ class Economy(commands.Cog):
         msg = await layout.send(ctx, LayoutContext(message=ctx.message), repls={'amount': amount})
         await asyncio.sleep(10)
         await msg.delete()
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            print(f'Failed to delete {ctx.message.jump_url}')
     
     @commands.hybrid_command()
     @app_commands.describe(item='The item you want to view')
     async def iteminfo(self, ctx, *, item):
-        item = item.lower()
-        shop_item = self.get_item_from_str(item)
-        if shop_item is None:
-            items = search_item(self.items, item)
+        item_str = item.lower()
+        item = self.get_item_from_str(item_str)
+        if item is None:
+            items = search_item(self.items, item_str)
 
             if items:
                 display_names = [it.display_name for it in items]
@@ -603,28 +630,77 @@ class Economy(commands.Cog):
                 await layout.send(ctx)
             return
 
-        layout = self.bot.get_layout('iteminfo')
+        embed = self.bot.get_embed('iteminfo')
 
-        repls = {
-            'item': shop_item.display_name,
-            'numberid': shop_item.number_id,
-            'nameid': shop_item.name_id,
-            'price': shop_item.price,
-            'sellprice': shop_item.sell_price if shop_item.sell_price != -1 else 'N/A',
-            'stock': '∞' if shop_item.stock == -1 else shop_item.stock,
-            'issellable': shop_item.is_sellable_text(),
-            'istradable': shop_item.is_tradable_text(),
-            'reqs': [],
-            'desc': shop_item.description
-        }
+        # repls = {
+        #     'item': shop_item.display_name,
+        #     'numberid': shop_item.number_id,
+        #     'nameid': shop_item.name_id,
+        #     'price': shop_item.price,
+        #     'sellprice': shop_item.sell_price if shop_item.sell_price != -1 else 'N/A',
+        #     'stock': '∞' if shop_item.stock == -1 else shop_item.stock,
+        #     'issellable': shop_item.is_sellable_text(),
+        #     'istradable': shop_item.is_tradable_text(),
+        #     'reqs': [],
+        #     'desc': shop_item.description
+        # }
 
-        if len(shop_item.buy_reqs) == 0:
-            repls['maybenone'] = 'None!'
+        plines = []
+
+        arrow_r = self.bot.vars.get('arrow-r-emoji')
+        pink_heart = self.bot.vars.get('heart-point-pink-emoji')
+        lunara = self.bot.vars.get('lunara')
+        branch_middle = self.bot.vars.get('branch-middle-emoji')
+        branch_final = self.bot.vars.get('branch-final-emoji')
+
+        arrow = pink_heart 
+
+        plines.append(f'> ⁺ {arrow}﹒{item.display_name}﹒⁺')
+        plines.append(f'> {branch_middle} __ID: **#{item.number_id}**__ (`{item.name_id}`)')
+
+        if await item.is_sellable(ctx.author):
+            sell_price = f'__{item.sell_price}__ {lunara}'
         else:
-            repls['maybenone'] = ''
-            shop_item['reqs'] = [str(req) for req in shop_item.buy_reqs]
+            sell_price = '__N/A__'
 
-        await layout.send(ctx, LayoutContext(message=ctx.message), repls=repls)
+        plines.append(f'> {branch_middle} Sell price = {sell_price}')
+
+        if item.stock == -1:
+            stock = '∞'
+        else:
+            stock = str(item.stock)
+
+        plines.append(f'> {branch_middle} Stock = __**{stock}**__')
+
+        if item.is_sellable_at_all():
+            sellable = "Yes"
+        else:
+            sellable = "No"
+
+        if item.is_tradable_at_all():
+            tradable = "Yes"
+        else:
+            tradable = "No"
+
+        plines.append(f'> {branch_middle} Able to be sold :: {sellable}')
+        plines.append(f'> {branch_middle} Able to be traded :: {tradable}')
+
+        if item.reqs:
+            plines.append(f'> {branch_middle} __Requirements:__')
+            for i, req in enumerate(item.reqs):
+                if i == len(item.reqs) - 1:
+                    branch_emoji = branch_final
+                else:
+                    branch_emoji = branch_middle
+                plines.append(f'> {branch_emoji} {arrow_r} {req.description}')
+         
+        # plines.append(f'> {branch_final} *{item.description}*')
+        plines.append('             ‧  ╴‧  ╴‧  ╴‧')
+        plines.append(f'> ⁺﹒*{item.description}*﹒⁺')
+        plines.append('             ‧  ╴‧  ╴‧  ╴‧')
+
+        embed.description = '\n'.join(plines)
+        await ctx.send(embed=embed)
 
     @commands.command()
     @commands.is_owner()
@@ -677,6 +753,132 @@ class Economy(commands.Cog):
     @additem.error
     async def additem_error(self, ctx, error):
         raise error
+
+
+        
+
+    @commands.command()
+    @commands.is_owner()
+    async def droptables(self, ctx, *tables):
+        query = f'DROP TABLE {",".join(tables)}'
+        result = await self.bot.db.execute(query)
+        await ctx.send(result)
+    
+    @commands.command()
+    @commands.is_owner()
+    async def insertitems(self, ctx):
+        data = [
+            (
+               '<@&983832932743512166>' ,
+                'cherrypop',
+                'A vibrant pop of cherry red! Gives you a color role with the hex #ff4961',
+                500000,
+                -1,
+                400000,
+                [
+                    ('trade', 'Only able to be traded for other color roles that are NOT perk limited'),
+                ],
+                'color_roles',
+                False,
+                True,
+            ),
+            (
+               '<@&987445973565472768>',
+                'juicycitrus',
+                'A bright orange, much like a citrus! Gives you a color role with the hex #ff7a55',
+                500000,
+                -1,
+                400000,
+                [
+                    ('trade', 'Only able to be traded for other color roles that are NOT perk limited'),
+                ],
+                'color_roles',
+                False,
+                True,
+            ),
+            (
+               '<@&1217667555628552222>' ,
+                'tangylemonade',
+                'A nice refreshing glass of yellow lemonade! Gives you a color role with the hex #ffcb6a',
+                500000,
+                -1,
+                400000,
+                [
+                    ('trade', 'Only able to be traded for other color roles that are NOT perk limited'),
+                ],
+                'color_roles',
+                False,
+                True,
+            ),
+            (
+               '<@&1217667588486594571>' ,
+                'zestylimeade',
+                'A nice refreshing glass of green limeade! Gives you a color role with the hex #6dff8d',
+                500000,
+                -1,
+                400000,
+                [
+                    ('trade', 'Only able to be traded for other color roles that are NOT perk limited'),
+                ],
+                'color_roles',
+                False,
+                True,
+            ),
+            (
+               '<@&989736151726317589>' ,
+                'blueberrydaydream',
+                'A burst of dazzling blue, reminiscent of a blueberry! Gives you a color role with the hex #5794ff',
+                500000,
+                -1,
+                400000,
+                [
+                    ('trade', 'Only able to be traded for other color roles that are NOT perk limited'),
+                ],
+                'color_roles',
+                False,
+                True,
+            ),
+            (
+               '<@&989747430507569212>' ,
+                'fizzygrapesoda',
+                'A fizzling glass of purple grape soda! Gives you a color role with the hex #9c69f',
+                500000,
+                -1,
+                400000,
+                [
+                    ('trade', 'Only able to be traded for other color roles that are NOT perk limited'),
+                ],
+                'color_roles',
+                False,
+                True,
+            ),
+            (
+               '<@&989747431178661908>' ,
+                'prettyinpink',
+                'A beautiful dash of pink! Gives you a color role with the hex #9c69ff',
+                500000,
+                -1,
+                400000,
+                [
+                    ('trade', 'Only able to be traded for other color roles that are NOT perk limited'),
+                ],
+                'color_roles',
+                False,
+                True,
+            ),
+        ]
+        i = 1
+        for displayname, nameid, desc, price, stock, sellprice, reqs, category, usable, actble in data:
+            query = 'INSERT INTO shop_items (name_id, number_id, display_name, price, sell_price, stock, usable, activatable, category, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)'
+            await self.bot.db.execute(query, nameid, i, displayname, price, sellprice, stock, usable, actble, category, desc)
+
+            for req_type, req_desc in reqs:
+                query = 'INSERT INTO item_reqs (item_name_id, type, description) VALUES ($1,$2,$3)'
+                await self.bot.db.execute(query, nameid, req_type,req_desc)
+
+            i += 1
+        
+        await ctx.send('done')
 
 
 async def setup(bot):

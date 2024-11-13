@@ -132,13 +132,8 @@ CREATE TABLE IF NOT EXISTS user_items (
   user_id BIGINT,
   item_name_id TEXT,
   state TEXT,
-  time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS item_use_times (
-  id SERIAL PRIMARY KEY,
-  user_id BIGINT,
-  item_name_id TEXT,
+  item_count INTEGER,
+  time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, item_name_id)
 );
@@ -167,7 +162,6 @@ CREATE TABLE IF NOT EXISTS item_reqs(
   type TEXT,  
   description TEXT,
   name TEXT,
-  kwargs JSONB,
   UNIQUE(item_name_id, type, name)
 );
 

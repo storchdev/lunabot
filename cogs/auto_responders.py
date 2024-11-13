@@ -94,8 +94,12 @@ class AutoResponderCog(commands.Cog, name='Autoresponders', description="Autores
                     ctx = LayoutContext(message=msg)
                     await layout.send(msg.channel, ctx, repls={'timestamp': int(end_time.timestamp())})
                 return
-        for action in ar.actions:
-            await action.execute(msg)
+        try:
+            for action in ar.actions:
+                await action.execute(msg)
+        except:
+            print(ar)
+            print(msg.jump_url)
 
     @commands.hybrid_group(name='autoresponder', aliases=['ar'], invoke_without_command=True)
     @app_commands.default_permissions()

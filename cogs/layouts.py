@@ -1,10 +1,9 @@
 from discord.ext import commands
-import asyncio
-import discord 
 from discord import app_commands 
 from .utils import Layout, SimplePages, LayoutEditor
-from .utils import InvalidURL
+# from .utils import InvalidURL
 import json 
+from fuzzywuzzy import process
 
 
 class Layouts(commands.Cog):    
@@ -111,7 +110,8 @@ class Layouts(commands.Cog):
     async def show(self, ctx, *, name):
         name = name.lower()
         if name not in self.bot.layouts:
-            await ctx.send('There is no layout with that name.', ephemeral=True)
+            options = "\n".join(x[0] for x in process.extract(name, list(self.bot.layouts.keys()), limit=5))
+            await ctx.send(f'There is no layout with that name. Maybe you meant:\n\n{options}', ephemeral=True)
             return
         layout = self.bot.layouts[name]
         await ctx.send(layout.content, embeds=layout.embeds)
