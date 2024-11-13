@@ -105,23 +105,19 @@ class BaseItem:
         return True 
     
     async def activate(self, ctx, **kwargs):
-        if not self.activatable:
-            await ctx.send(f'{ctx.author.mention} - item is not activatable')
-            return 
-
-        await ctx.send(f'{ctx.author.mention} - item activated')
+        query = 'UPDATE user_items SET state = $1 WHERE user_id = $2 AND item_name_id = $3'
+        await ctx.bot.db.execute(query, 'active', ctx.author.id, self.name_id)
         return True 
     
     async def deactivate(self, ctx, **kwargs):
-        if not self.activatable:
-            await ctx.send(f'{ctx.author.mention} - item is not activatable')
-            return 
-
-        await ctx.send(f'{ctx.author.mention} - item deactivated')
+        query = 'UPDATE user_items SET state = $1 WHERE user_id = $2 AND item_name_id = $3'
+        await ctx.bot.db.execute(query, 'inactive', ctx.author.id, self.name_id)
         return True 
 
 class ColorRoleItem(BaseItem):
     async def activate(self, ctx, **kwargs):
+        await super().activate(ctx, **kwargs)
+
         name = kwargs.get('name')
         role = ctx.guild.get_role(ctx.bot.vars.get(f'{name}-role-id'))
         if role in ctx.author.roles:
@@ -131,6 +127,8 @@ class ColorRoleItem(BaseItem):
         return True
 
     async def deactivate(self, ctx, **kwargs):
+        await super().deactivate(ctx, **kwargs)
+
         name = kwargs.get('name')
         role = ctx.guild.get_role(ctx.bot.vars.get(f'{name}-role-id'))
         if role not in ctx.author.roles:

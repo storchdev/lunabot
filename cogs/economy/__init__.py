@@ -262,10 +262,10 @@ class Economy(commands.Cog):
 
     async def add_item(self, user_id: str, item: 'BaseItem', amount: int = 1, *, update_stock=True):
         if item.activatable:
-            query = "SELECT item_count FROM user_items WHERE user_id = $1 AND item_name_id = $2"
-            count = await self.bot.db.fetchval(query, user_id, item.name_id)
-            if count and count >= 1:
-                return "over limit" 
+            # query = "SELECT item_count FROM user_items WHERE user_id = $1 AND item_name_id = $2"
+            # count = await self.bot.db.fetchval(query, user_id, item.name_id)
+            # if count and count >= 1:
+            #     return "over limit" 
             state = "inactive"
         else:
             state = None
@@ -341,7 +341,7 @@ class Economy(commands.Cog):
     async def buy(self, ctx, *, item: str):
         """Buy an item from the shop"""
         item = item.lower()
-        shop_item = await self.get_item_or_send_suggestions(item)
+        shop_item = await self.get_item_or_send_suggestions(ctx, item)
         if not shop_item:
             return
 
@@ -428,6 +428,8 @@ class Economy(commands.Cog):
     async def use(self, ctx, *, item: str):
         """Use an item in your inventory"""
         shop_item = await self.get_item_or_send_suggestions(ctx, item)
+        if not shop_item:
+            return
 
         if not shop_item.usable:
             await ctx.send('item not usable')
