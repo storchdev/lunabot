@@ -169,6 +169,11 @@ class LunaBot(commands.Bot):
         else:
             query = 'INSERT INTO counters (name, count) VALUES ($1, 0) ON CONFLICT (name) DO NOTHING RETURNING count'
             return await self.db.fetchval(query, name)
+    
+    async def dm_owner(self, message: str):
+        owner = self.get_user(self.owner_id)
+        await owner.send(message)
+
 
 
     

@@ -1,5 +1,6 @@
 from discord.ext import commands, tasks
 from .utils import LayoutContext
+from .utils.checks import is_admin
 import discord
 
 
@@ -59,14 +60,14 @@ class Vanity(commands.Cog):
             with open('vanitylog.txt', '+a') as f:
                 f.write(f'{after} lost vanity: before={self.get_vanity(before)}, after={self.get_vanity(after)}\n')
 
-    async def cog_load(self):
-        await self.update_roles()
+    # async def cog_load(self):
+    #     await self.update_roles()
     
     # async def cog_unload(self):
     #     self.update_roles.cancel() 
     
     # @tasks.loop(hours=1)
-    async def update_roles(self):
+    async def update_roles(self, channel=None):
         guild = self.bot.get_guild(self.bot.GUILD_ID)
 
         embed1 = discord.Embed(title='added roles to')
@@ -95,11 +96,17 @@ class Vanity(commands.Cog):
                     await member.remove_roles(role)
                     removed.append(member.mention)
         
-        channel = self.bot.get_var_channel('private')
+        if channel is None:
+            channel = self.bot.get_var_channel('private')
+
         embed1.description = '\n'.join(added)
         embed2.description = '\n'.join(removed)
         await channel.send(embeds=[embed1, embed2, embed3])
 
+    @commands.command()
+    @commands.check(is_admin)
+    async def uvr(self, ctx):
+        await self.update_roles(ctx.channel)
 
 
 async def setup(bot):

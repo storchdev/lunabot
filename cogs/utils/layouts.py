@@ -174,6 +174,13 @@ class Layout:
         elif isinstance(msgble, commands.Context):
             if ctx is None:
                 ctx = msgble
+
+            if msgble.interaction is not None:
+                if msgble.interaction.response.is_done():
+                    send_func = msgble.interaction.followup.send
+                else:
+                    send_func = msgble.interaction.response.send_message
+
             send_func = msgble.send
         elif isinstance(msgble, discord.Interaction):
             if ctx is None:
@@ -245,8 +252,9 @@ class Layout:
         for embed in self.embeds:
             embeds.append(self.fill_embed(embed, repls, ctx=ctx, special=special))
 
-        if 'view' in kwargs and kwargs['view'] is None:
-            cleaned_kwargs = {'view': None}
+        cleaned_kwargs = {}
+        if 'view' in kwargs:
+            cleaned_kwargs['view'] = kwargs['view']
 
         return await edit_func(content=content, embeds=embeds, **cleaned_kwargs)
 

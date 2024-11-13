@@ -1,4 +1,5 @@
 from discord.ext import commands
+from fuzzywuzzy import process
 
 
 class Vars(commands.Cog):
@@ -33,8 +34,10 @@ class Vars(commands.Cog):
     async def getvar(self, ctx, name: str):
         value = self.bot.vars.get(name)
         if value is None:
-            await ctx.send(f'No variable with the name `{name}` found')
+            results = '\n'.join(x[0] for x in process.extract(name, list(self.bot.vars), limit=5))
+            await ctx.send(f'No variable with the name `{name}` found. Maybe you meant:\n\n{results}')
             return 
+
         await ctx.send(value)
     
     @commands.command()
