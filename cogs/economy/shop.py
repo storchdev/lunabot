@@ -8,7 +8,7 @@ from .search import search_item
 from cogs.utils import View
 from cogs.utils.paginators import SkipToModal
 
-from typing import Any, Dict, List, Self
+from typing import Any, Dict, List, Self, Optional
 from typing import TYPE_CHECKING 
 
 if TYPE_CHECKING:
@@ -30,13 +30,6 @@ class ShopSearchModal(ui.Modal):
         results = search_item(entries, query)
 
         if results:
-            # await interaction.response.send_message(f"Found {len(results)} item(s) matching '{query}':", ephemeral=True)
-            # await self.shop.update_items(interaction, results)
-            # searched_entries = []
-            # for entry in entries:
-            #     if entry.name_id in results:
-            #         searched_entries.append(entry)
-
             results_source = ShopResultsPageSource(self.parent_view.ctx, results, 'number_id')
             results_view = ShopResultsPages(results_source, parent_view=self.parent_view)
             await results_view.show_page(interaction, 0)
@@ -77,7 +70,7 @@ class ShopMainView(View):
         
         source = ShopResultsPageSource(self.ctx, filtered_items)
         view = ShopResultsPages(source, parent_view=self)
-        await view.start(edit_interaction=True)
+        await view.start(interaction)
     
     @discord.ui.button(label='Help', style=discord.ButtonStyle.gray, row=1)
     async def help_page(self, interaction, button):
@@ -245,19 +238,20 @@ class ShopResultsPages(View):
             # An error happened that can be handled, so ignore it.
             pass
 
-    async def start(self, edit_interaction: bool = False) -> None:
+    async def start(self, interaction: Optional[discord.Interaction] = None, *, edit: bool = True) -> None:
         await self.source._prepare_once()
         page: Any = await self.source.get_page(0)
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(0)
-        if isinstance(self.ctx, commands.Context):
-            self.message = await self.ctx.send(**kwargs, view=self)
-        else:
-            if edit_interaction:
-                await self.ctx.response.edit_message(**kwargs, view=self)
+        # if isinstance(self.ctx, commands.Context):
+        if interaction:
+            if edit:
+                await interaction.response.edit_message(**kwargs, view=self)
             else:
-                await self.ctx.response.send_message(**kwargs, view=self)
+                await interaction.response.send_message(**kwargs, view=self)
             self.message = await self.ctx.original_response()
+        else:
+            self.message = await self.ctx.send(**kwargs, view=self)
 
     @ui.button(label="arrow-l-placeholder", style=discord.ButtonStyle.gray)
     async def go_to_previous_page(self, interaction, button):
@@ -290,12 +284,6 @@ class ShopResultsPages(View):
                 await self.current_modal.interaction.response.defer()
                 await self.show_checked_page(interaction, page - 1)
     
-    # @discord.ui.button(label='Exit', style=discord.ButtonStyle.red)
-    # async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
-    #     """stops the pagination session."""
-    #     await interaction.response.defer()
-    #     await interaction.delete_original_response()
-    #     self.stop()
     @discord.ui.button(label='Search', style=discord.ButtonStyle.gray, row=0)
     async def search(self, interaction, button):
         """sends the search modal"""

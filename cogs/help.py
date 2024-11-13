@@ -251,24 +251,31 @@ class GroupHelpPageSource(menus.ListPageSource):
 
 
 class HelpSelectMenu(discord.ui.Select['HelpMenu']):
-    def __init__(self, entries: dict[commands.Cog, list[commands.Command]], bot):
+    def __init__(self, entries: dict[commands.Cog, list[commands.Command]], bot, number: int = 0):
+        if number == 0:
+            placeholder = 'Select a category...'
+        else:
+            placeholder = 'more categories...'
+
         super().__init__(
-            placeholder='Select a category...',
+            placeholder=placeholder,
             min_values=1,
             max_values=1,
-            row=0,
+            # row=0,
         )
         self.commands: dict[commands.Cog, list[commands.Command]] = entries
         self.bot = bot
+        self.number = number
         self.__fill_options()
 
     def __fill_options(self) -> None:
-        self.add_option(
-            label='Index',
-            emoji='\N{WAVING HAND SIGN}',
-            value='__index',
-            description='The help page showing how to use the bot.',
-        )
+        if self.number == 0:
+            self.add_option(
+                label='Index',
+                emoji='\N{WAVING HAND SIGN}',
+                value='__index',
+                description='The help page showing how to use the bot.',
+            )
         for cog, commands in self.commands.items():
             if not commands:
                 continue
@@ -357,7 +364,28 @@ class HelpMenu(RoboPages):
 
     def add_categories(self, commands: dict[commands.Cog, list[commands.Command]]) -> None:
         self.clear_items()
-        self.add_item(HelpSelectMenu(commands, self.ctx.bot))
+
+        # Break commands into chunks of 25 
+        chunks = []
+        chunk = {} 
+        i = 0
+        for cog, cmds in commands.items():
+            if i == 24:
+                chunks.append(chunk)
+                chunk = {}
+                i = 0
+            chunk[cog] = cmds
+            i += 1
+
+        if chunk:
+            chunks.append(chunk)
+
+        print(chunks)
+
+        for i, chunk in enumerate(chunks):
+            self.add_item(HelpSelectMenu(chunk, self.ctx.bot, i))
+
+        # self.add_item(HelpSelectMenu(commands, self.ctx.bot))
         self.fill_items()
 
     async def rebind(self, source: menus.PageSource, interaction: discord.Interaction) -> None:
