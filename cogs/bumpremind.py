@@ -51,10 +51,21 @@ def is_storch_available(dt=None):
             return True
         return False
 
+def is_alex_available(dt=None):
+    if dt is None:
+        dt = datetime.now() 
+    
+    # Convert to GMT
+    dt = dt.astimezone(ZoneInfo('GMT'))
+
+    return dt.hour >= 16 or dt.hour < 8
+
+    
 
 SCHEDULE_CHECKS = [
     (718475543061987329, is_storch_available),
     (496225545529327616, is_luna_available),
+    (100963686411169792, is_alex_available),
 ]
 
 class BumpRemind(commands.Cog):
