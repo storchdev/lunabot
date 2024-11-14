@@ -35,8 +35,7 @@ class Vanity(commands.Cog):
         # if before.status != after.status:
         #     return
 
-        if not self.has_vanity(before) and self.has_vanity(after):
-
+        if self.has_vanity(after):
             role = after.guild.get_role(self.bot.vars.get('vanity-role-id'))
             
             if role in after.roles:
@@ -44,21 +43,21 @@ class Vanity(commands.Cog):
 
             await after.add_roles(role)
 
-            with open('vanitylog.txt', '+a') as f:
-                f.write(f'{after} gained vanity: before={self.get_vanity(before)}, after={self.get_vanity(after)}\n')
+            # with open('vanitylog.txt', '+a') as f:
+            #     f.write(f'{after} gained vanity: before={self.get_vanity(before)}, after={self.get_vanity(after)}\n')
 
             channel = self.bot.get_channel(self.bot.vars.get('vanity-channel-id'))
             layout = self.bot.get_layout('newrep')
             ctx = LayoutContext(author=after)
             await layout.send(channel, ctx=ctx)
-        elif self.has_vanity(before) and not self.has_vanity(after):
+        else:
             role = after.guild.get_role(self.bot.vars.get('vanity-role-id'))
             if role not in after.roles:
                 return
             await after.remove_roles(role)
 
-            with open('vanitylog.txt', '+a') as f:
-                f.write(f'{after} lost vanity: before={self.get_vanity(before)}, after={self.get_vanity(after)}\n')
+            # with open('vanitylog.txt', '+a') as f:
+            #     f.write(f'{after} lost vanity: before={self.get_vanity(before)}, after={self.get_vanity(after)}\n')
 
     # async def cog_load(self):
     #     await self.update_roles()
