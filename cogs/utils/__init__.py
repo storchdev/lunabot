@@ -2,12 +2,9 @@ from .converters import *
 from .imaging import * 
 from .views import *
 from .helpers import *
-from .layouts import * 
-from .layout_editor import * 
-from .embed_editor import * 
-from .auto_responder_editor import * 
-from .auto_responders import * 
 from .paginators import *
 from .errors import *
 from .checks import *
 from .time_stuff import *
+
+from cogs.layouts.layout import *

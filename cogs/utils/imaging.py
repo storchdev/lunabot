@@ -1,4 +1,4 @@
-from PIL import Image, ImageSequence, ImageDraw
+from PIL import Image, ImageDraw
 from io import BytesIO 
 
 

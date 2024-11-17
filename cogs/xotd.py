@@ -9,7 +9,7 @@ from .utils import staff_only
 from .utils import SimplePages
 from .utils import next_day
 from typing import TYPE_CHECKING
-from asyncspotify import Client, ClientCredentialsFlow
+# from asyncspotify import Client, ClientCredentialsFlow
 from .utils import user_cd_except_staff
 import re
 from .utils import ConfirmView
@@ -18,22 +18,22 @@ from .utils import ConfirmView
 if TYPE_CHECKING:
     from bot import LunaBot
 
-spotify_auth = ClientCredentialsFlow(
-    client_id=SPOTIFY_CLIENT_ID,
-    client_secret=SPOTIFY_CLIENT_SECRET
-)
+# spotify_auth = ClientCredentialsFlow(
+#     client_id=SPOTIFY_CLIENT_ID,
+#     client_secret=SPOTIFY_CLIENT_SECRET
+# )
 
 
-async def fetch_song(spotify_url):
-    async with Client(spotify_auth) as client:
-        # Extract track ID from URL
-        track_id = spotify_url.split('/')[-1].split('?')[0]
-        # Get track information asynchronously
-        track = await client.get_track(track_id)
-        track_name = track.name
-        artist_name = track.artists[0].name
+# async def fetch_song(spotify_url):
+#     async with Client(spotify_auth) as client:
+#         # Extract track ID from URL
+#         track_id = spotify_url.split('/')[-1].split('?')[0]
+#         # Get track information asynchronously
+#         track = await client.get_track(track_id)
+#         track_name = track.name
+#         artist_name = track.artists[0].name
 
-        return track_name, artist_name
+#         return track_name, artist_name
 
 
 def get_post_date(days):

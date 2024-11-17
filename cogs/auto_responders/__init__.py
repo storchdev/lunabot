@@ -1,12 +1,14 @@
+import re 
+
+import discord 
 from discord.ext import commands
 from discord import app_commands
-import discord 
-import json 
-import re 
-from .utils.auto_responder_editor import AutoResponderEditor
-from typing import Literal, Optional, List, TYPE_CHECKING
-import asyncio 
-from .utils import Layout, Cooldown, SimplePages, AutoResponder, AutoResponderAction, LayoutContext
+
+from cogs.utils import SimplePages, LayoutContext
+from .editor import AutoResponderEditor
+from .auto_responder import AutoResponder
+
+from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bot import LunaBot

@@ -1,6 +1,8 @@
 from discord.ext import commands
 from discord import app_commands 
-from .utils import Layout, SimplePages, LayoutEditor
+from cogs.utils import SimplePages
+from .editor import LayoutEditor 
+from .layout import Layout
 # from .utils import InvalidURL
 import json 
 from fuzzywuzzy import process

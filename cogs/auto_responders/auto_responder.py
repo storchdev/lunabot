@@ -1,14 +1,12 @@
-from typing import Optional 
-import random
-import discord 
-from discord.ext import commands
-import discord 
 import json 
-from typing import Literal, Optional, List
 import asyncio 
-from .helpers import Cooldown
-from .layouts import LayoutContext
+import random
 
+import discord 
+
+from cogs.utils import Cooldown, LayoutContext
+
+from typing import Optional, List
 
 class AutoResponderAction:
     def __init__(self, bot, action_type, **kwargs):

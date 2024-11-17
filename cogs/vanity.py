@@ -43,9 +43,6 @@ class Vanity(commands.Cog):
 
             await after.add_roles(role)
 
-            # with open('vanitylog.txt', '+a') as f:
-            #     f.write(f'{after} gained vanity: before={self.get_vanity(before)}, after={self.get_vanity(after)}\n')
-
             channel = self.bot.get_channel(self.bot.vars.get('vanity-channel-id'))
             layout = self.bot.get_layout('newrep')
             ctx = LayoutContext(author=after)
@@ -56,8 +53,6 @@ class Vanity(commands.Cog):
                 return
             await after.remove_roles(role)
 
-            # with open('vanitylog.txt', '+a') as f:
-            #     f.write(f'{after} lost vanity: before={self.get_vanity(before)}, after={self.get_vanity(after)}\n')
 
     # async def cog_load(self):
     #     await self.update_roles()

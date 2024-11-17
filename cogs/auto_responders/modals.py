@@ -1,10 +1,13 @@
+from typing import TYPE_CHECKING
+
 import discord 
 from discord import ui 
 from discord.ext import commands 
-from ..auto_responders import AutoResponderAction
-from cogs import utils
-from ..errors import InvalidModalField
-from typing import TYPE_CHECKING, Union
+
+from cogs.utils import InvalidModalField, Cooldown
+from .auto_responder import AutoResponderAction
+
+
 if TYPE_CHECKING:
     from .editor import AutoResponderEditor, SendMessageEditor
 
@@ -227,7 +230,7 @@ class CooldownModal(AutoResponderEditorBaseModal, title='Edit Cooldown'):
         else:
             raise InvalidModalField('Bucket must be g, c, or u!')
 
-        self.parent_view.cooldown = utils.Cooldown(rate, per, bucket)
+        self.parent_view.cooldown = Cooldown(rate, per, bucket)
 
         layout_name = str(self.layout)
         if layout_name:
