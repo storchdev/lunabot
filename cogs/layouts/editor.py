@@ -1,11 +1,10 @@
-from discord import ui, ButtonStyle, TextStyle 
+from discord import ButtonStyle
 import discord
-from discord.ext.commands.bot import Bot
 from .modals import (
     TextModal,
     EmbedsModal,
 )
-from ..helpers import View
+from utils.helpers import View
 from typing import Optional, List
 
 

@@ -249,7 +249,7 @@ class ShopResultsPages(View):
                 await interaction.response.edit_message(**kwargs, view=self)
             else:
                 await interaction.response.send_message(**kwargs, view=self)
-            self.message = await self.ctx.original_response()
+            self.message = await interaction.original_response()
         else:
             self.message = await self.ctx.send(**kwargs, view=self)
 

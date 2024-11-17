@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Tuple, TypeVar, Union, Self
+from typing import Any, Optional, Self
 
 import discord
 from discord.ext import commands
 import json 
-
-
 
 
 class View(discord.ui.View):

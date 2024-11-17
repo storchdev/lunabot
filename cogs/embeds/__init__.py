@@ -1,9 +1,12 @@
-from discord.ext import commands
 import json 
-import discord 
 import re 
+
+import discord 
+from discord.ext import commands
 from discord import app_commands 
-from .utils import EmbedEditor, SimplePages
+
+from cogs.utils import SimplePages
+from .editor import EmbedEditor
 
 
 class Embeds(commands.Cog, description='Create, save, and edit your own embeds.'):

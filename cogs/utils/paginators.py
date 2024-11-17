@@ -1,6 +1,4 @@
-import typing  
-import typing
-from typing import TYPE_CHECKING, Any, Dict, Optional, Self, Tuple
+from typing import Any, Dict, Optional, Self
 
 import discord
 from discord.ext import menus, commands
@@ -15,7 +13,7 @@ class SkipToModal(Modal, title='Skip to page...'):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         self.value = None
-        self.interaction: typing.Optional[discord.Interaction] = None
+        self.interaction: Optional[discord.Interaction] = None
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         self.interaction = interaction
@@ -39,7 +37,7 @@ class ViewMenuPages(discord.ui.View):
         compact: bool = False,
     ):
         super().__init__()
-        self.current_modal: typing.Optional[SkipToModal] = None
+        self.current_modal: Optional[SkipToModal] = None
         self.source: menus.PageSource = source
         self.check_embeds: bool = check_embeds
         self.ctx: commands.Context | discord.Interaction[commands.Bot] = ctx

@@ -1,14 +1,16 @@
 import asyncio
-from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar, Callable, Generic 
-import discord
 import traceback
-from discord.ext import commands
+
+import discord
+from discord.ext import commands, menus
 from discord.ext.commands import Paginator as CommandPaginator
-from discord.ext import menus
 from discord.ext.commands import Context 
-from .layouts import Layout
+
 from .helpers import View 
 from .errors import InvalidModalField
+from cogs.layouts.layout import Layout
+
+from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar, Callable, Generic 
 
 
 T = TypeVar('T')
