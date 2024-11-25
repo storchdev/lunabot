@@ -19,7 +19,13 @@ from .modals import (
 )
 
 if TYPE_CHECKING:
+    from bot import LunaBot
     BotInteraction: TypeAlias = discord.Interaction[commands.Bot]
+
+
+__all__ = (
+    "EmbedEditor",
+)
 
 
 class Embed(discord.Embed):
@@ -157,11 +163,19 @@ class SendToView(utils.View):
 
 
 class EmbedEditor(utils.View):
-    def __init__(self, bot, owner: discord.Member, *, embed: Optional[discord.Embed] = None, timeout: Optional[float] = 600):
+    def __init__(
+            self,
+            bot: "LunaBot",
+            owner: discord.Member,
+            *,
+            embed:
+            Optional[discord.Embed] = None,
+            timeout: Optional[float] = 600
+        ):
         self.owner: discord.Member = owner
 
         if embed is None:
-            self.embed = Embed()
+            self.embed = Embed(color=bot.DEFAULT_EMBED_COLOR)
         else:
             self.embed = Embed.from_dict(embed.to_dict())
 

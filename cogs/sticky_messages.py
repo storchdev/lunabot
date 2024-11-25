@@ -78,7 +78,11 @@ class StickyMessages(commands.Cog):
         if view.cancelled:
             return
         
-        query = 'insert into sticky_messages (channel_id, layout) values ($1, $2)'
+        query = """INSERT INTO
+                       sticky_messages (channel_id, layout)
+                   VALUES
+                       ($1, $2)
+                """
         await self.bot.db.execute(query, channel.id, view.layout.to_json())
         sm = StickyMessage(self.bot, channel, view.layout, None)
         self.sticky_messages[channel.id] = sm
@@ -91,7 +95,10 @@ class StickyMessages(commands.Cog):
             await ctx.send('That channel does not have a sticky message.')
             return
 
-        query = 'delete from sticky_messages where channel_id = $1'
+        query = """DELETE FROM sticky_messages
+                   WHERE
+                       channel_id = $1
+                """
         await self.bot.db.execute(query, channel.id)
         del self.sticky_messages[channel.id]
         await ctx.send('Successfully removed the sticky message.')

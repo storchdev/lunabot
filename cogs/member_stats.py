@@ -134,8 +134,13 @@ class MemberStats(commands.Cog):
         member_count = member.guild.member_count
 
         # Insert data into the joins table
+        query = """INSERT INTO
+                       joins (user_id, guild_id, member_count, time)
+                   VALUES
+                       ($1, $2, $3, $4)
+                """
         await self.bot.db.execute(
-            'INSERT INTO joins (user_id, guild_id, member_count, time) VALUES ($1, $2, $3, $4)',
+            query,
             member.id, member.guild.id, member_count, discord.utils.utcnow()
         )
     
@@ -149,8 +154,13 @@ class MemberStats(commands.Cog):
         member_count = member.guild.member_count
 
         # Insert data into the leaves table
+        query = """INSERT INTO
+                       leaves (user_id, guild_id, member_count, time)
+                   VALUES
+                       ($1, $2, $3, $4)
+                """
         await self.bot.db.execute(
-            'INSERT INTO leaves (user_id, guild_id, member_count, time) VALUES ($1, $2, $3, $4)',
+            query,
             member.id, member.guild.id, member_count, discord.utils.utcnow()
         )
 

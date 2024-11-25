@@ -54,7 +54,11 @@ class Embeds(commands.Cog, description='Create, save, and edit your own embeds.'
 
         embed = message.embeds[0]
         data = json.dumps(embed.to_dict(), indent=4)
-        query = 'INSERT INTO embeds (creator_id, name, embed) VALUES ($1, $2, $3)'
+        query = """INSERT INTO
+                       embeds (creator_id, name, embed)
+                   VALUES
+                       ($1, $2, $3)
+                """
         await self.bot.db.execute(query, ctx.author.id, name, data)
         self.bot.embeds[name] = discord.Embed.from_dict(json.loads(data))
         await ctx.send(f'Added your embed {name}!')
@@ -77,7 +81,11 @@ class Embeds(commands.Cog, description='Create, save, and edit your own embeds.'
             return 
 
         data = json.dumps(embed.to_dict(), indent=4)
-        query = 'INSERT INTO embeds (creator_id, name, embed) VALUES ($1, $2, $3)'
+        query = """INSERT INTO
+                       embeds (creator_id, name, embed)
+                   VALUES
+                       ($1, $2, $3)
+                """
         await self.bot.db.execute(query, ctx.author.id, name, data)
         self.bot.embeds[name] = embed
         await ctx.send(f'Added your embed {name}!')
@@ -98,7 +106,11 @@ class Embeds(commands.Cog, description='Create, save, and edit your own embeds.'
         
         embed = self.bot.embeds[old_name]
         data = json.dumps(embed.to_dict(), indent=4)
-        query = 'INSERT INTO embeds (creator_id, name, embed) VALUES ($1, $2, $3)'
+        query = """INSERT INTO
+                       embeds (creator_id, name, embed)
+                   VALUES
+                       ($1, $2, $3)
+                """
         await self.bot.db.execute(query, ctx.author.id, new_name, data)
         self.bot.embeds[new_name] = discord.Embed.from_dict(json.loads(data))
 
@@ -116,7 +128,11 @@ class Embeds(commands.Cog, description='Create, save, and edit your own embeds.'
             return 
 
         data = json.dumps(view.current_embed.to_dict(), indent=4)
-        query = 'INSERT INTO embeds (creator_id, name, embed) VALUES ($1, $2, $3)'
+        query = """INSERT INTO
+                       embeds (creator_id, name, embed)
+                   VALUES
+                       ($1, $2, $3)
+                """
         await self.bot.db.execute(query, ctx.author.id, name, data)
         self.bot.embeds[name] = discord.Embed.from_dict(json.loads(data))
         await view.final_interaction.response.edit_message(content=f'Added your embed `{name}`!', view=None)

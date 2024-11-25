@@ -13,18 +13,17 @@ if TYPE_CHECKING:
 
 
 def is_luna_available():
-    return True 
-
     central = ZoneInfo('US/Central')
     now = datetime.now(central)
 
-    # if it's a weekday
-    if now.weekday() < 5:
-        # 7am to 11pm
-        return 7 <= now.hour < 23
-    else:
-        # 11am to 3am
-        return now.hour < 3 or now.hour >= 11 
+    return 10 <= now.hour <= 22
+    # # if it's a weekday
+    # if now.weekday() < 5:
+    #     # 7am to 11pm
+    #     return 7 <= now.hour < 23
+    # else:
+    #     # 11am to 3am
+    #     return now.hour < 3 or now.hour >= 11 
 
 def is_storch_available(dt=None):
     if dt is None:
@@ -126,7 +125,11 @@ class BumpRemind(commands.Cog):
         user_id = msg.interaction.user.id 
         end_time = discord.utils.utcnow() + timedelta(hours=2)
         self.task = self.bot.loop.create_task(self.task_coro(user_id, end_time))
-        query = 'INSERT INTO bump_remind (user_id, next_bump) VALUES ($1, $2)'
+        query = """INSERT INTO
+                       bump_remind (user_id, next_bump)
+                   VALUES
+                       ($1, $2)
+                """
         await self.bot.db.execute(query, user_id, end_time)
 
         channel = self.bot.get_var_channel('bump-status')
@@ -151,7 +154,11 @@ class BumpRemind(commands.Cog):
             if parsed_time is None:
                 await ctx.send('Invalid time format.')
                 return
-            query = 'INSERT INTO bump_remind (user_id, next_bump) VALUES ($1, $2)'
+            query = """INSERT INTO
+                           bump_remind (user_id, next_bump)
+                       VALUES
+                           ($1, $2)
+                    """
             await self.bot.db.execute(query, ctx.author.id, parsed_time)
 
             self.task = self.bot.loop.create_task(self.task_coro(ctx.author.id, parsed_time))

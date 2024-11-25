@@ -149,7 +149,7 @@ class CodeResponderAPI:
             embed = await self.toEmbed(embed)
         elif not isinstance(embed, discord.Embed):
             embed = await self.toEmbed(str(embed))
-        return Layout.fill_embed(embed, {var: repl}, special=False)
+        return await Layout.fill_embed(embed, {var: repl}, special=False)
 
     async def fillText(self, string, var, repl):
         if not isinstance(string, str):
@@ -418,11 +418,18 @@ class CodeResponders(commands.Cog):
         item = CodeResponderItem(name, trigger, detection, code, ignore_errors, cd)
         self.lookup.add(name)
         self.code_responders.append(item)
-        query = '''INSERT INTO code_responders 
-                       (name, trigger, detection, code, cooldown, author_id) 
-                   VALUES
-                       ($1, $2, $3, $4, $5, $6)
-                '''
+        query = """INSERT INTO
+                      code_responders (
+                          name,
+                          trigger,
+                          detection,
+                          code,
+                          cooldown,
+                          author_id
+                      )
+                  VALUES
+                      ($1, $2, $3, $4, $5, $6)
+               """
 
         await self.bot.db.execute(query, name, trigger, detection, code, cd.jsonify(), ctx.author.id)
         await ctx.send(f'Congratulations, you successfully created a coderesponder named `{name}`!')

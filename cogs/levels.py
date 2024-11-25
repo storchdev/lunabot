@@ -286,7 +286,7 @@ class Levels(commands.Cog):
             layout = self.bot.get_layout('rankcommand')
             embed = layout.embeds[0].copy()
             embed.set_image(url='attachment://rank.gif')
-            embed = Layout.fill_embed(embed, {
+            embed = await Layout.fill_embed(embed, {
                 'ordinal': num2words(rank, to='ordinal_num'),
                 'totalxp': xp,
                 'neededxp': full - xp
@@ -332,11 +332,15 @@ class Levels(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def givexp(self, ctx, member: discord.Member, xp: int):
         # self.xp_cache[member.id] += xp
-        query = '''INSERT INTO xp (user_id, "total_xp") 
-                    VALUES ($1, $2)
-                    ON CONFLICT (user_id)
-                    DO UPDATE SET total_xp = xp.total_xp + $2
-                '''
+        query = """INSERT INTO
+                       xp (user_id, "total_xp")
+                   VALUES
+                       ($1, $2)
+                   ON CONFLICT (user_id) DO
+                   UPDATE
+                   SET
+                       total_xp = xp.total_xp + $2
+                """
         await self.bot.db.execute(query, member.id, xp)
         await ctx.send(f'Gave {xp} xp to {member.mention}.')
 

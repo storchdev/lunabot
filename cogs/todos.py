@@ -284,10 +284,12 @@ class TodoCog(commands.Cog, name='Todos'):
         priority = current_todo_count + 1
         
         try:
-            await self.bot.db.execute('''
-                INSERT INTO todos (name, priority, creator_id, completed)
-                VALUES ($1, $2, $3, FALSE)
-            ''', name, priority, ctx.author.id)
+            query = """INSERT INTO
+                           todos (name, priority, creator_id, completed)
+                       VALUES
+                           ($1, $2, $3, FALSE)
+                    """
+            await self.bot.db.execute(query, name, priority, ctx.author.id)
             await ctx.send(f'Todo "{name}" added with priority {priority}.')
         except asyncpg.UniqueViolationError:
             await ctx.send(f'A todo with the name "{name}" already exists.')

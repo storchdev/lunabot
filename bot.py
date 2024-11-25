@@ -1,14 +1,21 @@
 import json 
-from cogs.utils.checks import guild_only
-from discord.ext import commands 
 import logging
-from typing import Union, Optional
-import aiohttp 
-from cogs.utils import Layout, InvalidURL
-from cogs.future_tasks import FutureTask
-from datetime import datetime, timedelta
-import discord 
 from pkgutil import iter_modules
+from typing import Union, Optional, Dict, Set, TYPE_CHECKING
+from datetime import datetime, timedelta
+
+import aiohttp 
+import discord 
+from discord.ext import commands 
+
+from cogs.utils import Layout, InvalidURL, View
+from cogs.future_tasks import FutureTask
+from cogs.utils.checks import guild_only
+
+
+if TYPE_CHECKING:
+    from asyncpg import Pool
+
 
 
 class LunaBot(commands.Bot):
@@ -22,11 +29,12 @@ class LunaBot(commands.Bot):
         self.owner_id = self.STORCH_ID
         self.owner_ids = [self.STORCH_ID]
         self.DEFAULT_EMBED_COLOR = 0xcab7ff
-        self.views = set()
+        self.views: Set[View] = set()
         self.session = aiohttp.ClientSession()
-        self.embeds = {}
-        self.layouts = {}
-        self.future_tasks = {}
+        self.embeds: Dict[str, discord.Embed] = {}
+        self.layouts: Dict[str, Layout] = {}
+        self.future_tasks: Dict[int, FutureTask] = {}
+        self.db: Optional[Pool] = None
 
     async def start_task(self):
         await self.wait_until_ready()
@@ -101,7 +109,13 @@ class LunaBot(commands.Bot):
             raise InvalidURL()
     
     async def schedule_future_task(self, action, time, **kwargs):
-        query = 'INSERT INTO future_tasks (action, time, data) VALUES ($1, $2, $3) RETURNING id'
+        query = """INSERT INTO
+                       future_tasks (action, time, data)
+                   VALUES
+                       ($1, $2, $3)
+                   RETURNING
+                       id
+                """
         task_id = await self.db.fetchval(query, action, time, json.dumps(kwargs, indent=4))
         task = FutureTask(self, task_id, action, time, **kwargs)
         self.future_tasks[task_id] = task
@@ -162,10 +176,27 @@ class LunaBot(commands.Bot):
     
     async def get_count(self, name, *, update=True):
         if update:
-            query = 'INSERT INTO counters (name, count) VALUES ($1, 1) ON CONFLICT (name) DO UPDATE SET count = counters.count + 1 RETURNING count'
+            query = """INSERT INTO
+                           counters (name, COUNT)
+                       VALUES
+                           ($1, 1)
+                       ON CONFLICT (name) DO
+                       UPDATE
+                       SET
+                           COUNT = counters.count + 1
+                       RETURNING
+                           COUNT
+                    """
             return await self.db.fetchval(query, name)
         else:
-            query = 'INSERT INTO counters (name, count) VALUES ($1, 0) ON CONFLICT (name) DO NOTHING RETURNING count'
+            query = """INSERT INTO
+                           counters (name, COUNT)
+                       VALUES
+                           ($1, 0)
+                       ON CONFLICT (name) DO NOTHING
+                       RETURNING
+                           COUNT
+                    """
             return await self.db.fetchval(query, name)
     
     async def dm_owner(self, message: str):

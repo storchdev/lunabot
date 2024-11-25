@@ -103,16 +103,19 @@ async def setup(bot):
                 cooldown['per'] = 1
                 cooldown = json.dumps(cooldown, indent=4)
 
-        query = '''INSERT INTO auto_responders (
-                       name,
-                       trigger, 
-                       detection, 
-                       actions,
-                       restrictions, 
-                       cooldown,
-                       author_id
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7) 
-                '''
+        query = """INSERT INTO
+                       auto_responders (
+                           name,
+                           trigger,
+                           detection,
+                           actions,
+                           restrictions,
+                           cooldown,
+                           author_id
+                       )
+                   VALUES
+                       ($1, $2, $3, $4, $5, $6, $7)
+                """
         
 
         await db.execute(query, phrase, phrase, detection_map[detection], actions, json.dumps(restrictions, indent=4), cooldown, 496225545529327616)
@@ -148,15 +151,18 @@ async def setup(bot):
                 cooldown['per'] = 1
                 cooldown = json.dumps(cooldown, indent=4)
 
-        query = '''INSERT INTO code_responders (
-                    name,
-                    trigger, 
-                    detection, 
-                    code,
-                    cooldown,
-                    author_id
-                ) VALUES ($1, $2, $3, $4, $5, $6) 
-            '''
+        query = """INSERT INTO
+                        code_responders (
+                            name,
+                            trigger,
+                            detection,
+                            code,
+                            cooldown,
+                            author_id
+                        )
+                    VALUES
+                        ($1, $2, $3, $4, $5, $6)
+                 """
 
         await db.execute(query, phrase, phrase, detection_map[detection], cr['code'], cooldown, 496225545529327616)
 
@@ -173,14 +179,12 @@ async def setup(bot):
             'embeds': [embed] if embed else []
         }
         last_message_id = sm['last_msg_id']
-        query = '''INSERT INTO sticky_messages (
-                    channel_id,
-                    layout,
-                    last_message_id
-                ) VALUES ($1, $2, $3)
-                ON CONFLICT (channel_id)
-                DO NOTHING
-            '''
+        query = """INSERT INTO
+                       sticky_messages (channel_id, layout, last_message_id)
+                   VALUES
+                       ($1, $2, $3)
+                   ON CONFLICT (channel_id) DO NOTHING
+                """
         await db.execute(query, channel.id, json.dumps(layout, indent=4), last_message_id)
     
 # async def setup(bot):

@@ -125,7 +125,16 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
                     return 
                 day = int(day)
                 
-                query = 'INSERT INTO bdays (user_id, month, day) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET month = $2, DAY = $3'
+                query = """INSERT INTO
+                               bdays (user_id, MONTH, DAY)
+                           VALUES
+                               ($1, $2, $3)
+                           ON CONFLICT (user_id) DO
+                           UPDATE
+                           SET
+                               MONTH = $2,
+                               DAY = $3
+                        """
                 await minter.client.db.execute(query, minter.user.id, month, day)
                 
                 await minter.response.send_message(f'Set your birthday to {month}/{day}!', ephemeral=True)

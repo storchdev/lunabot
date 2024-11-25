@@ -92,7 +92,11 @@ class Automessages(commands.Cog):
         if view.cancelled:
             return 
         
-        query = 'INSERT INTO auto_messages (name, channel_id, interval, layout, lastsent) VALUES ($1, $2, $3, $4, $5)'
+        query = """INSERT INTO
+                       auto_messages (name, channel_id, interval, layout, lastsent)
+                   VALUES
+                       ($1, $2, $3, $4, $5)
+                """
         await self.bot.db.execute(query, name, channel.id, time, view.layout.to_json(), rn())
         await view.final_interaction.response.edit_message(
             content=f'Added your automessage `{name}`!',

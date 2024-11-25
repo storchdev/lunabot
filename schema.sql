@@ -1,14 +1,10 @@
--- temporary deletion 
--- rename arthof to art_hof if exists 
-ALTER TABLE IF EXISTS arthof RENAME TO art_hof;
-
 CREATE TABLE IF NOT EXISTS embeds (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE, 
     embed JSON,
     creator_id BIGINT
 );
---DROP TABLE IF EXISTS layouts; 
+
 CREATE TABLE IF NOT EXISTS layouts (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE, 
@@ -16,7 +12,7 @@ CREATE TABLE IF NOT EXISTS layouts (
     embeds TEXT,
     creator_id BIGINT
 );
---DROP TABLE IF EXISTS auto_responders;
+
 CREATE TABLE IF NOT EXISTS auto_responders (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE,
@@ -27,7 +23,7 @@ CREATE TABLE IF NOT EXISTS auto_responders (
     cooldown TEXT,
     author_id BIGINT
 );
---DROP TABLE IF EXISTS code_responders;
+
 CREATE TABLE IF NOT EXISTS code_responders (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE,
@@ -38,7 +34,6 @@ CREATE TABLE IF NOT EXISTS code_responders (
     author_id BIGINT
 );
 
---DROP TABLE IF EXISTS auto_messages;
 CREATE TABLE IF NOT EXISTS auto_messages (
     name TEXT UNIQUE,
     channel_id BIGINT,
@@ -47,13 +42,13 @@ CREATE TABLE IF NOT EXISTS auto_messages (
     lastsent INTEGER
 );
 
---DROP TABLE IF EXISTS sticky_messages;
 CREATE TABLE IF NOT EXISTS sticky_messages (
     id SERIAL PRIMARY KEY,
     channel_id BIGINT UNIQUE,
     layout JSON,
     last_message_id BIGINT DEFAULT NULL
 );
+
 CREATE TABLE IF NOT EXISTS future_tasks (
   id SERIAL PRIMARY KEY,
   action TEXT,
@@ -122,11 +117,6 @@ CREATE TABLE IF NOT EXISTS balances (
   balance INTEGER
 );
 
--- DROP TABLE user_items;
--- DROP TABLE shop_items;
--- DROP TABLE item_reqs;
--- DROP TABLE item_categories;
-
 CREATE TABLE IF NOT EXISTS user_items (
   id SERIAL PRIMARY KEY,
   user_id BIGINT,
@@ -186,4 +176,11 @@ CREATE TABLE IF NOT EXISTS message_data (
   user_id BIGINT,
   channel_id BIGINT,
   time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS afk (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  message TEXT,
+  start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

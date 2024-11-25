@@ -1,6 +1,6 @@
 from discord.ext import commands 
 import discord 
-from .utils import Layout
+from cogs.utils import Layout
 
 
 ART_HOF_CHANNEL_ID = 1191559069627060284
@@ -19,14 +19,14 @@ class Art(commands.Cog):
     def __init__(self, bot):
         self.bot = bot 
 
-    def create_embed(self, message, stars):
+    async def create_embed(self, message, stars):
         embed = self.bot.get_embed('hof')
         for a in message.attachments:    
             if not a.is_spoiler():
                 embed.set_image(url=a.url)
                 break
 
-        embed = Layout.fill_embed(embed, {
+        embed = await Layout.fill_embed(embed, {
             'mention': message.author.mention,
             'messagelink': message.jump_url,
             'text': message.content,
@@ -68,30 +68,47 @@ class Art(commands.Cog):
             return
         reaction = discord.utils.get(message.reactions, emoji=payload.emoji)
 
-        query = 'SELECT * FROM art_hof WHERE original_id = $1' 
+        query = """SELECT
+                       *
+                   FROM
+                       art_hof
+                   WHERE
+                       original_id = $1
+                """ 
         row = await self.bot.db.fetchrow(query, payload.message_id)
         stars = len([u async for u in reaction.users() if u.id not in [self.bot.user.id, message.author.id]])
 
         if row is not None:
             hof_channel = self.bot.get_channel(row['hof_channel_id'])
             hof_msg = await hof_channel.fetch_message(row['hof_id'])
-            embed = self.create_embed(message, stars)
+            embed = await self.create_embed(message, stars)
             await hof_msg.edit(embed=embed)
-            query = 'UPDATE art_hof SET stars = $1 WHERE original_id = $2'
+            query = """UPDATE art_hof
+                       SET
+                           stars = $1
+                       WHERE
+                           original_id = $2
+                    """
             await self.bot.db.execute(query, stars, payload.message_id)
             return 
         
         if stars < THRESHOLD:
             return
         
-        embed = self.create_embed(message, stars)
+        embed = await self.create_embed(message, stars)
         hof_channel = self.bot.get_channel(ART_HOF_CHANNEL_ID)
         hof_msg = await hof_channel.send(embed=embed)
-        query = '''INSERT INTO art_hof
-                       (original_id, hof_id, hof_channel_id, author_id, stars) 
+        query = """INSERT INTO
+                       art_hof (
+                           original_id,
+                           hof_id,
+                           hof_channel_id,
+                           author_id,
+                           stars
+                       )
                    VALUES
                        ($1, $2, $3, $4, $5)
-                '''
+                """
         await self.bot.db.execute(query, 
             payload.message_id, 
             hof_msg.id, 
@@ -114,15 +131,26 @@ class Art(commands.Cog):
         reaction = discord.utils.get(message.reactions, emoji=payload.emoji)
         stars = len([u async for u in reaction.users() if u.id not in [self.bot.user.id, message.author.id]])
 
-        query = 'SELECT * FROM art_hof WHERE original_id = $1' 
+        query = """SELECT
+                       *
+                   FROM
+                       art_hof
+                   WHERE
+                       original_id = $1
+                """ 
         row = await self.bot.db.fetchrow(query, payload.message_id)
 
         if row is not None:
             hof_channel = self.bot.get_channel(row['hof_channel_id'])
             hof_msg = await hof_channel.fetch_message(row['hof_id'])
-            embed = self.create_embed(message, stars)
+            embed = await self.create_embed(message, stars)
             await hof_msg.edit(embed=embed)
-            query = 'UPDATE art_hof SET stars = $1 WHERE original_id = $2'
+            query = """UPDATE art_hof
+                       SET
+                           stars = $1
+                       WHERE
+                           original_id = $2
+                    """
             await self.bot.db.execute(query, stars, payload.message_id)
             return 
 

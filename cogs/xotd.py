@@ -49,7 +49,12 @@ class XoTD(commands.Cog):
         self.bot: 'LunaBot' = bot
     
     async def cog_load(self):
-        query = 'INSERT INTO queues (name, items) VALUES ($1, $2) ON CONFLICT DO NOTHING'
+        query = """INSERT INTO
+                       queues (name, items)
+                   VALUES
+                       ($1, $2)
+                   ON CONFLICT DO NOTHING
+                """
         await self.bot.db.execute(query, 'qotd', '[]')
         await self.bot.db.execute(query, 'sotd', '[]')
 

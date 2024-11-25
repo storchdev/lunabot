@@ -24,11 +24,18 @@ class MessageStats(commands.Cog):
     
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
+        if not msg.guild:
+            return 
+
         if msg.author.bot or msg.guild.id != self.bot.GUILD_ID:
             return 
         
         
-        query = 'INSERT INTO message_data (user_id, channel_id) VALUES ($1, $2)'
+        query = """INSERT INTO
+                       message_data (user_id, channel_id)
+                   VALUES
+                       ($1, $2)
+                """
         await self.bot.db.execute(query, msg.author.id, msg.channel.id)
 
 

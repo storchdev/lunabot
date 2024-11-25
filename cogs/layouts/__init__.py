@@ -1,6 +1,6 @@
 from discord.ext import commands
 from discord import app_commands 
-from cogs.utils import SimplePages
+from cogs.utils.paginators import SimplePages
 from .editor import LayoutEditor 
 from .layout import Layout
 # from .utils import InvalidURL
@@ -19,7 +19,7 @@ class Layouts(commands.Cog):
                 self.bot,
                 row['name'], 
                 row['content'], 
-                json.loads(row['embeds'])
+                json.loads(row['embeds']),
             )
 
     @commands.group(invoke_without_command=True)
@@ -44,7 +44,11 @@ class Layouts(commands.Cog):
             return 
 
         embeds = json.dumps(view.embed_names, indent=4)
-        query = 'INSERT INTO layouts (creator_id, name, content, embeds) VALUES ($1, $2, $3, $4)'
+        query = """INSERT INTO
+                       layouts (creator_id, name, content, embeds)
+                   VALUES
+                       ($1, $2, $3, $4)
+                """
         await self.bot.db.execute(query, ctx.author.id, name, view.content, embeds)
         self.bot.layouts[name] = Layout(self.bot, name, view.content, view.embed_names)
         await ctx.send(f'Added your layout `{name}`!')
@@ -63,7 +67,11 @@ class Layouts(commands.Cog):
             return
 
         data = json.dumps([embed_name], indent=4)
-        query = 'INSERT INTO layouts (creator_id, name, content, embeds) VALUES ($1, $2, $3, $4)'
+        query = """INSERT INTO
+                       layouts (creator_id, name, content, embeds)
+                   VALUES
+                       ($1, $2, $3, $4)
+                """
         await self.bot.db.execute(query, ctx.author.id, embed_name, None, data)
         self.bot.layouts[embed_name] = Layout(self.bot, embed_name, None, [embed_name])
         await ctx.send(f'Added your layout `{embed_name}`!')
