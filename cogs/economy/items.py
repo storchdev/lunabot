@@ -5,12 +5,12 @@ from typing import List
 from typing import TYPE_CHECKING
 
 
-if TYPE_CHECKING:
-    from . import (
-        BuyRequirement,
-        SellRequirement,
-        TradeRequirement,
-    )
+# if TYPE_CHECKING:
+#     from . import (
+#         BuyRequirement,
+#         SellRequirement,
+#         TradeRequirement,
+#     )
 
 __all__ = (
     'BaseItem',

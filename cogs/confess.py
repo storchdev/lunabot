@@ -50,7 +50,13 @@ class Confess(commands.Cog):
             await ctx.message.delete()
         
         channel = self.bot.get_var_channel('confess')
-        query = 'INSERT INTO confessions (confession, user_id, channel_id) VALUES ($1, $2, $3) RETURNING id'
+        query = """INSERT INTO
+                       confessions (confession, user_id, channel_id)
+                   VALUES
+                       ($1, $2, $3)
+                   RETURNING
+                       id
+                """
         confession_id = await self.bot.db.fetchval(query, confession, ctx.author.id, channel.id)
 
         layout = self.bot.get_layout('confess')

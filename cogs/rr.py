@@ -386,7 +386,20 @@ class RR(commands.Cog, name='Reaction Roles'):
             await rrmsg.add_reaction(emoji)
         msgid = rrmsg.id
 
-        query = 'INSERT INTO rrs (channel_id, message_id, map, max_sel, req_role_id, no_role_msg, req_time, no_time_msg) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)'
+        query = """INSERT INTO
+                       rrs (
+                           channel_id,
+                           message_id,
+                           map,
+                           max_sel,
+                           req_role_id,
+                           no_role_msg,
+                           req_time,
+                           no_time_msg
+                       )
+                   VALUES
+                       ($1, $2, $3, $4, $5, $6, $7, $8)
+                """
         await self.bot.db.execute(query, channel.id, msgid, json.dumps(stuff), int(view2.limit), view3.role.id if view3.role else None, view3.role_denymsg, view3.seconds, view3.time_denymsg)
         await ctx.send('Successfully added reaction role :white_check_mark:')
 
@@ -441,7 +454,12 @@ class RR(commands.Cog, name='Reaction Roles'):
         
         role = payload.member.guild.get_role(map[str(payload.emoji)])
         await payload.member.add_roles(role)
-        query = 'INSERT INTO rr_selections (user_id, channel_id, message_id, role_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING'
+        query = """INSERT INTO
+                       rr_selections (user_id, channel_id, message_id, role_id)
+                   VALUES
+                       ($1, $2, $3, $4)
+                   ON CONFLICT DO NOTHING
+                """
         await self.bot.db.execute(query, payload.user_id, payload.channel_id, payload.message_id, role.id)
 
     @commands.Cog.listener()

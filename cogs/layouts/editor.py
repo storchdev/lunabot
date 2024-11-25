@@ -4,7 +4,7 @@ from .modals import (
     TextModal,
     EmbedsModal,
 )
-from utils.helpers import View
+from cogs.utils.helpers import View
 from typing import Optional, List
 
 

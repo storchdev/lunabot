@@ -31,7 +31,11 @@ class EconomySu(commands.Cog):
 
     @commands.command()
     async def addcategory(self, ctx, name: str, display_name: str, description: str):
-        query = 'INSERT INTO item_categories (name, display_name, description) VALUES ($1, $2, $3)'
+        query = """INSERT INTO
+                       item_categories (name, display_name, description)
+                   VALUES
+                       ($1, $2, $3)
+                """
         await self.bot.db.execute(query, name, display_name, description)
         self.categories[name] = description
         await ctx.send('Category added.')
@@ -50,7 +54,22 @@ class EconomySu(commands.Cog):
             await ctx.send('Invalid JSON provided.')
             return
 
-        query = 'INSERT INTO shop_items (number_id, name_id, display_name, price, sell_price, stock, usable, activatable, category, description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)'
+        query = """INSERT INTO
+                       shop_items (
+                           number_id,
+                           name_id,
+                           display_name,
+                           price,
+                           sell_price,
+                           stock,
+                           usable,
+                           activatable,
+                           category,
+                           description
+                       )
+                   VALUES
+                       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                """
         await self.bot.db.execute(
             query, 
             flags.number_id, 
@@ -189,11 +208,30 @@ class EconomySu(commands.Cog):
         ]
         i = 1
         for displayname, nameid, desc, price, stock, sellprice, reqs, category, usable, actble in data:
-            query = 'INSERT INTO shop_items (name_id, number_id, display_name, price, sell_price, stock, usable, activatable, category, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)'
+            query = """INSERT INTO
+                           shop_items (
+                               name_id,
+                               number_id,
+                               display_name,
+                               price,
+                               sell_price,
+                               stock,
+                               usable,
+                               activatable,
+                               category,
+                               description
+                           )
+                       VALUES
+                           ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    """
             await self.bot.db.execute(query, nameid, i, displayname, price, sellprice, stock, usable, actble, category, desc)
 
             for req_type, req_desc in reqs:
-                query = 'INSERT INTO item_reqs (item_name_id, type, description) VALUES ($1,$2,$3)'
+                query = """INSERT INTO
+                               item_reqs (item_name_id, type, description)
+                           VALUES
+                               ($1, $2, $3)
+                        """
                 await self.bot.db.execute(query, nameid, req_type,req_desc)
 
             i += 1

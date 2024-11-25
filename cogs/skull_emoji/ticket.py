@@ -154,7 +154,17 @@ class TicketView(ui.View):
         channel = await self.create_channel(inter, ticket)
         temp = await channel.send(f'{inter.user.mention}')
         # temp = await channel.send(inter.user.mention)
-        query = 'INSERT INTO actickets (ticket_id, channel_id, opener_id, timestamp, archive_id) VALUES ($1, $2, $3, $4, $5)'
+        query = """INSERT INTO
+                       actickets (
+                           ticket_id,
+                           channel_id,
+                           opener_id,
+                           timestamp,
+                           archive_id
+                       )
+                   VALUES
+                       ($1, $2, $3, $4, $5)
+                """
         await inter.client.db.execute(query, ticket.id, ticket.channel.id, ticket.opener.id, ticket.timestamp.timestamp(), ticket.archive_id)
         view = CloseView(ticket.id, ticket.channel, ticket.opener.id, ticket.timestamp, ticket.archive_id)
         
@@ -200,7 +210,11 @@ class TicketView(ui.View):
         row = await inter.client.db.fetchrow(query, self.custom_id, inter.user.id)
         
         if row is None or row['end_time'] - time.time() < 0:
-            query = 'INSERT INTO cooldowns (custom_id, user_id, end_time) VALUES ($1, $2, $3)'
+            query = """INSERT INTO
+                           cooldowns (custom_id, user_id, end_time)
+                       VALUES
+                           ($1, $2, $3)
+                    """
             await inter.client.db.execute(query, self.custom_id, inter.user.id, int(time.time() + self.cooldown))
             return True
         else:
@@ -279,7 +293,11 @@ class TicketCog(commands.Cog, name='Tickets', description='a few sketchy admin-o
                     await ctx.send('I couldnt give that member the role, make sure im not being permission hiearchyd')
                     return 
                 
-                query = 'INSERT INTO cooldowns (custom_id, user_id, end_time, reason) VALUES (?, ?, ?, ?)'
+                query = """INSERT INTO
+                               cooldowns (custom_id, user_id, end_time, reason)
+                           VALUES
+                               ($1, $2, $3, $4)
+                        """
                 await self.bot.db.execute(query, view.custom_id, member.id, int(time.time() + view.cooldown), 'initial wait')
                 
                 channel = self.bot.get_channel(view.channel_id)

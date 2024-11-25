@@ -44,9 +44,19 @@ class PingOnJoin(commands.Cog):
         if view.cancelled:
             return
 
-        await self.bot.db.execute('delete from pingonjoin where guild_id = $1', ctx.guild.id)
+        query = """DELETE FROM pingonjoin
+                   WHERE
+                       guild_id = $1
+                """
+        await self.bot.db.execute(query, ctx.guild.id)
+
         for channel in view.channels:
-            await self.bot.db.execute('insert into pingonjoin (guild_id, channel_id) values ($1, $2)', ctx.guild.id, channel.id)
+            query = """INSERT INTO
+                           pingonjoin (guild_id, channel_id)
+                       VALUES
+                           ($1, $2)
+                    """
+            await self.bot.db.execute(query, ctx.guild.id, channel.id)
         self.channels[ctx.guild.id] = [channel.id for channel in view.channels]
         await view.final_interaction.response.edit_message(content='Done', view=None)
 

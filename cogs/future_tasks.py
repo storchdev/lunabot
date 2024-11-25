@@ -39,7 +39,11 @@ class FutureTask:
 
     async def task_coro(self):
         if self.action == 'remove_role':
-            query = 'INSERT INTO sticky_roles (user_id, role_id, until) VALUES ($1, $2, $3)'
+            query = """INSERT INTO
+                           sticky_roles (user_id, role_id, until)
+                       VALUES
+                           ($1, $2, $3)
+                    """
             await self.bot.db.execute(query, self.kwargs.get('user_id'), self.kwargs.get('role_id'), self.dt)
 
         await asyncio.sleep((self.dt - discord.utils.utcnow()).total_seconds())

@@ -8,3 +8,4 @@ from .checks import *
 from .time_stuff import *
 
 from cogs.layouts.layout import *
+from cogs.embeds.editor import *

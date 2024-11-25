@@ -67,7 +67,11 @@ class CloseView(View):
                 'content': msg.content,
                 'attachments': attachments
             })
-        query = 'INSERT INTO ticket_transcripts (ticket_id, opener_id, messages) VALUES ($1, $2, $3)'
+        query = """INSERT INTO
+                       ticket_transcripts (ticket_id, opener_id, messages)
+                   VALUES
+                       ($1, $2, $3)
+                """
         await self.bot.db.execute(query, self.ticket_id, self.opener_id, json.dumps(msg_objs, indent=4))
 
     async def interaction_check(self, inter):
@@ -153,7 +157,11 @@ class TicketTypeMenu(View):
     async def create_ticket(self):
         ticket = Ticket(self.owner, discord.utils.utcnow())
         channel = await self.create_channel(ticket)
-        query = 'INSERT INTO active_tickets (ticket_id, channel_id, opener_id, timestamp) VALUES ($1, $2, $3, $4)'
+        query = """INSERT INTO
+                       active_tickets (ticket_id, channel_id, opener_id, timestamp)
+                   VALUES
+                       ($1, $2, $3, $4)
+                """
         await self.bot.db.execute(query, ticket.id, ticket.channel.id, ticket.opener.id, ticket.timestamp.timestamp())
         view = CloseView(self.bot, ticket.id, ticket.channel, ticket.opener.id, ticket.timestamp)
         
@@ -267,7 +275,11 @@ class TicketCog(commands.Cog, name='Tickets', description='a few sketchy admin-o
                     await ctx.send('I couldnt give that member the role, make sure im not being permission hiearchyd')
                     return 
                 
-                query = 'INSERT INTO cooldowns (custom_id, user_id, end_time, reason) VALUES (?, ?, ?, ?)'
+                query = """INSERT INTO
+                               cooldowns (custom_id, user_id, end_time, reason)
+                           VALUES
+                               (?, ?, ?, ?)
+                        """
                 await self.bot.db.execute(query, view.custom_id, member.id, int(time.time() + view.cooldown), 'initial wait')
                 
                 channel = self.bot.get_channel(view.channel_id)

@@ -1,10 +1,15 @@
 import asyncpg 
 from config import DB_LOGIN 
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bot import LunaBot
+
 
 class DB:
     def __init__(self, bot):
-        self.bot = bot 
+        self.bot: "LunaBot" = bot 
 
     async def connect(self):
         self.bot.db = await asyncpg.create_pool(

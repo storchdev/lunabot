@@ -23,7 +23,15 @@ class Vars(commands.Cog):
 
     @commands.command()
     async def setvar(self, ctx, name: str, *, value: str):
-        query = 'INSERT INTO vars(name, value) VALUES($1, $2) ON CONFLICT(name) DO UPDATE SET value = $2'
+        query = """INSERT INTO
+                       vars (name, value)
+                   VALUES
+                       ($1, $2)
+                   ON CONFLICT (name) DO
+                   UPDATE
+                   SET
+                       value = $2
+                """
         await self.bot.db.execute(query, name, value)
         if value.isdigit():
             value = int(value)

@@ -163,7 +163,17 @@ class Economy(commands.Cog):
 
     async def add_balance(self, user_id, amount):
         # update and return 
-        query = 'INSERT INTO balances (user_id, balance) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET balance = balances.balance + $2 RETURNING balance'
+        query = """INSERT INTO
+                       balances (user_id, balance)
+                   VALUES
+                       ($1, $2)
+                   ON CONFLICT (user_id) DO
+                   UPDATE
+                   SET
+                       balance = balances.balance + $2
+                   RETURNING
+                       balance
+                """
         return await self.bot.db.fetchval(query, user_id, amount)
 
     async def add_item(self, user_id: str, item: 'BaseItem', amount: int = 1, *, update_stock=True):
@@ -206,7 +216,15 @@ class Economy(commands.Cog):
         return bal
     
     async def update_item_use_time(self, user_id, item_name_id):
-        query = 'INSERT INTO item_use_times (user_id, item_name_id) VALUES ($1, $2) ON CONFLICT (user_id, item_name_id) DO UPDATE SET time_used = CURRENT_TIMESTAMP'
+        query = """INSERT INTO
+                       item_use_times (user_id, item_name_id)
+                   VALUES
+                       ($1, $2)
+                   ON CONFLICT (user_id, item_name_id) DO
+                   UPDATE
+                   SET
+                       time_used = CURRENT_TIMESTAMP
+                """
         await self.bot.db.execute(query, user_id, item_name_id)
 
     # User commands / slash commands 
@@ -287,14 +305,14 @@ class Economy(commands.Cog):
                 name_ids = [it.name_id for it in items]
                 layout = self.bot.get_layout('itemsuggestions')
                 await layout.send(ctx, repls={
-                    'displaynames': display_names, 
-                    'nameids': name_ids
-                })
+                    "items": zip(display_names, name_ids),
+                }, jinja=True)
             else:
                 layout = self.bot.get_layout('itemnosuggestions')
                 await layout.send(ctx)
 
-            return False
+            return None 
+
         return shop_item
 
     @commands.hybrid_command(name='sell')
@@ -417,21 +435,8 @@ class Economy(commands.Cog):
     @app_commands.describe(item='The item you want to view')
     async def iteminfo(self, ctx, *, item):
         item_str = item.lower()
-        item = self.get_item_from_str(item_str)
+        item = await self.get_item_or_send_suggestions(ctx, item_str)
         if item is None:
-            items = search_item(self.items, item_str)
-
-            if items:
-                display_names = [it.display_name for it in items]
-                name_ids = [it.name_id for it in items]
-                layout = self.bot.get_layout('itemsuggestions')
-                await layout.send(ctx, repls={
-                    'displaynames': display_names, 
-                    'nameids': name_ids
-                })
-            else:
-                layout = self.bot.get_layout('itemnosuggestions')
-                await layout.send(ctx)
             return
 
         embed = self.bot.get_embed('iteminfo')
