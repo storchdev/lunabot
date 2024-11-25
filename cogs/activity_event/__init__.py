@@ -276,6 +276,9 @@ class ActivityEvent(commands.Cog):
 
         self.questions_i = 0
 
+        self.intercept_snowballs = False
+        self.num_snowballs: Dict[str, Dict[int, int]] = {}
+
     async def cog_check(self, ctx):
         return ctx.author.id in self.players or ctx.author.id == 718475543061987329
 
@@ -361,13 +364,64 @@ class ActivityEvent(commands.Cog):
     
     async def snowball_fight(self, channel: discord.TextChannel):
         # whichever team spams the most snowballs in 15 seconds wins
+
+        snowball_phrases = ["throw","bonk","🏐","🪩","⛄","☃️","❄️","🧊","<:ML_blue_snowflake:1310499586841903154>"]
+        # dodge_phrases = ["dodge", "💨"]
+        self.num_snowballs["mistletoe"] = {}
+        self.num_snowballs["poinsettia"] = {}
+
+        self.intercept_snowballs = True 
+
         layout = self.bot.get_layout("ae/snowballfight")
-        msg = await layout.send(channel)
+        await layout.send(channel)
 
-        allowed_phrases = ["throw" "bonk" "🏐" "🪩" "⛄" "☃️" "❄️" "🧊" ]
+        await asyncio.sleep(15)
+        # tally handled in on_message
 
-        def check(m):
-            return m.channel == channel and m.content.lower() in allowed_phrases
+        self.intercept_snowballs = False
+
+        total_mistletoe = sum(self.num_mistletoe.values()) 
+        total_poinsettia = sum(self.num_poinsettia.values())
+
+        def weighted_points(total_points: int, team: str) -> Dict[int, int]:
+            # return a dict of player ids to points based on how many snowballs they threw
+            # the ratio of snowballs thrown equals the ratio of points they get
+            if team == "mistletoe":
+                return {k: round(v / total_mistletoe * total_points) for k, v in num_mistletoe.items()}
+            else:
+                return {k: round(v / total_poinsettia * total_points) for k, v in num_poinsettia.items()}
+
+        if total_mistletoe == total_poinsettia:
+            total_points = round(total_mistletoe / 10)
+
+            for member_id, points in weighted_points(total_points, "mistletoe").items():
+                await self.players[member_id].add_points(points, 'snowball_fight')
+            
+            for member_id, points in weighted_points(total_points, "poinsettia").items():
+                await self.players[member_id].add_points(points, 'snowball_fight')
+        
+            # send draw layout
+            return
+
+        if total_mistletoe > total_poinsettia:
+            winning_team = "mistletoe"
+        else:
+            winning_team = "poinsettia"
+
+        total_points = 3 + round((total_mistletoe - total_poinsettia) / 10)
+
+        for member_id, points in weighted_points(total_points, winning_team).items():
+            await self.players[member_id].add_points(points, 'snowball_fight')
+        
+        # send layout
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        self.has_welcomed = set()
+
+    async def handle_snowball(self, msg: discord.Message):
+        if msg.content.lower() not in snowball_phrases:
+            return
         
         num_mistletoe: Dict[int, int] = {}
         num_poinsettia: Dict[int, int] = {}
@@ -379,45 +433,18 @@ class ActivityEvent(commands.Cog):
             except asyncio.TimeoutError:
                 continue
 
-            if msg.author.id in self.players:
-                await msg.delete()
-                if self.players[msg.author.id].team.name == "mistletoe":
-                    if msg.author.id not in num_mistletoe:
-                        num_mistletoe[msg.author.id] = 1
-                    else:
-                        num_mistletoe[msg.author.id] += 1
+            await msg.delete()
+            if self.players[msg.author.id].team.name == "mistletoe":
+                if msg.author.id not in num_mistletoe:
+                    num_mistletoe[msg.author.id] = 1
                 else:
-
-                    if msg.author.id not in num_poinsettia:
-                        num_poinsettia[msg.author.id] = 1
-                    else:
-                        num_poinsettia[msg.author.id] += 1
-
-        def weighted_points(total_points: int, team: str) -> Dict[int, int]:
-            # return a dict of player ids to points based on how many snowballs they threw
-            # the ratio of snowballs thrown equals the ratio of points they get
-            if team == "mistletoe":
-                total = sum(num_mistletoe.values())
-                return {k: round(v / total * total_points) for k, v in num_mistletoe.items()}
+                    num_mistletoe[msg.author.id] += 1
             else:
-                total = sum(num_poinsettia.values())
-                return {k: round(v / total * total_points) for k, v in num_poinsettia.items()}
 
-        if sum(num_mistletoe.values()) == sum(num_poinsettia.values()):
-            total_points = round(sum(num_mistletoe.values()) / 10)
-
-            for member_id, points in weighted_points(total_points, "mistletoe").items():
-                await self.players[member_id].add_points(points, 'snowball_fight')
-            
-            for member_id, points in weighted_points(total_points, "poinsettia").items():
-                await self.players[member_id].add_points(points, 'snowball_fight')
-        
-
-
-    @commands.Cog.listener()
-    async def on_member_join(self, member):
-        self.has_welcomed = set()
-
+                if msg.author.id not in num_poinsettia:
+                    num_poinsettia[msg.author.id] = 1
+                else:
+                    num_poinsettia[msg.author.id] += 1
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         # comment out later
@@ -433,6 +460,9 @@ class ActivityEvent(commands.Cog):
         #     return
         if msg.channel.id != GENERAL_ID:
             return 
+
+        if self.intercept_snowballs:
+            self.bot.loop.create_task(self.handle_snowball(msg))
 
         player = self.players[msg.author.id]
         await player.on_msg()
