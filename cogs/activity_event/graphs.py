@@ -5,8 +5,14 @@ from io import BytesIO
 from datetime import datetime
 from pytz import timezone
 from discord import File
+from discord.ext.commands import Context
 
 from .constants import *
+
+from typing import Dict, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 params = {
@@ -19,11 +25,16 @@ params = {
 plt.rcParams.update(params)
 
 
-async def plot_data(bot, data):
-    buf = await bot.loop.run_in_executor(None, plot_data_sync, data)
+async def plot_data(ctx: Context, data) -> BytesIO:
+    bot: "LunaBot" = ctx.bot
+
+    query = "SELECT timezone FROM timezones WHERE user_id = $1"
+    tz = await bot.db.fetchval(query, ctx.author.id)
+
+    buf = await bot.loop.run_in_executor(None, plot_data_sync, data, tz)
     return File(fp=buf, filename='plot.png')    
 
-def plot_data_sync(data):
+def plot_data_sync(data, tz: Optional[str] = None):
     """
     Plot data synchronously.
     :param data: A list of tuples of the form (datetime, value).
@@ -33,11 +44,11 @@ def plot_data_sync(data):
 
     # Create the plot.
     fig = plt.figure(figsize=(8, 5))
-    # set background colo
-    fig.set_facecolor('#36393f')
+    # set background color
+    fig.set_facecolor('none')
 
     ax = fig.add_subplot(1, 1, 1)
-    ax.set_facecolor('#36393f')
+    ax.set_facecolor('none')
 
     # add legends
 
@@ -61,7 +72,11 @@ def plot_data_sync(data):
     ax.legend(legends)
 
     # ax.xaxis.set_major_locator(mdates.DayLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d\n%H:%M', tz=timezone('US/Central')))
+    if tz is None:
+        tz = "US/Central"
+        fig.text(0.05, 0.05, "You have not set a timezone with !settz. Defaulting to CST.", fontsize=10, color='w')
+
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%a %-m/%-d\n%-I:%M %p', tz=timezone(tz)))
 
     # Rotate the x axis labels.
     fig.autofmt_xdate()

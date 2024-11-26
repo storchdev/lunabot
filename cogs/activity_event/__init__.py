@@ -20,16 +20,16 @@ from .effects import (
     CooldownReducer,
 ) 
 from .views import RedeemView, TeamLBView
-from cogs.utils import LayoutContext, View
+from cogs.utils import Layout, LayoutContext, View
 
-from typing import Dict, Set, TYPE_CHECKING
+from typing import List, Dict, Set, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bot import LunaBot
 
 
 class TeamStatsFlags(commands.FlagConverter):
-    team: str = None 
+    # team: str = None 
     stat: str
     start: str = None
     end: str = 'now'
@@ -80,6 +80,7 @@ class ActivityEvent(commands.Cog):
         self.team_members = {
             "mistletoe": [
                 496225545529327616,
+                1211386664367292467,
                 # add more
             ],
             "poinsettia": [
@@ -102,12 +103,13 @@ class ActivityEvent(commands.Cog):
         self.nick_dict = {
             496225545529327616: 'Luna',
             718475543061987329: 'Storch',
+            1211386664367292467: "Storch alt"
             # add more
         }
 
         self.powerup_emoji = '<a:ML_present_gift:1302182895020150804>'
 
-        self.last_msg_times: Dict[int, float] = {}
+
 
     def generate_powerup(self) -> int:
         if TEST:
@@ -278,6 +280,7 @@ class ActivityEvent(commands.Cog):
 
         self.intercept_snowballs = False
         self.num_snowballs: Dict[str, Dict[int, int]] = {}
+        self.snowball_messages: List[discord.Message] = []
 
     async def cog_check(self, ctx):
         return ctx.author.id in self.players or ctx.author.id == 718475543061987329
@@ -354,22 +357,29 @@ class ActivityEvent(commands.Cog):
 
         for player in self.players.values():
             if player.team.name == "mistletoe" and \
-                (player.last_message_time - now) < 60:
+                (now - player.last_message_time) < 60:
                 mistletoe += 1
             elif player.team.name == "poinsettia" and \
-                (player.last_message_time - now) < 60:
+                (now - player.last_message_time) < 60:
                 poinsettia += 1
 
-        return mistletoe >= 2 and poinsettia >= 2
+        if TEST:
+            return mistletoe >= 1 and mistletoe == poinsettia
+        else:
+            return mistletoe >= 2 and mistletoe == poinsettia
     
     async def snowball_fight(self, channel: discord.TextChannel):
         # whichever team spams the most snowballs in 15 seconds wins
 
-        snowball_phrases = ["throw","bonk","🏐","🪩","⛄","☃️","❄️","🧊","<:ML_blue_snowflake:1310499586841903154>"]
         # dodge_phrases = ["dodge", "💨"]
+        
         self.num_snowballs["mistletoe"] = {}
         self.num_snowballs["poinsettia"] = {}
 
+        num_mistletoe = self.num_snowballs["mistletoe"]
+        num_poinsettia = self.num_snowballs["poinsettia"]
+
+        self.snowball_messages = []
         self.intercept_snowballs = True 
 
         layout = self.bot.get_layout("ae/snowballfight")
@@ -380,71 +390,90 @@ class ActivityEvent(commands.Cog):
 
         self.intercept_snowballs = False
 
-        total_mistletoe = sum(self.num_mistletoe.values()) 
-        total_poinsettia = sum(self.num_poinsettia.values())
+        await channel.delete_messages(self.snowball_messages)
+
+        totals_dict = {
+            "mistletoe": sum(num_mistletoe.values()),
+            "poinsettia": sum(num_poinsettia.values())
+        } 
 
         def weighted_points(total_points: int, team: str) -> Dict[int, int]:
             # return a dict of player ids to points based on how many snowballs they threw
             # the ratio of snowballs thrown equals the ratio of points they get
-            if team == "mistletoe":
-                return {k: round(v / total_mistletoe * total_points) for k, v in num_mistletoe.items()}
-            else:
-                return {k: round(v / total_poinsettia * total_points) for k, v in num_poinsettia.items()}
+            return {k: round(v / totals_dict[team] * total_points) for k, v in self.num_snowballs[team].items()}
 
-        if total_mistletoe == total_poinsettia:
-            total_points = round(total_mistletoe / 10)
+        if totals_dict["mistletoe"] == totals_dict["poinsettia"]:
+            total_points = round(totals_dict["mistletoe"] / 5)
 
-            for member_id, points in weighted_points(total_points, "mistletoe").items():
-                await self.players[member_id].add_points(points, 'snowball_fight')
-            
-            for member_id, points in weighted_points(total_points, "poinsettia").items():
-                await self.players[member_id].add_points(points, 'snowball_fight')
-        
-            # send draw layout
-            return
+            for team_name in totals_dict.keys():
+                for member_id, points in weighted_points(total_points, team_name).items():
+                    await self.players[member_id].add_points(points, 'snowball_fight')
 
-        if total_mistletoe > total_poinsettia:
-            winning_team = "mistletoe"
+            repls = {
+                "snowballs": sum(totals_dict.values()),
+                "points1": total_points,
+                "points2": total_points
+            } 
+            layout = self.bot.get_layout("ae/snowballfight/draw")
+            await layout.send(channel, repls=repls)
         else:
-            winning_team = "poinsettia"
+            winning_team = max(totals_dict, key=totals_dict.get)
+            losing_team = min(totals_dict, key=totals_dict.get)
+            snowball_diff = abs(totals_dict["mistletoe"] - totals_dict["poinsettia"])
 
-        total_points = 3 + round((total_mistletoe - total_poinsettia) / 10)
+            bonus_points = round(snowball_diff / 5)
+            winning_points = round(totals_dict[winning_team] / 7) + bonus_points
+            losing_points = round(totals_dict[losing_team] / 7)
 
-        for member_id, points in weighted_points(total_points, winning_team).items():
-            await self.players[member_id].add_points(points, 'snowball_fight')
-        
-        # send layout
+            for member_id, points in weighted_points(winning_points, winning_team).items():
+                await self.players[member_id].add_points(points, 'snowball_fight')
+            for member_id, points in weighted_points(losing_points, losing_team).items():
+                await self.players[member_id].add_points(points, 'snowball_fight')
+
+            if winning_team == "poinsettia":
+                points1 = losing_points
+                points2 = winning_points
+            else:
+                points1 = winning_points
+                points2 = losing_points
+
+            repls = {
+                "snowballs": sum(totals_dict.values()),
+                "points1": points1,
+                "points2": points2,
+                "winningteam": winning_team.capitalize(),
+                "bonus": bonus_points
+            }
+            layout = self.bot.get_layout("ae/snowballfight/results")
+            await layout.send(channel, repls=repls)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         self.has_welcomed = set()
 
     async def handle_snowball(self, msg: discord.Message):
-        if msg.content.lower() not in snowball_phrases:
+        snowball_phrases = ["<:ML_blue_snowflake:1310499586841903154>"]
+
+        if msg.content not in snowball_phrases:
             return
         
-        num_mistletoe: Dict[int, int] = {}
-        num_poinsettia: Dict[int, int] = {}
+        num_mistletoe = self.num_snowballs["mistletoe"]
+        num_poinsettia = self.num_snowballs["poinsettia"]
 
-        end = time.time() + 15
-        while time.time() < end:
-            try:
-                msg = await self.bot.wait_for('message', check=check, timeout=end - time.time())
-            except asyncio.TimeoutError:
-                continue
+        self.snowball_messages.append(msg)
 
-            await msg.delete()
-            if self.players[msg.author.id].team.name == "mistletoe":
-                if msg.author.id not in num_mistletoe:
-                    num_mistletoe[msg.author.id] = 1
-                else:
-                    num_mistletoe[msg.author.id] += 1
+        if self.players[msg.author.id].team.name == "mistletoe":
+            if msg.author.id not in num_mistletoe:
+                num_mistletoe[msg.author.id] = 1
             else:
+                num_mistletoe[msg.author.id] += 1
+        else:
 
-                if msg.author.id not in num_poinsettia:
-                    num_poinsettia[msg.author.id] = 1
-                else:
-                    num_poinsettia[msg.author.id] += 1
+            if msg.author.id not in num_poinsettia:
+                num_poinsettia[msg.author.id] = 1
+            else:
+                num_poinsettia[msg.author.id] += 1
+        
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         # comment out later
@@ -488,10 +517,15 @@ class ActivityEvent(commands.Cog):
         #comment out later 
         # self.msgs_needed = 3
 
-        if random.random() < 0.5:
+        if random.random() < 0.5 and not TEST:
             return
 
-        if self.can_snowball_fight() and random.random() < 0.15:
+        if TEST:
+            snowball_threshold = 1
+        else:
+            snowball_threshold = 0.15
+
+        if not self.intercept_snowballs and self.can_snowball_fight() and random.random() < snowball_threshold:
             await self.snowball_fight(msg.channel)
             return
 
@@ -738,27 +772,31 @@ class ActivityEvent(commands.Cog):
         if flags.stat.lower() not in VALID_STATS:
             return await ctx.send('That is not a valid option!')
 
-        team = self._get_team(ctx, flags)
-        if team is None:
-            return await ctx.send('That is not a valid team!')
+        # team = self._get_team(ctx, flags)
+        # if team is None:
+        #     return await ctx.send('That is not a valid team!')
+        team = "both"
 
         start = START_TIME if flags.start is None else dateparser.parse(flags.start)
         end = dateparser.parse(flags.end)
 
         if flags.stat in {'msg', 'messages', 'message', 'msgs'}:
-            await self._process_stat(ctx, team, start, end, 'Messages sent', 'all_msg', lambda x: x.msg_count, lambda t: t.msg_count)
+            await self._process_stat(ctx, team, start, end, 'messages sent', 'all_msg', lambda x: x.msg_count, lambda t: t.msg_count)
         elif flags.stat in {'points', 'pts'}:
-            await self._process_stat(ctx, team, start, end, 'Points earned', None, lambda x: x.points, lambda t: t.total_points, exclude_types=self.non_point_types)
+            await self._process_stat(ctx, team, start, end, 'points earned', None, lambda x: x.points, lambda t: t.total_points, exclude_types=self.non_point_types)
         elif flags.stat in {'powerup', 'powerups'}:
-            await self._process_powerup(ctx, team, start, end, 'Powerups obtained')
+            await self._process_powerup(ctx, team, start, end, 'powerups obtained')
         elif flags.stat in {'bonus', 'bonuses'}:
-            await self._process_bonus(ctx, team, start, end, 'Bonus points earned', ['welc_bonus', '500_bonus', 'topup_bonus', 'steal_bonus'])
+            await self._process_bonus(ctx, team, start, end, 'bonus points earned', ['welc_bonus', '500_bonus', 'topup_bonus', 'steal_bonus'])
         elif flags.stat == 'trivia':
-            await self._process_bonus(ctx, team, start, end, 'Trivia points earned', ['trivia'])
+            await self._process_bonus(ctx, team, start, end, 'trivia points earned', ['trivia'])
         elif flags.stat in {'stolen', 'stole', 'steals'}:
-            await self._process_bonus(ctx, team, start, end, 'Points stolen', ['stolen', 'steal_trivia'])
+            await self._process_bonus(ctx, team, start, end, 'points stolen', ['stolen', 'steal_trivia'])
+        elif flags.stat in {'snowball', "snowballfight"}:
+            # todo
+            pass
         else:
-            await self._process_bonus(ctx, team, start, end, 'Points from welcoming', ['welc_bonus'])
+            await self._process_bonus(ctx, team, start, end, 'points from welcoming', ['welc_bonus'])
 
     def _get_team(self, ctx, flags):
         if flags.team is None:
@@ -777,19 +815,25 @@ class ActivityEvent(commands.Cog):
             rows_list.append((t, rows))
 
         data = self._data_from_rows(rows_list, start)
-        file = await plot_data(self.bot, data)
-        embed = self._create_stat_embed(title, team, data, start, end, player_key, team_key)
+        file = await plot_data(ctx, data)
+        embed = self.bot.get_embed("ae/teamstats")
+        repls = self._get_stat_repls(title, team, data, start, end, player_key, team_key)
+        embed = await Layout.fill_embed(embed, repls, special=False)
+        embed.set_image(url=f'attachment://plot.png')
         await ctx.send(embed=embed, file=file)
 
     async def _process_bonus(self, ctx, team, start, end, title, types):
         rows_list, stats, player_stats = [], {}, {}
-        for t in (self.teams.values() if team == 'both' else [team]):
+        for t in self.teams.values():
             rows, stats, player_stats = await self._process_rows(t, types, end, stats, player_stats)
             rows_list.append((t, rows))
 
         data = self._data_from_rows(rows_list, start)
-        file = await plot_data(self.bot, data)
-        embed = self._create_bonus_embed(title, team, stats, player_stats, start, end)
+        file = await plot_data(ctx, data)
+        embed = self.bot.get_embed("ae/teamstats")
+        repls = self._get_bonus_repls(title, team, stats, player_stats, start, end)
+        embed = await Layout.fill_embed(embed, repls, special=False)
+        embed.set_image(url=f'attachment://plot.png')
         await ctx.send(embed=embed, file=file)
 
     async def _fetch_rows(self, team, stat_type, start, end, exclude_types):
@@ -842,34 +886,64 @@ class ActivityEvent(commands.Cog):
             ret.append((team, data))
         return ret
 
-    def _create_stat_embed(self, title, team, data, start, end, player_key, team_key):
-        embed = discord.Embed(title=title, color=0xcab7ff)
-        for t in (self.teams.values() if team == 'both' else [team]):
-            mvp = max(t.players, key=player_key)
-            total = team_key(t)
-            val = self._generate_stat_val(mvp, total, start, end, len(t.players))
-            embed.add_field(name=t.name.capitalize(), value=val)
-        return embed
+    def _get_stat_repls(self, title, team, data, start, end, player_key, team_key):
+        total = 0
+        repls = {}
+        for i, t in enumerate(self.teams.values()):
+            duration = (end.timestamp() - start.timestamp())
+            repls[f"mvp{i+1}"] = max(t.players, key=player_key).nick
+            repls[f"total{i+1}"] = team_key(t)
+            repls[f"houravg{i+1}"] = "{:.2f}".format(team_key(t) / (duration / 3600))
+            repls[f"dayavg{i+1}"] = "{:.2f}".format(team_key(t) / (duration / 86400))
+            repls[f"playeravg{i+1}"] = "{:.2f}".format(team_key(t) / len(t.players))
+            total += team_key(t)
 
-    def _create_bonus_embed(self, title, team, stats, player_stats, start, end):
-        embed = discord.Embed(title=title, color=0xcab7ff)
-        for t in (self.teams.values() if team == 'both' else [team]):
+        repls["stattitle"] = title.title()
+        repls["stat"] = title
+        repls["total"] = total
+
+        return repls
+
+    def _get_bonus_repls(self, title, team, stats, player_stats, start, end):
+        total = 0
+        repls = {}
+        for i, t in enumerate(self.teams.values()):
             mvp = max(t.players, key=lambda x: player_stats.get(x.member.id, 0))
             count = player_stats.get(mvp.member.id, 0)
-            total = stats[t.name]['total']
-            val = self._generate_stat_val(mvp, total, start, end, len(t.players))
-            embed.add_field(name=t.name.capitalize(), value=val)
-        return embed
+            this_total = stats[t.name]['total']
+            repls[f"mvp{i+1}"] = mvp.nick
+            repls[f"total{i+1}"] = this_total 
+            repls[f"playeravg{i+1}"] = "{:.2f}".format(total / len(t.players))
+            repls[f"houravg{i+1}"] = "{:.2f}".format(total / (end.timestamp() - start.timestamp()) * 3600)
+            repls[f"dayavg{i+1}"] = "{:.2f}".format(total / (end.timestamp() - start.timestamp()) * 86400)
 
-    def _generate_stat_val(self, mvp, total, start, end, player_count):
-        duration = (end.timestamp() - start.timestamp())
-        return dedent(f'''
-        Total: **{total:,}**
-        Average per player: **{total / player_count:.2f}**
-        Team MVP: **{mvp.nick}** ({total:,})
-        Average per hour: **{total / (duration / 3600):.2f}**
-        Average per day: **{total / (duration / 86400):.2f}**
-        ''')
+            total += this_total
+        
+        repls["title"] = title.title()
+        repls["stat"] = title
+        repls["total"] = total
+
+        return repls
+
+    # def _create_bonus_embed_old(self, title, team, stats, player_stats, start, end):
+    #     embed = discord.Embed(title=title, color=0xcab7ff)
+    #     for t in (self.teams.values() if team == 'both' else [team]):
+    #         mvp = max(t.players, key=lambda x: player_stats.get(x.member.id, 0))
+    #         count = player_stats.get(mvp.member.id, 0)
+    #         total = stats[t.name]['total']
+    #         val = self._generate_stat_val(mvp, total, start, end, len(t.players))
+    #         embed.add_field(name=t.name.capitalize(), value=val)
+    #     return embed
+
+    # def _generate_stat_val(self, mvp, total, start, end, player_count):
+    #     duration = (end.timestamp() - start.timestamp())
+    #     return dedent(f'''
+    #     Total: **{total:,}**
+    #     Average per player: **{total / player_count:.2f}**
+    #     Team MVP: **{mvp.nick}** ({total:,})
+    #     Average per hour: **{total / (duration / 3600):.2f}**
+    #     Average per day: **{total / (duration / 86400):.2f}**
+    #     ''')
 
 
 async def setup(bot):
