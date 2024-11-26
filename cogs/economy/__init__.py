@@ -17,7 +17,7 @@ from .search import search_item
 from .shop import ShopMainView
 from .su import EconomySu
 
-from typing import Optional
+from typing import Optional, Dict
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -37,7 +37,8 @@ class Economy(commands.Cog):
         self.low_drop = 1000 
         self.high_drop = 5000
         self.pick_limit = 1
-        self.pickers = set()
+        self.picker_amounts: Dict[discord.Member, int] = {}
+        self.drop_message: Optional[discord.Message] = None
         self.items = []
         self.categories = {}
 
@@ -544,18 +545,27 @@ class Economy(commands.Cog):
         if not self.is_verified(msg.author):
             return
 
-        if not self.drop_active: 
-            self.msg_count += 1
+        if not self.drop_message: 
+            async def task():
+                self.msg_count += 1
 
-        if self.check_for_drop(self.msg_count):
-            self.msg_count = 0 
-            self.pickers.clear()
-            layout = self.bot.get_layout('drop') 
-            temp = await layout.send(msg.channel, LayoutContext(message=msg), repls={'low': self.low_drop, 'high': self.high_drop})
-            self.drop_active = True
-            await asyncio.sleep(30)
-            self.drop_active = False
-            await temp.delete()
+                if self.check_for_drop(self.msg_count):
+                # if True:
+                    self.msg_count = 0 
+                    self.picker_amounts = {}
+
+                    layout = self.bot.get_layout('drop') 
+                    self.drop_message = await layout.send(msg.channel, repls={
+                        "edited": False,
+                        "data": []
+                    }, jinja=True)
+
+                    await self.drop_message.add_reaction(self.bot.vars.get("lunara"))
+                    await asyncio.sleep(30)
+                    await self.drop_message.delete()
+                    self.drop_message = None
+
+            self.bot.loop.create_task(task())
                     
         if 'welc' in msg.content.lower():
             et = await self.bot.get_cooldown_end('welc', 60, obj=msg.author)
@@ -575,36 +585,72 @@ class Economy(commands.Cog):
         amount = random.randint(100, 300)
         await self.add_balance(msg.author.id, amount)
 
-    @commands.command()
-    async def pick(self, ctx):
-        if not self.drop_active or ctx.channel.id != self.bot.vars.get('general-channel-id'):
-            layout = self.bot.get_layout('drop/noactive')
-            await layout.send(ctx, LayoutContext(message=ctx.message), delete_after=7)
-            return 
+    # @commands.command()
+    # async def pick(self, ctx):
+    #     if not self.drop_active or ctx.channel.id != self.bot.vars.get('general-channel-id'):
+    #         layout = self.bot.get_layout('drop/noactive')
+    #         await layout.send(ctx, LayoutContext(message=ctx.message), delete_after=7)
+    #         return 
 
-        if ctx.author.id in self.pickers:
-            layout = self.bot.get_layout('drop/limit')
-            await layout.send(ctx, LayoutContext(message=ctx.message), delete_after=7)
+    #     if ctx.author.id in self.pickers:
+    #         layout = self.bot.get_layout('drop/limit')
+    #         await layout.send(ctx, LayoutContext(message=ctx.message), delete_after=7)
+    #         return
+
+    #     self.pickers.add(ctx.author.id)
+
+    #     amount = random.randint(self.low_drop, self.high_drop)
+    #     await self.add_balance(ctx.author.id, amount)
+    #     if 1000 <= amount <= 1999:
+    #         layout = self.bot.get_layout('drop/1kto2k')
+    #     elif 2000 <=amount < 3999:
+    #         layout = self.bot.get_layout('drop/2kto4k')
+    #     else:
+    #         layout = self.bot.get_layout('drop/4kto5k')
+
+    #     msg = await layout.send(ctx, LayoutContext(message=ctx.message), repls={'amount': amount})
+    #     await asyncio.sleep(10)
+    #     await msg.delete()
+    #     try:
+    #         await ctx.message.delete()
+    #     except discord.NotFound:
+    #         print(f'Failed to delete {ctx.message.jump_url}')
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        if payload.user_id == self.bot.user.id:
+            return
+        if payload.message_id != self.drop_message.id:
+            return
+        if str(payload.emoji) != self.bot.vars.get('lunara'):
             return
 
-        self.pickers.add(ctx.author.id)
+        if payload.member in self.picker_amounts:
+            return 
 
         amount = random.randint(self.low_drop, self.high_drop)
-        await self.add_balance(ctx.author.id, amount)
-        if 1000 <= amount <= 1999:
-            layout = self.bot.get_layout('drop/1kto2k')
-        elif 2000 <=amount < 3999:
-            layout = self.bot.get_layout('drop/2kto4k')
-        else:
-            layout = self.bot.get_layout('drop/4kto5k')
+        self.picker_amounts[payload.member] = amount
+        await self.add_balance(payload.user_id, amount)
 
-        msg = await layout.send(ctx, LayoutContext(message=ctx.message), repls={'amount': amount})
-        await asyncio.sleep(10)
-        await msg.delete()
-        try:
-            await ctx.message.delete()
-        except discord.NotFound:
-            print(f'Failed to delete {ctx.message.jump_url}')
+        layout = self.bot.get_layout('drop')
+        
+        def amount_to_comment(amount: int):
+            if 1000 <= amount <= 1999:
+                return "...a low amount, but still better than nothing"
+            elif 2000 <= amount <= 3999:
+                return "...not a bad pick at all"
+            else:
+                return "...a truly impressive amount"
+        amounts = list(self.picker_amounts.values())
+
+        await layout.edit(self.drop_message, repls={
+            "data": zip(
+                [m.mention for m in self.picker_amounts.keys()],
+                amounts,
+                [amount_to_comment(a) for a in amounts],
+            ),
+            "edited": True
+        }, jinja=True)
 
 
 async def setup(bot):
