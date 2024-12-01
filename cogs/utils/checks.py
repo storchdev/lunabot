@@ -22,6 +22,9 @@ def is_admin(ctx):
 def staff_only():
     return commands.check(is_staff)
 
+def admin_only():
+    return commands.check(is_admin)
+
 def user_cd_except_staff(per: float, rate: int = 1):
     async def predicate(ctx):
         if is_staff(ctx):

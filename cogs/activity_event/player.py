@@ -1,6 +1,8 @@
 import asyncio 
 import random 
 import time
+from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 import discord
 
@@ -12,6 +14,7 @@ from .effects import (
 )
 
 from cogs.utils import LayoutContext
+from .helpers import get_unique_day_string
 
 from typing import List, TYPE_CHECKING
 
@@ -19,6 +22,9 @@ if TYPE_CHECKING:
     from bot import LunaBot
     from .team import Team
 
+
+
+    
 
 
 class Player:
@@ -78,6 +84,7 @@ class Player:
                        ($1, $2, $3, $4, $5)
                 """
         await self.bot.db.execute(query, self.member.id, powerup.log_name, powerup.n, powerup.start, powerup.end)
+        self.powerups.append(powerup)
         self.bot.loop.create_task(self.task(powerup))
         if log:
             await self.log_powerup(powerup.log_name)
@@ -99,6 +106,7 @@ class Player:
             return
         self.next_welc = time.time() + WELC_CD 
         bonus = random.randint(1, 3)
+        await self.increment_daily_task("welc")
         await self.add_points(bonus, 'welc_bonus')
 
         layout = self.bot.get_layout('ae/welcbonus')
@@ -139,6 +147,8 @@ class Player:
 
         self.points += gain
 
+        await self.increment_daily_task("points", gain)
+
         query = """INSERT INTO
                        event_log (team, user_id, type, gain, time)
                    VALUES
@@ -152,7 +162,13 @@ class Player:
             gain,
             int(time.time()),
         )
-        # query = 'update se_stats set points = points + ? where user_id = ?'
+
+        # query = """UPDATE event_stats
+        #            SET
+        #                points = points + $1 
+        #            WHERE
+        #                user_id = $2 
+        #         """
         # await self.bot.db.execute(query, gain, self.member.id)
     
     async def remove_points(self, points, reason):
@@ -163,7 +179,13 @@ class Player:
                        ($1, $2, $3, $4, $5)
                 """
         await self.bot.db.execute(query, self.team.name, self.member.id, reason, -points, int(time.time()))
-        # query = 'update se_stats set points = points - ? where team = ?'
+
+        # query = """UPDATE event_stats
+        #            SET
+        #                points = points - $1 
+        #            WHERE
+        #                team = $2 
+        #         """
         # await self.bot.db.execute(query, points, self.member.id)
     
     async def on_500(self):
@@ -173,3 +195,19 @@ class Player:
         }
         layout = self.bot.get_layout("ae/milestone500")
         await layout.send(self.team.channel, ctx=LayoutContext(author=self.member), repls=repls)
+
+    async def increment_daily_task(self, task: str, amount: int = 1):
+        query = """INSERT INTO
+                        event_dailies (user_id, date_str, task)
+                    VALUES
+                        ($1, $2, $3)
+                    ON CONFLICT (user_id, date_str, task) DO
+                    UPDATE
+                    SET
+                        num = event_dailies.num + $4 
+                """
+        await self.bot.db.execute(query, self.member.id, get_unique_day_string(), task, amount)
+
+
+
+

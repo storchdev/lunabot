@@ -3,17 +3,18 @@ import time
 import discord 
 from discord.ext import commands, tasks 
 from discord import ui
+from num2words import num2words
 
 from .constants import * 
 from .team import Team
+from .helpers import get_unique_day_string
 from cogs.utils import Layout, View
-from num2words import num2words
 
 from typing import List, Optional, Dict, Set, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bot import LunaBot
-
+    from .player import Player
 
 
 class RedeemView(View):
@@ -58,7 +59,7 @@ class RedeemButton(ui.Button):
             # label=powerups[name],
             custom_id=name,
             row=row,
-            style=discord.ButtonStyle.blurple
+            style=discord.ButtonStyle.grey
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -104,6 +105,12 @@ class TeamLBView(View):
 
     async def update(self, interaction=None):
         self.switch_teams.emoji = self.other_team.emoji
+
+        if self.current_team.name == "mistletoe":
+            self.switch_teams.style = discord.ButtonStyle.green
+        else:
+            self.switch_teams.style = discord.ButtonStyle.red
+
         embed = self.ctx.bot.get_embed("ae/teamlb")
         dlines = []
         players = self.current_team.players.copy()
@@ -141,4 +148,146 @@ class TeamLBView(View):
         await self.update(interaction)
 
     
+
+
+class DailyTasksView(View):
+    def __init__(self, ctx: commands.Context, player: "Player"):
+        super().__init__(bot=ctx.bot, owner=ctx.author)
+
+        self.ctx = ctx
+        self.player = player
+        self.bot: "LunaBot" = ctx.bot 
+        self.task_statuses = {}
+        self.unclaimed_ids = []
+        self.progresses = {} 
+
+        self.goals = {
+            "messages": DAILY_GOAL_MESSAGES,
+            "points": DAILY_GOAL_POINTS,
+            "trivia": DAILY_GOAL_TRIVIA,
+            "welc": DAILY_GOAL_WELC,
+        }
+        self.completed = 0 
+
+        self.message: Optional[discord.Message] = None
+    
+    async def update_self(self):
+        today = get_unique_day_string()
+        unclaimed_ids = []
+
+        claimed = 0
+        self.completed = 0
+
+        for task, goal in self.goals.items():
+            query = "SELECT id, num, claimed FROM event_dailies WHERE user_id = $1 AND date_str = $2 AND task = $3"
+            row = await self.bot.db.fetchrow(query, self.owner.id, today, task)
+
+            if row is None:
+                query = "INSERT INTO event_dailies (user_id, date_str, task, num) VALUES ($1, $2, $3, $4)"
+                await self.bot.db.execute(query, self.ctx.author.id, today, task, 0)
+                num = 0 
+            else:
+                num = row["num"]
+
+            if num >= goal:
+                if row["claimed"]:
+                    self.task_statuses[task] = "claimed"
+                    claimed += 1
+                else:
+                    self.task_statuses[task] = "unclaimed"
+                    unclaimed_ids.append(row["id"])
+                self.completed += 1
+            else:
+                self.task_statuses[task] = "uncompleted"
+            self.progresses[task] = (num, goal)
+        
+        self.unclaimed_ids = unclaimed_ids
+
+        self.clear_items()
+        if len(self.unclaimed_ids) > 0:
+            self.add_item(self.claim_all)
+        else: 
+            if claimed == len(self.goals):
+                self.add_item(self.claim_bonus)
+
+    async def send(self, edit=False):
+        await self.update_self()
+        embed = self.bot.get_embed("ae/dailyadvent")
+
+        def stylize(text, task):
+            if self.task_statuses[task] == "claimed":
+                return f"~~**{text}**~~"
+            elif self.task_statuses[task] == "unclaimed":
+                return f"**{text}**"
+            else:
+                return text
+        
+        branch_middle = self.bot.vars.get("branch-middle-emoji")
+        branch_final = self.bot.vars.get("branch-final-emoji")
+
+        def progress_bar(task, last=False):
+            if last:
+                emoji = branch_final
+            else:
+                emoji = branch_middle
+            
+            progress, total = self.progresses[task]
+            if total > 10:
+                full = min(round(progress / total * 10), total)
+                empty = 10 - full 
+            else:
+                full = min(progress, total)
+                empty = total - full
+
+            return f"> {emoji} ₍ {"✦"*full}{"✧"*empty} ₎"
+
+        dlines = []
+        dlines.append(f"> ⁺ <a:ML_red_flower:1308674651450511381>﹒{stylize("Welcome __5__ members﹒⁺", "welc")}")
+        dlines.append(progress_bar("welc"))
+        dlines.append(f"> ⁺ <a:ML_green_flower:1308674666897997857>﹒{stylize("Send __100__ messages", "messages")}﹒⁺")
+        dlines.append(progress_bar("messages"))
+        dlines.append(f"> ⁺ <a:ML_white_flower:1308674682135773206>﹒{stylize("Gain __50__ points", "points")}﹒⁺")
+        dlines.append(progress_bar("points"))
+        dlines.append(f"> ⁺ <a:ML_gold_flower:1308674704072245318>﹒{stylize("Get __3__ trivia correct", "trivia")}﹒⁺")
+        dlines.append(progress_bar("trivia", last=True))
+        dlines.append(f"             ‧  ╴‧  ╴‧  ╴‧")
+        embed.description = "\n".join(dlines)
+
+        if edit:
+            await self.message.edit(embed=embed, view=self)
+        else:
+            self.message = await self.ctx.send(embed=embed, view=self)
+    
+    @ui.button(label="⁺﹒Claim All﹗𖹭﹒⁺", emoji="<a:ML_ornament:1303613720349642773>", style=discord.ButtonStyle.green)
+    async def claim_all(self, interaction, button):
+        query = "UPDATE event_dailies SET claimed = $1 WHERE id = ANY($2)"
+        await self.bot.db.execute(query, True, self.unclaimed_ids)
+
+        points = 10 * len(self.unclaimed_ids)
+        await self.player.add_points(points, "dailies_bonus", multi=False)
+
+        await self.update_self()
+        layout = self.bot.get_layout("ae/dailies/claimed")
+        repls = {
+            "points": points,
+            "completed": self.completed,
+            "total": len(self.goals)
+        }
+        await layout.send(interaction, repls=repls, ephemeral=True)
+        await self.send(edit=True)
+    
+    @ui.button(label="⁺﹒Claim Bonus﹗𖹭﹒⁺", emoji="<a:ML_ornament2:1311495049111932942>", style=discord.ButtonStyle.red)
+    async def claim_bonus(self, interaction, button):
+        bonus_points = 7
+        await self.player.add_points(bonus_points, "dailies_bonus", multi=False)
+        await self.update_self()
+        # send layout
+        layout = self.bot.get_layout("ae/dailies/bonusclaimed")
+        repls = {
+            "points": bonus_points
+        }
+        await layout.send(interaction, repls=repls, ephemeral=True) 
+        await self.send(edit=True)
+
+
 

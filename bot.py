@@ -15,6 +15,7 @@ from cogs.utils.checks import guild_only
 
 if TYPE_CHECKING:
     from asyncpg import Pool
+    from cogs.tickets import Ticket
 
 
 
@@ -35,6 +36,7 @@ class LunaBot(commands.Bot):
         self.layouts: Dict[str, Layout] = {}
         self.future_tasks: Dict[int, FutureTask] = {}
         self.db: Optional[Pool] = None
+        self.tickets: Dict[discord.Thread, Ticket] = {}
 
     async def start_task(self):
         await self.wait_until_ready()

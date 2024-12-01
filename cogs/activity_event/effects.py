@@ -3,6 +3,9 @@ class Powerup:
     def __init__(self, start, end):
         self.start = start
         self.end = end
+        self.n = None 
+        self.name = None 
+        self.log_name = None
 
 
 class Multiplier(Powerup):

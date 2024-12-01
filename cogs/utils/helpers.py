@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Self
+from typing import Any, Optional, Self, TYPE_CHECKING
 
 import discord
 from discord.ext import commands
 import json 
+
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 class View(discord.ui.View):
@@ -13,9 +17,9 @@ class View(discord.ui.View):
         self.on_timeout = cls._wrap_timeout(self)
         return self
 
-    def __init__(self, *, timeout: Optional[float] = 180, bot: Optional[commands.Bot] = None, owner: Optional[discord.Member] = None, parent_view: Optional[Self] = None):
+    def __init__(self, *, timeout: Optional[float] = 180, bot: Optional[LunaBot] = None, owner: Optional[discord.Member] = None, parent_view: Optional[Self] = None):
         super().__init__(timeout=timeout)
-        self.bot: Optional[commands.Bot] = bot
+        self.bot: Optional[LunaBot] = bot
         self.owner: Optional[discord.Member] = owner 
 
         self.parent_view: Optional[Self] = parent_view 

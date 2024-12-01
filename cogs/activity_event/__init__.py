@@ -1,5 +1,5 @@
 from itertools import cycle
-from datetime import datetime
+from datetime import datetime, timedelta
 from textwrap import dedent
 import time 
 import random 
@@ -19,7 +19,7 @@ from .effects import (
     Multiplier,
     CooldownReducer,
 ) 
-from .views import RedeemView, TeamLBView
+from .views import RedeemView, TeamLBView, DailyTasksView
 from cogs.utils import Layout, LayoutContext, View
 
 from typing import List, Dict, Set, TYPE_CHECKING
@@ -79,13 +79,20 @@ class ActivityEvent(commands.Cog):
 
         self.team_members = {
             "mistletoe": [
-                496225545529327616,
-                1211386664367292467,
-                # add more
+                1011106833412403230,
+                1061535351031746581,
+                1089275337633972306,
+                902448599542157322,
+                718475543061987329,
+                965552455993683978,
             ],
             "poinsettia": [
-                718475543061987329,
-                # add more
+                396740993115881492,
+                675058943596298340,
+                496225545529327616,
+                1081628938394148884,
+                989623504867565588,
+                628091002997047298,
             ] 
         }
         self.team_channels = {
@@ -101,15 +108,23 @@ class ActivityEvent(commands.Cog):
             "poinsettia": "<:ML_Team_Poinsettia:1302156805639503892>",
         }
         self.nick_dict = {
-            496225545529327616: 'Luna',
+            1011106833412403230: 'Val',
+            1061535351031746581: 'Mizuki',
+            1089275337633972306: 'Tea',
+            902448599542157322: 'Kyoka',
             718475543061987329: 'Storch',
-            1211386664367292467: "Storch alt"
-            # add more
+            965552455993683978: 'Sid',
+            396740993115881492: 'Onyx',
+            675058943596298340: 'Molly',
+            496225545529327616: 'Luna',
+            1081628938394148884: 'Nester',
+            989623504867565588: 'Seabass',
+            628091002997047298: 'Yuriiko',
         }
 
         self.powerup_emoji = '<a:ML_present_gift:1302182895020150804>'
 
-
+        self.daily_message_task_cds = {}
 
     def generate_powerup(self) -> int:
         if TEST:
@@ -165,6 +180,16 @@ class ActivityEvent(commands.Cog):
                        start_time integer,
                        end_time integer
                    );
+                   
+                   CREATE TABLE IF NOT EXISTS event_dailies (
+                       id SERIAL PRIMARY KEY,
+                       user_id BIGINT,
+                       date_str TEXT,
+                       task TEXT,
+                       num INTEGER DEFAULT 1,
+                       claimed BOOLEAN DEFAULT FALSE,
+                       UNIQUE (user_id, date_str, task)
+                   );
                 """
         await self.bot.db.execute(query)
 
@@ -178,7 +203,7 @@ class ActivityEvent(commands.Cog):
             for member_id in member_ids:
                 await self.bot.db.execute(query, member_id, team)
             
-        rows = await self.bot.db.fetch("SELECT * FROM event_stats")
+        # rows = await self.bot.db.fetch("SELECT * FROM event_stats")
 
     async def cog_load(self):
 
@@ -235,16 +260,15 @@ class ActivityEvent(commands.Cog):
                     elif row['name'] == 'cd_powerup':
                         powerups.append(CooldownReducer(row['value'], row['start_time'], row['end_time']))
 
-                placeholders = ','.join(f'${i+2}' for i in range(len(self.non_point_types)))
                 query = f"""SELECT
                                sum(gain)
                            FROM
                                event_log
                            WHERE
-                               type NOT IN ({placeholders})
+                               type != ANY($2)
                                AND user_id = $1 
                         """ 
-                points = await self.bot.db.fetchval(query, member.id, *self.non_point_types)
+                points = await self.bot.db.fetchval(query, member.id, self.non_point_types)
                 if points is None:
                     points = 0
 
@@ -333,6 +357,8 @@ class ActivityEvent(commands.Cog):
             return
 
         if question.choices[emojis.index(str(reaction.emoji))] == question.answer:
+            await player.increment_daily_task("trivia")
+
             if not steal:
                 await player.add_points(points, 'trivia')
                 layout = self.bot.get_layout("ae/trivia/correct")
@@ -340,7 +366,7 @@ class ActivityEvent(commands.Cog):
             else:
                 await player.team.opp.captain.remove_points(points, 'steal_trivia')
                 await player.add_points(points, 'trivia')
-                layout = self.bot.get_layout("ae/tealtrivia/correct")
+                layout = self.bot.get_layout("ae/stealtrivia/correct")
                 await layout.send(channel, repls={"points": points})
         else:
             layout = self.bot.get_layout("ae/trivia/incorrect")
@@ -473,11 +499,10 @@ class ActivityEvent(commands.Cog):
                 num_poinsettia[msg.author.id] = 1
             else:
                 num_poinsettia[msg.author.id] += 1
-        
+
+
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
-        # comment out later
-        # return 
 
         if msg.guild is None or msg.guild.id != self.bot.GUILD_ID:
             return 
@@ -485,27 +510,29 @@ class ActivityEvent(commands.Cog):
             return 
         if msg.author.id not in self.players:
             return 
-        # if msg.channel.id not in self.channel_ids:
-        #     return
         if msg.channel.id != GENERAL_ID:
             return 
+
+        if msg.author not in self.daily_message_task_cds or self.daily_message_task_cds[msg.author] < time.time():
+            self.daily_message_task_cds[msg.author] = time.time() + 5
+            await self.players[msg.author.id].increment_daily_task("messages")
 
         if self.intercept_snowballs:
             self.bot.loop.create_task(self.handle_snowball(msg))
 
         player = self.players[msg.author.id]
-        await player.on_msg()
+        self.bot.loop.create_task(player.on_msg())
 
         if player.msg_count % LOW_PERIOD == 0:
-            await player.on_500()
+            self.bot.loop.create_task(player.on_500())
         
         if player.team.msg_count % HIGH_PERIOD == 0:
-            await player.team.on_1000()
+            self.bot.loop.create_task(player.team.on_1000())
 
         if msg.author.id not in self.has_welcomed:
             if msg.content.lower().startswith('welc'):
                 self.has_welcomed.add(msg.author.id)
-                await player.on_welc(msg.channel)
+                self.bot.loop.create_task(player.on_welc(msg.channel))
 
         self.msg_counter += 1
         if self.msg_counter < self.msgs_needed:
@@ -594,8 +621,6 @@ class ActivityEvent(commands.Cog):
 
     @commands.command()
     async def redeem(self, ctx):
-        # comment out later
-        # team = self.players[ctx.author.id].team 
         
         for team in self.teams.values():
             if ctx.author == team.captain.member:
@@ -614,17 +639,12 @@ class ActivityEvent(commands.Cog):
         seeded_random.seed(seed)
         choices = seeded_random.sample(list(self.powerups_1k.keys()), 3)
 
-        # embed = discord.Embed(color=0xcab7ff, title='Redeem a Powerup') 
-        # for i, choice in enumerate(choices):
-        #     embed.add_field(name=f'{i+1}', value=self.powerups_1k[choice], inline=False)
-
         layout = self.bot.get_layout("ae/redeem")
         view = RedeemView(ctx, team, choices, self.powerups_1k)
         view.message = await layout.send(ctx, repls={
             f"powerup{i+1}": self.powerups_1k[choice]
             for i, choice in enumerate(choices)
         }, view=view)
-        # view.message = await ctx.send(embed=embed, view=view)
     
     @commands.command()
     async def usepowerup(self, ctx):
@@ -634,9 +654,6 @@ class ActivityEvent(commands.Cog):
         else:
             return 
 
-        # comment out later
-        # team = self.players[ctx.author.id].team
-        
         powerups = team.saved_powerups
         if len(powerups) == 0:
             layout = self.bot.get_layout("ae/usepowerup/nopowerups")
@@ -691,7 +708,7 @@ class ActivityEvent(commands.Cog):
             embed.add_field(name=team.capitalize(), value=f'{self.teams[team].total_points:,}')
         await ctx.send(embed=embed)
     
-    @commands.command(aliases=["teamlb", "allpoints", "pointslb"])
+    @commands.command(aliases=["pts", "teamlb", "allpoints", "pointslb"])
     async def points(self, ctx):
         ok = False
         for team in self.teams.values():
@@ -707,56 +724,53 @@ class ActivityEvent(commands.Cog):
         
         view = TeamLBView(ctx, team)
         await view.update()
-            
          
-
-
-        # embed = discord.Embed(title='Points for each player', color=0xcab7ff)
-        # for team in self.teams:
-        #     pointlst = []
-        #     for player in self.teams[team].players:
-        #         pointlst.append(f'**{player.nick}** - `{player.points:,}`')
-        #     embed.add_field(name=f'Team {team.capitalize()}', value='\n'.join(pointlst))
-        # await ctx.send(embed=embed)
-    
-    # @commands.command()
-    # async def pointslb(self, ctx):
-    #     embed = discord.Embed(title='Points leaderboard', color=0xcab7ff)
-    #     pointlst = []
-    #     players = sorted(self.players.values(), key=lambda x: x.points, reverse=True)
-    #     i = 1
-    #     for player in players:
-    #         pointlst.append(f'#{i}: **{player.nick}** - `{player.points:,}`')
-    #         i += 1
-    #     embed.description = '\n'.join(pointlst)
-    #     await ctx.send(embed=embed)
-
     @commands.command(alises=['effects'])
     async def powerups(self, ctx, *, member: discord.Member = None):
         if member is None:
             member = ctx.author
 
-        embed = discord.Embed(title='Active Powerups', color=0xcab7ff)
-        for team in self.teams:
-            poweruplst = []
-            for player in self.teams[team].players:
-                lst2 = [] 
-                if len(player.powerups) == 0:
-                    continue 
-                for powerup in player.powerups:
-                    end = discord.utils.format_dt(datetime.datetime.fromtimestamp(powerup.end), 'R')
-                    if powerup.name == 'Multiplier':
-                        lst2.append(f'{powerup.n}x multiplier, ends {end}')
-                    else:
-                        mins = round((powerup.end - time.time()) / 60)
-                        lst2.append(f'{mins} min message CD, ends {end}')
-                lst2 = '\n'.join(lst2)
-                poweruplst.append(f'**{player.nick}**\n{lst2}')
-            if len(poweruplst) == 0:
-                continue 
-            embed.add_field(name=f'Team {team.capitalize()}', value='\n\n'.join(poweruplst))
-        await ctx.send(embed=embed)
-    
+        if member.id not in self.players:
+            await ctx.send("You aren't on a team!")
+            return 
+        
+        player = self.players[member.id]
+
+        hearts = []
+        powerup_names = []
+        values = []
+        timethingys = []
+
+        pink_heart = self.bot.vars.get("heart-point-emoji")
+        purple_heart = self.bot.vars.get("heart-point-purple-emoji")
+
+        powerups = sorted(player.powerups, key=lambda p: p.end)
+        for i, powerup in enumerate(powerups):
+            if powerup.name == "Multiplier":
+                value = f"x{powerup.n}"
+            else:
+                minutes, seconds = divmod(powerup.n)
+                value = f"{minutes}:{seconds:02}"
+
+            values.append(value)
+            hearts.append(pink_heart if i % 2 == 0 else purple_heart)
+            powerup_names.append(powerup.name)
+            timethingys.append(discord.utils.format_dt(datetime.fromtimestamp(powerup.end), 'R'))
+                
+        layout = self.bot.get_layout("ae/powerups")
+        await layout.send(ctx, repls={
+            "data": zip(hearts, powerup_names, values, timethingys),
+            "branch": self.bot.vars.get("branch-final-emoji"),
+        }, jinja=True)
+
+    @commands.command(aliases=["dailys"]) 
+    async def dailies(self, ctx):
+        if ctx.author.id not in self.players:
+            return
+
+        view = DailyTasksView(ctx, self.players[ctx.author.id])
+        await view.send()
+
     @commands.command()
     async def teamstats(self, ctx, *, flags: TeamStatsFlags):
         VALID_STATS = {
@@ -766,7 +780,9 @@ class ActivityEvent(commands.Cog):
             'bonuses', 'bonus',
             'trivia',
             'stolen', 'stole', 'steals',
-            'welc', 'welcs'
+            'welc', 'welcs',
+            'snowball', 'snowballfight', 'snowballs', 'snowballfights', 'snow',
+            'daily', 'dailies', 'advent',
         }
 
         if flags.stat.lower() not in VALID_STATS:
@@ -777,8 +793,27 @@ class ActivityEvent(commands.Cog):
         #     return await ctx.send('That is not a valid team!')
         team = "both"
 
-        start = START_TIME if flags.start is None else dateparser.parse(flags.start)
-        end = dateparser.parse(flags.end)
+        query = "SELECT timezone FROM timezones WHERE user_id = $1"
+        timezone = await self.bot.db.fetchval(query, ctx.author.id)
+        if timezone is None:
+            timezone = 'US/Central'
+
+        start = START_TIME if flags.start is None else \
+            dateparser.parse(
+                flags.start,
+                settings={
+                    "TIMEZONE": timezone,
+                    "RETURN_AS_TIMEZONE_AWARE": True
+                }
+            )
+
+        end = dateparser.parse(
+            flags.end,
+            settings={
+                "TIMEZONE": timezone,
+                "RETURN_AS_TIMEZONE_AWARE": True
+            }
+        )
 
         if flags.stat in {'msg', 'messages', 'message', 'msgs'}:
             await self._process_stat(ctx, team, start, end, 'messages sent', 'all_msg', lambda x: x.msg_count, lambda t: t.msg_count)
@@ -793,10 +828,41 @@ class ActivityEvent(commands.Cog):
         elif flags.stat in {'stolen', 'stole', 'steals'}:
             await self._process_bonus(ctx, team, start, end, 'points stolen', ['stolen', 'steal_trivia'])
         elif flags.stat in {'snowball', "snowballfight"}:
-            # todo
-            pass
-        else:
+            await self._process_bonus(ctx, team, start, end, 'points from snowball fights', ['snowball_fight'])
+        elif flags.stat in {'welc', 'welcs'}:
             await self._process_bonus(ctx, team, start, end, 'points from welcoming', ['welc_bonus'])
+        elif flags.stat in {'daily', 'dailies', 'advent'}:
+            await self._process_bonus(ctx, team, start, end, 'points from dailies', ['dailes_bonus'])
+
+    def _data_from_rows(self, rows_list, start, end):
+        ret = []
+        for team, rows in rows_list:
+            data = []
+            cumulative_sum = 0  # Accumulate values even before the start time
+
+            # Add all rows before the start time to the cumulative sum
+            for row in rows:
+                if row['time'] <= int(start.timestamp()):
+                    cumulative_sum += row['gain']
+                else:
+                    break
+
+            # Ensure a data point at the start time
+            data.append((int(start.timestamp()), cumulative_sum))
+
+            # Add rows from the start time onward
+            for row in rows:
+                if row['time'] > int(start.timestamp()):
+                    cumulative_sum += row['gain']
+                    data.append((row['time'], cumulative_sum))
+
+            # Ensure a data point at the end time
+            if not data or data[-1][0] < int(end.timestamp()):
+                data.append((int(end.timestamp()), cumulative_sum))
+
+            ret.append((team, data))
+        return ret
+
 
     def _get_team(self, ctx, flags):
         if flags.team is None:
@@ -814,10 +880,10 @@ class ActivityEvent(commands.Cog):
             rows = await self._fetch_rows(t.name, stat_type, start, end, exclude_types)
             rows_list.append((t, rows))
 
-        data = self._data_from_rows(rows_list, start)
+        data = self._data_from_rows(rows_list, start, end)
         file = await plot_data(ctx, data)
         embed = self.bot.get_embed("ae/teamstats")
-        repls = self._get_stat_repls(title, team, data, start, end, player_key, team_key)
+        repls = self._get_stat_repls(title, start, end, player_key, team_key)
         embed = await Layout.fill_embed(embed, repls, special=False)
         embed.set_image(url=f'attachment://plot.png')
         await ctx.send(embed=embed, file=file)
@@ -828,7 +894,7 @@ class ActivityEvent(commands.Cog):
             rows, stats, player_stats = await self._process_rows(t, types, end, stats, player_stats)
             rows_list.append((t, rows))
 
-        data = self._data_from_rows(rows_list, start)
+        data = self._data_from_rows(rows_list, start, end)
         file = await plot_data(ctx, data)
         embed = self.bot.get_embed("ae/teamstats")
         repls = self._get_bonus_repls(title, team, stats, player_stats, start, end)
@@ -841,16 +907,15 @@ class ActivityEvent(commands.Cog):
             query = """SELECT time, gain FROM event_log WHERE team = $1 AND type = $2 AND time < $3 ORDER BY time ASC"""
             return await self.bot.db.fetch(query, team, stat_type, int(end.timestamp()))
         else:
-            placeholders = ','.join(f'${i+3}' for i in range(len(exclude_types)))
-            query = f"""SELECT gain, time FROM event_log WHERE team = $1 AND time < $2 AND type NOT IN ({placeholders})"""
-            return await self.bot.db.fetch(query, team, int(end.timestamp()), *exclude_types)
+            query = """SELECT gain, time FROM event_log WHERE team = $1 AND type != ANY($2) AND time < $3 ORDER BY time ASC"""
+            return await self.bot.db.fetch(query, team, exclude_types, int(end.timestamp()))
 
     async def _process_rows(self, team, types, end, stats, player_stats):
         if team.name not in stats:
             stats[team.name] = {}
 
-        query = f"""SELECT user_id, gain, time FROM event_log WHERE team = $1 AND type IN ({','.join(f"${i+3}" for i in range(len(types)))}) AND time < $2"""
-        rows = await self.bot.db.fetch(query, team.name, int(end.timestamp()), *types)
+        query = f"""SELECT user_id, gain, time FROM event_log WHERE team = $1 AND type = ANY($3) AND time < $2"""
+        rows = await self.bot.db.fetch(query, team.name, int(end.timestamp()), types)
 
         total = 0
         for row in rows:
@@ -862,31 +927,8 @@ class ActivityEvent(commands.Cog):
         stats[team.name]['total'] = total
         return rows, stats, player_stats
 
-    def _data_from_rows(self, rows_list, start):
-        ret = []
-        for team, rows in rows_list:
-            data = []
-            count, i = 0, 0
-            while i < len(rows):
-                row = rows[i]
-                if row['time'] > int(start.timestamp()):
-                    break
-                count += row['gain']
-                i += 1
 
-            if i != 0:
-                data.append((row['time'], count))
-
-            while i < len(rows):
-                row = rows[i]
-                prev_sum = data[-1][1] if data else 0
-                data.append((row['time'], prev_sum + row['gain']))
-                i += 1
-
-            ret.append((team, data))
-        return ret
-
-    def _get_stat_repls(self, title, team, data, start, end, player_key, team_key):
+    def _get_stat_repls(self, title, start, end, player_key, team_key):
         total = 0
         repls = {}
         for i, t in enumerate(self.teams.values()):
@@ -925,28 +967,17 @@ class ActivityEvent(commands.Cog):
 
         return repls
 
-    # def _create_bonus_embed_old(self, title, team, stats, player_stats, start, end):
-    #     embed = discord.Embed(title=title, color=0xcab7ff)
-    #     for t in (self.teams.values() if team == 'both' else [team]):
-    #         mvp = max(t.players, key=lambda x: player_stats.get(x.member.id, 0))
-    #         count = player_stats.get(mvp.member.id, 0)
-    #         total = stats[t.name]['total']
-    #         val = self._generate_stat_val(mvp, total, start, end, len(t.players))
-    #         embed.add_field(name=t.name.capitalize(), value=val)
-    #     return embed
-
-    # def _generate_stat_val(self, mvp, total, start, end, player_count):
-    #     duration = (end.timestamp() - start.timestamp())
-    #     return dedent(f'''
-    #     Total: **{total:,}**
-    #     Average per player: **{total / player_count:.2f}**
-    #     Team MVP: **{mvp.nick}** ({total:,})
-    #     Average per hour: **{total / (duration / 3600):.2f}**
-    #     Average per day: **{total / (duration / 86400):.2f}**
-    #     ''')
-
 
 async def setup(bot):
     if LOAD:
-        await bot.add_cog(ActivityEvent(bot))
+        if TEST:
+            await bot.add_cog(ActivityEvent(bot))
+        else:
+            channel = bot.get_var_channel('private')
+            async def task():
+                await channel.send(f"event starting {discord.utils.format_dt(START_TIME, "R")}")
+
+                await discord.utils.sleep_until(START_TIME)
+                await bot.add_cog(ActivityEvent(bot))
+            bot.loop.create_task(task())
 
