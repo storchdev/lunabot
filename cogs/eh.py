@@ -24,10 +24,15 @@ class EH(commands.Cog):
             trace = error.__traceback__
             lines = traceback.format_exception(etype, error, trace)
             traceback_text = ''.join(lines)
+            if len(traceback_text) > 4080:
+                traceback_text = traceback_text[:4080]
+                traceback_text += '...'
+            description = f'```py\n{traceback_text}```'
+
             embed = discord.Embed(
                 title=f'Error in !{ctx.command.qualified_name}',
                 url=ctx.message.jump_url,
-                description=f'```py\n{traceback_text}```',
+                description=description,
                 color=ctx.author.color
             ).add_field(
                 name='Channel', value=ctx.channel.mention

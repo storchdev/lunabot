@@ -620,6 +620,8 @@ class Economy(commands.Cog):
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         if payload.user_id == self.bot.user.id:
             return
+        if self.drop_message is None:
+            return
         if payload.message_id != self.drop_message.id:
             return
         if str(payload.emoji) != self.bot.vars.get('lunara'):

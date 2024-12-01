@@ -188,4 +188,14 @@ CREATE TABLE IF NOT EXISTS afk (
 CREATE TABLE IF NOT EXISTS timezones (
   user_id BIGINT PRIMARY KEY,
   timezone TEXT
-)
+);
+
+CREATE TABLE IF NOT EXISTS event_dailies (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  date_str TEXT,
+  task TEXT,
+  num INTEGER DEFAULT 1,
+  claimed BOOLEAN DEFAULT FALSE,
+  UNIQUE(user_id, date_str, task)
+);
