@@ -518,7 +518,7 @@ class Economy(commands.Cog):
     # Drops
 
     @staticmethod
-    def check_for_drop(message_count, max_messages=150, steepness=0.1, cap=0.05):
+    def check_for_drop(message_count, max_messages=500, steepness=0.1, cap=0.05):
         """
         This function simulates a drop happening based on the message count. 
         As the message count increases, the probability of a drop happening increases.
@@ -570,13 +570,13 @@ class Economy(commands.Cog):
         if 'welc' in msg.content.lower():
             et = await self.bot.get_cooldown_end('welc', 60, obj=msg.author)
             if et:
-                await (self.bot.get_layout('welccd')).send(msg.channel, LayoutContext(message=msg), delete_after=7)
+                # await (self.bot.get_layout('welccd')).send(msg.channel, LayoutContext(message=msg), delete_after=7)
                 return
 
             gained = 100 
             bal = await self.add_balance(msg.author.id, gained)
-            layout = self.bot.get_layout('welcreward')
-            await layout.send(msg.channel, LayoutContext(message=msg), repls={'gained': gained, 'balance': bal}, delete_after=7) 
+            # layout = self.bot.get_layout('welcreward')
+            # await layout.send(msg.channel, LayoutContext(message=msg), repls={'gained': gained, 'balance': bal}, delete_after=7) 
 
         et = await self.bot.get_cooldown_end('currency', 60, obj=msg.author)
         if et:

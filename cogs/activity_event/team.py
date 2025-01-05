@@ -40,7 +40,6 @@ class Team:
             player.team = self
 
         self.captain: Optional[Player] = None 
-        self.msg_count = 0
         self.redeems = redeems 
         self.saved_powerups = saved_powerups
         self.opp = None 
@@ -52,8 +51,7 @@ class Team:
         self.redeems += 1
         query = """UPDATE num_redeems
                    SET
-                       number = number + 1,
-                       total = total + 1
+                       number = number + 1
                    WHERE
                        team = $1
                 """
@@ -74,13 +72,13 @@ class Team:
     async def apply_team_powerup(self, option: str) -> str:
         if option == 'topup':
             points = random.randint(15, 20)
-            await self.captain.add_points(points, 'topup_bonus')
+            points = await self.captain.add_points(points, 'topup_bonus', multi=False)
             await self.captain.log_powerup('topup_powerup')
             return points
         elif option == 'steal':
             points = random.randint(10, 15)
             await self.opp.captain.remove_points(points, 'stolen')
-            await self.captain.add_points(points, 'steal_bonus')
+            points = await self.captain.add_points(points, 'steal_bonus', multi=False)
             await self.captain.log_powerup('steal_powerup')
             return points
         elif option == 'double':
@@ -103,3 +101,7 @@ class Team:
     @property 
     def total_points(self):
         return sum([player.points for player in self.players])
+    
+    @property
+    def msg_count(self):
+        return sum([player.msg_count for player in self.players])

@@ -20,9 +20,14 @@ class Vars(commands.Cog):
             else:
                 value = row['value']
             self.bot.vars[row['name']] = value
+    
+    async def cog_unload(self):
+        self.bot.vars = {}
 
     @commands.command()
     async def setvar(self, ctx, name: str, *, value: str):
+        if value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
         query = """INSERT INTO
                        vars (name, value)
                    VALUES

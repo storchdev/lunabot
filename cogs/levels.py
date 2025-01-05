@@ -160,7 +160,7 @@ class Levels(commands.Cog):
             if role not in message.author.roles:
                 await message.author.add_roles(role)
             for lvl in keys:
-                role = message.guild.get_role(roles[lvl])
+                role = roles[lvl]
                 if role in message.author.roles:
                     await message.author.remove_roles(role)
 

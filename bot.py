@@ -110,7 +110,7 @@ class LunaBot(commands.Bot):
         except discord.NotFound:
             raise InvalidURL()
     
-    async def schedule_future_task(self, action, time, **kwargs):
+    async def schedule_future_task(self, action: str, time: datetime, **kwargs):
         query = """INSERT INTO
                        future_tasks (action, time, data)
                    VALUES

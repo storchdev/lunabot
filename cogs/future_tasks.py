@@ -36,6 +36,13 @@ class FutureTask:
         guild = self.bot.get_guild(self.bot.GUILD_ID)
         thread = guild.get_channel_or_thread(self.kwargs.get('thread_id'))
         await thread.edit(locked=True)
+    
+    async def kick_sus_member(self):
+        guild = self.bot.get_guild(self.bot.GUILD_ID)
+        role = guild.get_role(self.bot.vars.get('sus-role-id'))
+        member = guild.get_member(self.kwargs.get('user_id'))
+        if member and role in member.roles:
+            await member.kick(reason="suspicious account")
 
     async def task_coro(self):
         if self.action == 'remove_role':
@@ -52,7 +59,9 @@ class FutureTask:
             await self.remove_role()
         elif self.action == 'lock_thread':
             await self.lock_thread()
-        
+        elif self.action == 'kick_sus_member':
+            await self.kick_sus_member()
+
         query = 'DELETE FROM future_tasks WHERE id = $1'
         await self.bot.db.execute(query, self.id) 
     

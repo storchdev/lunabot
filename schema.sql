@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS code_responders (
 );
 
 CREATE TABLE IF NOT EXISTS auto_messages (
+    id SERIAL PRIMARY KEY,
     name TEXT UNIQUE,
     channel_id BIGINT,
     layout JSON,
@@ -198,4 +199,10 @@ CREATE TABLE IF NOT EXISTS event_dailies (
   num INTEGER DEFAULT 1,
   claimed BOOLEAN DEFAULT FALSE,
   UNIQUE(user_id, date_str, task)
+);
+
+CREATE TABLE IF NOT EXISTS event_dailies_bonuses (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  date_str TEXT 
 );

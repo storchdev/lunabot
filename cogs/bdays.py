@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 from .utils import LayoutContext
 import json 
 from typing import TYPE_CHECKING
+from cogs.utils import SimplePages
+
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -84,7 +86,7 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
             mentions_list.append(member.mention)
             role = guild.get_role(self.bot.vars.get('bday-role-id'))
             await member.add_roles(role)
-            await self.bot.schedule_future_task('remove_role', discord.utils.utcnow() + timedelta(days=7), user_id=member.id, role_id=role.id)
+            await self.bot.schedule_future_task('remove_role', discord.utils.utcnow() + timedelta(days=1), user_id=member.id, role_id=role.id)
 
         mentions_str = 'ㆍ'.join(mentions_list) + 'ㆍ'
 
@@ -145,7 +147,7 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
     
     @commands.hybrid_command(name='upcoming-birthdays')
     async def upcoming_bdays(self, ctx):
-        """Gets people's birthdays up to the next 10."""
+        """Lists everyone's birthdays with soonest first."""
 
         def magic(now, m, d):
             move = False 
@@ -160,29 +162,28 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
                 return date(now.year, m, d)
 
             
-        embed = discord.Embed(title='Upcoming Birthdays', color=0xcab7ff)
         rows = await self.bot.db.fetch('SELECT user_id, month, day FROM bdays')
         now = datetime.now(tz=ZoneInfo("US/Central"))
         rows = sorted(rows, key=lambda row: magic(now, row['month'], row['day']))
-        i = 0
+
+        entries = []
+
         for row in rows:
-            if i == 10:
-                continue 
 
             user = ctx.guild.get_member(row['user_id'])
             if user is None:
                 continue
 
-            disp = user.display_name if user else f'User with ID {row["user_id"]}'
-            
             if (row['month'], row['day']) == (now.month, now.day):
                 opt = '(Happy Birthday!)'
             else:
                 opt = ''
-            embed.add_field(name=disp, value=f'{row["month"]}/{row["day"]} {opt}', inline=False)
+            
+            entries.append(f'{user.mention} - {row["month"]}/{row["day"]} {opt}')
 
-            i += 1
-        await ctx.send(embed=embed)
+        embed = discord.Embed(title="Upcoming Birthdays", color=self.bot.DEFAULT_EMBED_COLOR)
+        view = SimplePages(entries, ctx=ctx, embed=embed)
+        await view.start()
 
 async def setup(bot):
     await bot.add_cog(Birthdays(bot))
