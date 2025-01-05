@@ -23,6 +23,11 @@ from .views import RedeemView, TeamLBView, DailyTasksView
 from cogs.utils import Layout, LayoutContext, View
 
 from typing import List, Dict, Set, TYPE_CHECKING
+import logging
+
+from cogs.utils import next_day
+from zoneinfo import ZoneInfo
+
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -47,7 +52,7 @@ class ActivityEvent(commands.Cog):
             self.msgs_needed = 3
             self.powerups_cycle = cycle([0, 1, 2, 3, 4])
         else:
-            self.msgs_needed = random.randint(15, 35)
+            self.msgs_needed = random.randint(5, 10)
 
         self.msg_counter = 0  
 
@@ -79,20 +84,25 @@ class ActivityEvent(commands.Cog):
 
         self.team_members = {
             "mistletoe": [
+                718475543061987329,
                 1011106833412403230,
                 1061535351031746581,
                 1089275337633972306,
                 902448599542157322,
-                718475543061987329,
                 965552455993683978,
+                1119583389893279844,
+                949757993631748119,
+
             ],
             "poinsettia": [
-                396740993115881492,
-                675058943596298340,
                 496225545529327616,
+                675058943596298340,
+                396740993115881492,
                 1081628938394148884,
                 989623504867565588,
                 628091002997047298,
+                248224130221080577,
+                1063408231323549696,
             ] 
         }
         self.team_channels = {
@@ -120,11 +130,17 @@ class ActivityEvent(commands.Cog):
             1081628938394148884: 'Nester',
             989623504867565588: 'Seabass',
             628091002997047298: 'Yuriiko',
+            248224130221080577: 'Wolfy',
+            1063408231323549696: 'Ema',
+            949757993631748119: 'Wacky',
+            1119583389893279844: 'Koda',
         }
 
         self.powerup_emoji = '<a:ML_present_gift:1302182895020150804>'
 
         self.daily_message_task_cds = {}
+
+        # self.fresh = True
 
     def generate_powerup(self) -> int:
         if TEST:
@@ -265,7 +281,7 @@ class ActivityEvent(commands.Cog):
                            FROM
                                event_log
                            WHERE
-                               type != ANY($2)
+                               type != ALL($2)
                                AND user_id = $1 
                         """ 
                 points = await self.bot.db.fetchval(query, member.id, self.non_point_types)
@@ -288,7 +304,6 @@ class ActivityEvent(commands.Cog):
                 player = Player(self.bot, team, member, self.nick_dict[member.id], points, msgs, powerups)
                 self.players[member.id] = player 
                 team.players.append(player)
-                team.msg_count += player.msg_count
 
         self.teams["mistletoe"].create_captain()
         self.teams["poinsettia"].create_captain()
@@ -305,6 +320,81 @@ class ActivityEvent(commands.Cog):
         self.intercept_snowballs = False
         self.num_snowballs: Dict[str, Dict[int, int]] = {}
         self.snowball_messages: List[discord.Message] = []
+
+        self.sync_player_data.start()
+        self.award_pension.start()
+    
+    async def cog_unload(self):
+        self.sync_player_data.cancel()
+        self.award_pension.cancel()
+    
+    @tasks.loop(hours=24)
+    async def award_pension(self):
+        ids = map(int, self.bot.vars.get("ae-break-ids").split(","))
+        amount = self.bot.vars.get("ae-pension-amount")
+        nicks = []
+        for user_id in ids:
+            player = self.players.get(user_id)
+            if player is None:
+                print(f"{user_id} not a player")
+                continue
+            await player.add_points(amount, "pension", multi=False)
+            nicks.append(player.nick)
+        
+        channel = self.bot.get_var_channel("private")
+        await channel.send(f"Awarded pensions to {", ".join(nicks)}")
+    
+    @award_pension.before_loop
+    async def before_award_pension(self):
+        await discord.utils.sleep_until(next_day(ZoneInfo("US/Central")))
+
+    @tasks.loop(hours=1)
+    async def sync_player_data(self):
+        """Fetch points and message counts from the database and update the players."""
+        try:
+            for player_id, player in self.players.items():
+                # Fetch points
+                points_query = """
+                SELECT
+                    COALESCE(SUM(gain), 0)
+                FROM
+                    event_log
+                WHERE
+                    user_id = $1
+                    AND type != ALL($2)
+                """
+                points = await self.bot.db.fetchval(points_query, player_id, self.non_point_types)
+                if points is None:
+                    points = 0
+
+                # Fetch message count
+                msgs_query = """
+                SELECT
+                    COALESCE(SUM(gain), 0)
+                FROM
+                    event_log
+                WHERE
+                    user_id = $1
+                    AND type = $2
+                """
+                msgs = await self.bot.db.fetchval(msgs_query, player_id, 'all_msg')
+                if msgs is None:
+                    msgs = 0
+
+                # Update player object
+                player.points = points
+                player.msg_count = msgs
+
+                logging.info(f"Updated Player {player.nick} (ID: {player_id}): "
+                                     f"Points: {player.points}, Msg Count: {player.msg_count}")
+
+
+        except Exception as e:
+            self.bot.logger.error(f"Error during player data synchronization: {e}")
+
+    @sync_player_data.before_loop
+    async def before_sync_player_data(self):
+        await asyncio.sleep(3600)
 
     async def cog_check(self, ctx):
         return ctx.author.id in self.players or ctx.author.id == 718475543061987329
@@ -334,7 +424,7 @@ class ActivityEvent(commands.Cog):
             args['otherteam'] = player.team.opp.name
             layout = self.bot.get_layout('ae/stealtrivia/main')
 
-        bot_msg = await layout.send(channel, repls=args) 
+        bot_msg = await layout.send(channel, repls=args, special=False) 
 
         emojis = [
             "<a:ML_red_flower:1308674651450511381>",
@@ -359,18 +449,28 @@ class ActivityEvent(commands.Cog):
         if question.choices[emojis.index(str(reaction.emoji))] == question.answer:
             await player.increment_daily_task("trivia")
 
+            repls = {
+                "answer": question.answer,
+                "user": player.nick,
+            }
+
             if not steal:
-                await player.add_points(points, 'trivia')
+                points = await player.add_points(points, 'trivia')
+
+                repls["team"] = player.team.name.capitalize()
                 layout = self.bot.get_layout("ae/trivia/correct")
-                await layout.send(channel, repls={"points": points})
             else:
                 await player.team.opp.captain.remove_points(points, 'steal_trivia')
-                await player.add_points(points, 'trivia')
+                points = await player.add_points(points, 'trivia')
+
+                repls["team"] = player.team.opp.name.capitalize()
                 layout = self.bot.get_layout("ae/stealtrivia/correct")
-                await layout.send(channel, repls={"points": points})
+            
+            repls["points"] = points
+            await layout.send(channel, repls=repls, delete_after=10)
         else:
             layout = self.bot.get_layout("ae/trivia/incorrect")
-            await layout.send(channel, repls=question.get_incorrect_layout_repls())
+            await layout.send(channel, repls={"answer": question.answer}, delete_after=10)
 
         await asyncio.sleep(10)
         await bot_msg.delete()
@@ -411,7 +511,7 @@ class ActivityEvent(commands.Cog):
         layout = self.bot.get_layout("ae/snowballfight")
         await layout.send(channel)
 
-        await asyncio.sleep(15)
+        await asyncio.sleep(25)
         # tally handled in on_message
 
         self.intercept_snowballs = False
@@ -433,7 +533,7 @@ class ActivityEvent(commands.Cog):
 
             for team_name in totals_dict.keys():
                 for member_id, points in weighted_points(total_points, team_name).items():
-                    await self.players[member_id].add_points(points, 'snowball_fight')
+                    await self.players[member_id].add_points(points, 'snowball_fight', multi=False)
 
             repls = {
                 "snowballs": sum(totals_dict.values()),
@@ -447,14 +547,14 @@ class ActivityEvent(commands.Cog):
             losing_team = min(totals_dict, key=totals_dict.get)
             snowball_diff = abs(totals_dict["mistletoe"] - totals_dict["poinsettia"])
 
-            bonus_points = round(snowball_diff / 5)
-            winning_points = round(totals_dict[winning_team] / 7) + bonus_points
-            losing_points = round(totals_dict[losing_team] / 7)
+            bonus_points = round(snowball_diff / 2)
+            winning_points = round(totals_dict[winning_team] / 4) + bonus_points
+            losing_points = round(totals_dict[losing_team] / 4)
 
             for member_id, points in weighted_points(winning_points, winning_team).items():
-                await self.players[member_id].add_points(points, 'snowball_fight')
+                await self.players[member_id].add_points(points, 'snowball_fight', multi=False)
             for member_id, points in weighted_points(losing_points, losing_team).items():
-                await self.players[member_id].add_points(points, 'snowball_fight')
+                await self.players[member_id].add_points(points, 'snowball_fight', multi=False)
 
             if winning_team == "poinsettia":
                 points1 = losing_points
@@ -518,10 +618,11 @@ class ActivityEvent(commands.Cog):
             await self.players[msg.author.id].increment_daily_task("messages")
 
         if self.intercept_snowballs:
-            self.bot.loop.create_task(self.handle_snowball(msg))
+            await self.handle_snowball(msg)
+            return
 
         player = self.players[msg.author.id]
-        self.bot.loop.create_task(player.on_msg())
+        await player.on_msg()
 
         if player.msg_count % LOW_PERIOD == 0:
             self.bot.loop.create_task(player.on_500())
@@ -539,13 +640,16 @@ class ActivityEvent(commands.Cog):
             return
 
         self.msg_counter = 0 
-        self.msgs_needed = random.randint(15, 35)
+        self.msgs_needed = random.randint(10, 25)
         
         #comment out later 
         # self.msgs_needed = 3
 
+        # if random.random() < 0.5 and not TEST and not self.fresh:
         if random.random() < 0.5 and not TEST:
             return
+        
+        # self.fresh = False
 
         if TEST:
             snowball_threshold = 1
@@ -566,7 +670,7 @@ class ActivityEvent(commands.Cog):
         else:
             layout = self.bot.get_layout("ae/powerup/random")
 
-        spawn_msg = await layout.send(msg.channel)
+        spawn_msg = await layout.send(msg.channel, special=False)
 
         await spawn_msg.add_reaction(self.powerup_emoji)
 
@@ -595,7 +699,7 @@ class ActivityEvent(commands.Cog):
                     await other.apply_powerup(CooldownReducer(TEAM_REDUCED_CD, time.time(), time.time() + TEAM_REDUCED_CD_TIME))
 
             layout = self.bot.get_layout("ae/reducedcd")
-        elif powerup_i == "double":
+        elif powerup_name == "double":
             await player.apply_powerup(Multiplier(2, time.time(), time.time() + INDIV_DOUBLE_TIME), log=True)
 
             for other in player.team.players:
@@ -603,7 +707,7 @@ class ActivityEvent(commands.Cog):
                     await other.apply_powerup(Multiplier(2, time.time(), time.time() + TEAM_DOUBLE_TIME))
 
             layout = self.bot.get_layout("ae/double")
-        elif powerup_i == "triple":
+        elif powerup_name == "triple":
             await player.apply_powerup(Multiplier(3, time.time(), time.time() + INDIV_TRIPLE_TIME), log=True)
 
             for other in player.team.players:
@@ -617,7 +721,7 @@ class ActivityEvent(commands.Cog):
                 'mention': player.member.mention,
                 'team': player.team.name.capitalize(),
             }                    
-            await layout.send(msg.channel, repls=repls)
+            await layout.send(msg.channel, repls=repls, special=False)
 
     @commands.command()
     async def redeem(self, ctx):
@@ -745,11 +849,13 @@ class ActivityEvent(commands.Cog):
         purple_heart = self.bot.vars.get("heart-point-purple-emoji")
 
         powerups = sorted(player.powerups, key=lambda p: p.end)
+        exists = False
         for i, powerup in enumerate(powerups):
+            exists = True
             if powerup.name == "Multiplier":
                 value = f"x{powerup.n}"
             else:
-                minutes, seconds = divmod(powerup.n)
+                minutes, seconds = divmod(powerup.n, 60)
                 value = f"{minutes}:{seconds:02}"
 
             values.append(value)
@@ -757,10 +863,17 @@ class ActivityEvent(commands.Cog):
             powerup_names.append(powerup.name)
             timethingys.append(discord.utils.format_dt(datetime.fromtimestamp(powerup.end), 'R'))
                 
+        real_multi = f"x{player.real_multi}"
+        minutes, seconds = divmod(player.cd, 60)
+        real_cd = f"{minutes}:{seconds:02}"
+
         layout = self.bot.get_layout("ae/powerups")
         await layout.send(ctx, repls={
             "data": zip(hearts, powerup_names, values, timethingys),
             "branch": self.bot.vars.get("branch-final-emoji"),
+            "exists": exists,
+            "realmulti": real_multi,
+            "realcd": real_cd
         }, jinja=True)
 
     @commands.command(aliases=["dailys"]) 
@@ -832,7 +945,7 @@ class ActivityEvent(commands.Cog):
         elif flags.stat in {'welc', 'welcs'}:
             await self._process_bonus(ctx, team, start, end, 'points from welcoming', ['welc_bonus'])
         elif flags.stat in {'daily', 'dailies', 'advent'}:
-            await self._process_bonus(ctx, team, start, end, 'points from dailies', ['dailes_bonus'])
+            await self._process_bonus(ctx, team, start, end, 'points from dailies', ['dailies_bonus'])
 
     def _data_from_rows(self, rows_list, start, end):
         ret = []
@@ -907,7 +1020,7 @@ class ActivityEvent(commands.Cog):
             query = """SELECT time, gain FROM event_log WHERE team = $1 AND type = $2 AND time < $3 ORDER BY time ASC"""
             return await self.bot.db.fetch(query, team, stat_type, int(end.timestamp()))
         else:
-            query = """SELECT gain, time FROM event_log WHERE team = $1 AND type != ANY($2) AND time < $3 ORDER BY time ASC"""
+            query = """SELECT gain, time FROM event_log WHERE team = $1 AND type != ALL($2) AND time < $3 ORDER BY time ASC"""
             return await self.bot.db.fetch(query, team, exclude_types, int(end.timestamp()))
 
     async def _process_rows(self, team, types, end, stats, player_stats):
@@ -966,6 +1079,14 @@ class ActivityEvent(commands.Cog):
         repls["total"] = total
 
         return repls
+    
+    @commands.command()
+    @commands.is_owner()
+    async def announce(self, ctx, *, message):
+        for team in self.teams.values():
+            message = f"{team.captain.member.mention}\n\n{message}\n\n-storch\n-# this message is sent to both team channels and will only ping the captain"
+            await team.channel.send(message)
+        await ctx.send("Done!")
 
 
 async def setup(bot):
@@ -973,11 +1094,5 @@ async def setup(bot):
         if TEST:
             await bot.add_cog(ActivityEvent(bot))
         else:
-            channel = bot.get_var_channel('private')
-            async def task():
-                await channel.send(f"event starting {discord.utils.format_dt(START_TIME, "R")}")
-
-                await discord.utils.sleep_until(START_TIME)
-                await bot.add_cog(ActivityEvent(bot))
-            bot.loop.create_task(task())
+            await bot.add_cog(ActivityEvent(bot))
 

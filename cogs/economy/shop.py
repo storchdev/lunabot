@@ -125,11 +125,11 @@ class ShopResultsPageSource(menus.ListPageSource):
         lunara = self.bot.vars.get('lunara')
         branch_middle = self.bot.vars.get('branch-middle-emoji')
         branch_final = self.bot.vars.get('branch-final-emoji')
+        divider = self.bot.vars.get('divider')
 
-        paragraphs = []
+        plines = []
 
         for i, item in enumerate(entries):
-            plines = []
 
             if i % 2 == 0:
                 arrow = pink_heart 
@@ -148,11 +148,9 @@ class ShopResultsPageSource(menus.ListPageSource):
 
             plines.append(f'> {branch_middle} Stock = __**{stock}**__')
             plines.append(f'> {branch_final} *{item.description}*.')
-            plines.append('‧ ╴‧ ╴‧ ╴‧')
+            plines.append(divider)
 
-            paragraphs.append('\n'.join(plines))
-        
-        embed.description = "\n\n".join(paragraphs)
+        embed.description = "\n".join(plines)
         return embed 
 
 

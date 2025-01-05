@@ -24,9 +24,6 @@ if TYPE_CHECKING:
 
 
 
-    
-
-
 class Player:
 
     def __init__(self,
@@ -56,6 +53,10 @@ class Player:
     @property
     def cd(self):
         return min(self.cds)
+    
+    @property
+    def real_multi(self):
+        return min(self.multi, 10)
 
     async def task(self, powerup: Powerup):
         if isinstance(powerup, Multiplier):
@@ -107,11 +108,11 @@ class Player:
         self.next_welc = time.time() + WELC_CD 
         bonus = random.randint(1, 3)
         await self.increment_daily_task("welc")
-        await self.add_points(bonus, 'welc_bonus')
+        points = await self.add_points(bonus, 'welc_bonus')
 
         layout = self.bot.get_layout('ae/welcbonus')
         repls = {
-            'points': bonus,
+            'points': points,
             'user': self.nick,
             'team': self.team.name.capitalize(),
         }
@@ -122,7 +123,6 @@ class Player:
 
     async def log_msg(self):
         self.msg_count += 1
-        self.team.msg_count += 1
         # query = 'update se_stats set msgs = msgs + 1 where user_id = ?'
         # await self.bot.db.execute(query, self.member.id)
         query = """INSERT INTO
@@ -139,9 +139,9 @@ class Player:
             int(time.time()),
         )
 
-    async def add_points(self, points, reason, multi=True):
+    async def add_points(self, points, reason, multi=True) -> int:
         if multi:
-            gain = points * self.multi
+            gain = points * self.real_multi
         else:
             gain = points
 
@@ -162,6 +162,8 @@ class Player:
             gain,
             int(time.time()),
         )
+
+        return gain
 
         # query = """UPDATE event_stats
         #            SET
@@ -198,13 +200,14 @@ class Player:
 
     async def increment_daily_task(self, task: str, amount: int = 1):
         query = """INSERT INTO
-                        event_dailies (user_id, date_str, task)
+                        event_dailies (user_id, date_str, task, num)
                     VALUES
-                        ($1, $2, $3)
+                        ($1, $2, $3, $4)
                     ON CONFLICT (user_id, date_str, task) DO
                     UPDATE
                     SET
                         num = event_dailies.num + $4 
+
                 """
         await self.bot.db.execute(query, self.member.id, get_unique_day_string(), task, amount)
 

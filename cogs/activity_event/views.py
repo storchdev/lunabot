@@ -65,7 +65,8 @@ class RedeemButton(ui.Button):
     async def callback(self, interaction: discord.Interaction):
         query = """UPDATE num_redeems
                    SET
-                       number = number - 1
+                       number = number - 1,
+                       total = total + 1
                    WHERE
                        team = $1
                 """
@@ -206,8 +207,11 @@ class DailyTasksView(View):
         self.clear_items()
         if len(self.unclaimed_ids) > 0:
             self.add_item(self.claim_all)
-        else: 
-            if claimed == len(self.goals):
+
+        if self.completed == len(self.goals): 
+            query = "SELECT * FROM event_dailies_bonuses WHERE user_id = $1 AND date_str = $2"
+            row = await self.bot.db.fetchrow(query, self.owner.id, today)
+            if row is None:
                 self.add_item(self.claim_bonus)
 
     async def send(self, edit=False):
@@ -233,7 +237,7 @@ class DailyTasksView(View):
             
             progress, total = self.progresses[task]
             if total > 10:
-                full = min(round(progress / total * 10), total)
+                full = min(round(progress / total * 10), 10)
                 empty = 10 - full 
             else:
                 full = min(progress, total)
@@ -280,6 +284,10 @@ class DailyTasksView(View):
     async def claim_bonus(self, interaction, button):
         bonus_points = 7
         await self.player.add_points(bonus_points, "dailies_bonus", multi=False)
+
+        query = "INSERT INTO event_dailies_bonuses (user_id, date_str) VALUES ($1, $2)"
+        await self.bot.db.execute(query, self.owner.id, get_unique_day_string())
+
         await self.update_self()
         # send layout
         layout = self.bot.get_layout("ae/dailies/bonusclaimed")
