@@ -8,3 +8,4 @@ embed_editor/
 .vscode/
 __pycache__/
 start.sh
+.venv/
