@@ -52,7 +52,6 @@ class TicketTypeMenu(View):
         for option in [
             'VIP Artist',
             'Trusted Seller',
-            'Partnership Request',
             'PM Request',
             'Booster Perks',
             'User Report',

@@ -17,7 +17,7 @@ class ServerBattle(commands.Cog):
         self.d = {}
 
     async def cog_load(self):
-        return 
+        # return 
 
         ch = self.bot.get_var_channel("server-battle")
         emoji = self.bot.vars.get("love-button-emoji")

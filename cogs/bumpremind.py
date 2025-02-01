@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def is_luna_available():
-    return False 
+    # return False 
 
     central = ZoneInfo('US/Central')
     now = datetime.now(central)
@@ -145,7 +145,7 @@ class BumpRemind(commands.Cog):
         channel = self.bot.get_var_channel('bump-status')
         if channel.name != self.cant_bump_name:
             await channel.edit(name=self.cant_bump_name)
-    
+
     @commands.command(name='bumpreset', aliases=['resetbump', 'bump-reset', 'reset-bump'])
     @staff_only()
     async def reset_bump(self, ctx, *, time: str = None):
