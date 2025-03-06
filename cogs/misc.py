@@ -4,7 +4,9 @@ import random
 import discord 
 import asyncio 
 
-from typing import TYPE_CHECKING
+from fuzzywuzzy import process
+
+from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from bot import LunaBot 
 
@@ -20,14 +22,6 @@ class Misc(commands.Cog):
         with open('cogs/static/8ball.json') as f:
             self._8ball_answers = json.load(f)
 
-    @commands.Cog.listener()
-    async def on_member_join(self, member):
-        # TODO: could move to a different cog
-        name = member.display_name
-        if len(name) > 28:
-            name = name[:28]
-        await asyncio.sleep(1)
-        await member.edit(nick=f'✿❀﹕{name}﹕')
     
     @commands.hybrid_command()
     async def topic(self, ctx):
@@ -75,6 +69,24 @@ class Misc(commands.Cog):
         msg = await layout.send(channel, repls={'question': question})
         await msg.create_thread(name="⁺﹒Luna's Answer﹗𖹭﹒⁺")
         await ctx.send(f'Your question has been sent to the QnA channel! {msg.jump_url}')
+    
+    @commands.command()
+    async def userlookup(self, ctx, limit: Optional[int] = 5, *, query: str):
+        usernames = {m.name: m for m in ctx.guild.members}
+        # display_names = [m.display_name for m in ctx.guild.members]
+
+        results = process.extractBests(query, usernames, limit=limit)
+        embed = discord.Embed(title="best matches", color=self.bot.DEFAULT_EMBED_COLOR)
+
+        desc = []
+        for m, _, _ in results:
+            if ctx.guild.get_member(m.id):
+                desc.append(m.mention)
+        
+        embed.description = "\n".join(desc)
+        await ctx.send(embed=embed)
+
+
 
 
 async def setup(bot):
