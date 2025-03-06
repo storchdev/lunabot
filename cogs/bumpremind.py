@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def is_luna_available():
-    # return False 
+    return False 
 
     central = ZoneInfo('US/Central')
     now = datetime.now(central)
@@ -66,11 +66,16 @@ def is_wolfy_available(dt=None):
     return True
 
 
+def is_seabass_available(dt=None):
+    return True
+
+
 SCHEDULE_CHECKS = [
     (718475543061987329, is_storch_available),
     (496225545529327616, is_luna_available),
     # (100963686411169792, is_alex_available),
     (248224130221080577, is_wolfy_available),
+    (989623504867565588, is_seabass_available),
 ]
 
 class BumpRemind(commands.Cog):
