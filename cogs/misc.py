@@ -72,21 +72,40 @@ class Misc(commands.Cog):
     
     @commands.command()
     async def userlookup(self, ctx, limit: Optional[int] = 5, *, query: str):
-        usernames = {m.name: m for m in ctx.guild.members}
-        # display_names = [m.display_name for m in ctx.guild.members]
-
-        results = process.extractBests(query, usernames, limit=limit)
-        embed = discord.Embed(title="best matches", color=self.bot.DEFAULT_EMBED_COLOR)
-
+        search_terms = {}
+        
+        # Gather search terms and allow multiple users with the same name
+        for m in ctx.guild.members:
+            terms = [m.display_name, m.global_name, m.name]
+            for term in terms:
+                if term:  # Ensure term is not None
+                    if term in search_terms:
+                        search_terms[term].append(m)
+                    else:
+                        search_terms[term] = [m]
+        
+        # Perform fuzzy matching
+        results = await asyncio.to_thread(process.extractBests, query, search_terms.keys(), limit=limit)
+        embed = discord.Embed(title="Best Matches", color=self.bot.DEFAULT_EMBED_COLOR)
+        
         desc = []
-        for m, _, _ in results:
-            if ctx.guild.get_member(m.id):
-                desc.append(m.mention)
+        seen = set()
+        for name, _ in results:
+            for member in search_terms[name]:  # Append all members with the matching name
+                if member in seen:
+                    continue
+                seen.add(member)
+                desc.append(f'{member.mention} (`{member.name}` a.k.a. {member.display_name})')
         
         embed.description = "\n".join(desc)
         await ctx.send(embed=embed)
 
-
+    @commands.command()
+    async def ratio(self, ctx):
+        total = len(ctx.guild.members)
+        online = len([m for m in ctx.guild.members if m.status is not discord.Status.offline])
+        pc = str(round(online / total * 100))
+        await ctx.send(f'{pc}% ({online}/{total})')
 
 
 async def setup(bot):
