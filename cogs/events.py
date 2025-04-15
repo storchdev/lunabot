@@ -23,7 +23,7 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
             await message.add_reaction('<a:LCM_mail:1151561338317983966>')
         if message.channel.id == self.bot.vars.get('void-channel-id'):
             await message.delete()
-    
+
     @commands.Cog.listener()
     async def on_member_join(self, member):
         if member.guild.id == self.bot.vars.get('guild-server-id'):
@@ -31,11 +31,11 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
             ctx = LayoutContext(author=member)
             channel = self.bot.get_var_channel('guild-welc')
             await layout.send(channel, ctx)
-        elif member.guild.id == self.bot.GUILD_ID:
-            layout = self.bot.get_layout('welc')
-            ctx = LayoutContext(author=member)
-            channel = self.bot.get_var_channel('welc')
-            await layout.send(channel, ctx)
+        # if member.guild.id == self.bot.GUILD_ID:
+        #     layout = self.bot.get_layout('welc')
+        #     ctx = LayoutContext(author=member)
+        #     channel = self.bot.get_var_channel('welc')
+        #     await layout.send(channel, ctx)
     
     @commands.command()
     async def boosttest(self, ctx):

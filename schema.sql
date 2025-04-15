@@ -206,3 +206,9 @@ CREATE TABLE IF NOT EXISTS event_dailies_bonuses (
   user_id BIGINT,
   date_str TEXT 
 );
+
+CREATE TABLE IF NOT EXISTS welc_messages (
+  user_id BIGINT PRIMARY KEY,
+  channel_id BIGINT,
+  message_id BIGINT
+);
