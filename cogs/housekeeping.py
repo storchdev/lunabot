@@ -5,6 +5,8 @@ from datetime import timedelta
 from discord.ext import commands, tasks
 import discord
 
+from .utils import LayoutContext
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -54,7 +56,47 @@ class Housekeeping(commands.Cog):
             name = name[:28]
         await asyncio.sleep(1)
         await member.edit(nick=f'✿❀﹕{name}﹕')
+
+        if member.guild.id == self.bot.GUILD_ID:
+            layout = self.bot.get_layout('welc')
+            ctx = LayoutContext(author=member)
+            channel = self.bot.get_var_channel('welc')
+            bot_msg = await layout.send(channel, ctx)
+
+            query = """INSERT INTO
+                         welc_messages (user_id, channel_id, message_id)
+                       VALUES
+                         ($1, $2, $3)
+                    """
+            await self.bot.db.execute(query, member.id, bot_msg.channel.id, bot_msg.id)
     
+    @commands.Cog.listener()
+    async def on_member_leave(self, member):
+        query = """SELECT * FROM welc_messages WHERE user_id = $1"""
+        rows = await self.bot.db.fetch(query, member.id)
+
+        for row in rows:
+            channel = self.bot.get_channel(row["channel_id"])
+            if channel is None:
+                continue
+            try:
+                msg = await channel.fetch_message(row["message_id"])
+                await msg.delete()
+                await self.bot.get_var_channel("action-log").send(
+                    f"Deleted welcome autoresponder for {member.mention} ({member.id})"
+                )
+            except (discord.HTTPException, discord.Forbidden):
+                continue
+
+        query = """DELETE *
+                   FROM
+                     welc_messages
+                   WHERE
+                     user_id = $1
+                """
+        await self.bot.db.execute(query, member.id)
+
+
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         role = after.guild.get_role(self.bot.vars.get("sus-role-id"))
@@ -87,3 +129,5 @@ class Housekeeping(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Housekeeping(bot))
+
+from .utils import LayoutContext
