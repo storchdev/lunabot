@@ -15,12 +15,13 @@ if TYPE_CHECKING:
 
 VC_IDS = {
     899108709450543115: 1041061422706204802,
-    1068342105006673972: 1068342105006673977,
+    # 1068342105006673972: 1068342105006673977,
+    1314357693384888451: 1370519328608485417,   
     1004878848262934538: 1004881486991851570,
     1041468894487003176: 1041472654537932911,
 }
 
-
+# haha funny
 class Housekeeping(commands.Cog):
     """The description for Housekeeping goes here."""
 
@@ -50,6 +51,30 @@ class Housekeeping(commands.Cog):
                 await asyncio.sleep(3)
 
     @commands.Cog.listener()
+    async def on_message(self, msg: discord.Message):
+        if msg.channel.id == self.bot.vars.get("welc-channel-id") and 'welc' in msg.content.lower():
+            # remove emojis and links
+
+            cleaned = re.sub(r'(<a?:\w+:\d+>)|(https:\/\/(?:media\.)?tenor\.com\/\S+)', '', msg.content)
+            if len(cleaned) > 20:
+                return
+
+            query = "SELECT message_id FROM welc_messages ORDER BY time DESC LIMIT 1"
+            bot_message_id = await self.bot.db.fetchval(query)
+
+            if bot_message_id is None:
+                return 
+
+            query = "INSERT INTO user_welc_messages (message_id, bot_message_id, channel_id) VALUES ($1, $2, $3)"
+            await self.bot.db.execute(query, msg.id, bot_message_id, msg.channel.id)
+
+            print(f"--- added welc message by {msg.author.name} ---")
+
+        # TODO: delete intros when someone leaves
+        # elif msg.channel.id == self.bot.vars.get("intros-channel-id") and "my intro" in msg.content.lower():
+            
+                
+    @commands.Cog.listener()
     async def on_member_join(self, member):
         name = member.display_name
         if len(name) > 28:
@@ -71,7 +96,7 @@ class Housekeeping(commands.Cog):
             await self.bot.db.execute(query, member.id, bot_msg.channel.id, bot_msg.id)
     
     @commands.Cog.listener()
-    async def on_member_leave(self, member):
+    async def on_member_remove(self, member):
         query = """SELECT * FROM welc_messages WHERE user_id = $1"""
         rows = await self.bot.db.fetch(query, member.id)
 
@@ -88,7 +113,32 @@ class Housekeeping(commands.Cog):
             except (discord.HTTPException, discord.Forbidden):
                 continue
 
-        query = """DELETE *
+            # delete user welcs
+            query = "SELECT channel_id, message_id FROM user_welc_messages WHERE bot_message_id = $1"
+            urows = await self.bot.db.fetch(query, row["message_id"])
+            bulk_delete = []
+
+            for urow in urows:
+                msg = await channel.fetch_message(urow["message_id"])
+                if (discord.utils.utcnow() - msg.created_at).total_seconds() > 7 * 86400:
+                    await msg.delete()
+                    print(f"Deleted welc message by {msg.author.name}")
+                else:
+                    bulk_delete.append(msg)
+            
+            if bulk_delete:
+                await channel.delete_messages(bulk_delete, reason="welcomed a user who left")
+                await self.bot.get_var_channel("action-log").send(
+                    f"Bulk deleted {len(bulk_delete)} welc messages"
+                )
+
+                for msg in bulk_delete:
+                    print(f"Deleted welc message from {msg.author.name} ({msg.jump_url})")
+            
+            query = "DELETE FROM user_welc_messages WHERE bot_message_id = $1" 
+            await self.bot.db.execute(query, row["message_id"])
+
+        query = """DELETE
                    FROM
                      welc_messages
                    WHERE

@@ -95,7 +95,8 @@ class BumpRemind(commands.Cog):
         channel = self.bot.get_var_channel('bump-status')
 
         if row['next_bump'] > discord.utils.utcnow():
-            self.task = self.bot.loop.create_task(self.task_coro(row['user_id'], row['next_bump']))
+            self.create_task(row["user_id"], row["next_bump"])
+            # self.bot.loop.create_task(self.task_coro(row['user_id'], row['next_bump']))
             if channel.name != self.cant_bump_name:
                 await channel.edit(name=self.cant_bump_name)
         else:
@@ -124,6 +125,13 @@ class BumpRemind(commands.Cog):
         channel = self.bot.get_var_channel('bump-status')
         await channel.edit(name=self.can_bump_name)
         self.task = None
+    
+    def create_task(self, user_id, end_time):
+        if self.task is not None:
+            self.task.cancel()
+            self.task = None
+        
+        self.task = self.bot.loop.create_task(self.task_coro(user_id, end_time))
 
     @commands.Cog.listener()
     async def on_message(self, msg):
@@ -139,7 +147,8 @@ class BumpRemind(commands.Cog):
 
         user_id = msg.interaction.user.id 
         end_time = discord.utils.utcnow() + timedelta(hours=2)
-        self.task = self.bot.loop.create_task(self.task_coro(user_id, end_time))
+        # self.task = self.bot.loop.create_task(self.task_coro(user_id, end_time))
+        self.create_task(user_id, end_time)
         query = """INSERT INTO
                        bump_remind (user_id, next_bump)
                    VALUES
@@ -154,12 +163,6 @@ class BumpRemind(commands.Cog):
     @commands.command(name='bumpreset', aliases=['resetbump', 'bump-reset', 'reset-bump'])
     @staff_only()
     async def reset_bump(self, ctx, *, time: str = None):
-        query = 'DELETE FROM bump_remind'
-        await self.bot.db.execute(query)
-
-        if self.task is not None:
-            self.task.cancel()
-            self.task = None
 
         channel = self.bot.get_var_channel('bump-status')
         if time is None:
@@ -169,6 +172,10 @@ class BumpRemind(commands.Cog):
             if parsed_time is None:
                 await ctx.send('Invalid time format.')
                 return
+
+            query = 'DELETE FROM bump_remind'
+            await self.bot.db.execute(query)
+
             query = """INSERT INTO
                            bump_remind (user_id, next_bump)
                        VALUES
@@ -176,7 +183,8 @@ class BumpRemind(commands.Cog):
                     """
             await self.bot.db.execute(query, ctx.author.id, parsed_time)
 
-            self.task = self.bot.loop.create_task(self.task_coro(ctx.author.id, parsed_time))
+            self.create_task(ctx.author.id, parsed_time) 
+            # self.task = self.bot.loop.create_task(self.task_coro(ctx.author.id, parsed_time))
 
             await channel.edit(name=self.cant_bump_name)
 

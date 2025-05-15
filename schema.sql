@@ -210,5 +210,27 @@ CREATE TABLE IF NOT EXISTS event_dailies_bonuses (
 CREATE TABLE IF NOT EXISTS welc_messages (
   user_id BIGINT PRIMARY KEY,
   channel_id BIGINT,
-  message_id BIGINT
+  message_id BIGINT,
+  time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_welc_messages (
+  message_id BIGINT PRIMARY KEY,
+  bot_message_id BIGINT,
+  channel_id BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS welc_messages (
+  user_id BIGINT PRIMARY KEY,
+  channel_id BIGINT,
+  message_id BIGINT,
+  time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS intro_messages (
+  id SERIAL PRIMARY KEY,
+  message_id BIGINT,
+  channel_id BIGINT,
+  associated_user_id BIGINT,
+  bot BOOLEAN
 );
