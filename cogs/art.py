@@ -109,6 +109,7 @@ class Art(commands.Cog):
                    VALUES
                        ($1, $2, $3, $4, $5)
                 """
+
         await self.bot.db.execute(query, 
             payload.message_id, 
             hof_msg.id, 

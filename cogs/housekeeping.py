@@ -68,7 +68,7 @@ class Housekeeping(commands.Cog):
             query = "INSERT INTO user_welc_messages (message_id, bot_message_id, channel_id) VALUES ($1, $2, $3)"
             await self.bot.db.execute(query, msg.id, bot_message_id, msg.channel.id)
 
-            print(f"--- added welc message by {msg.author.name} ---")
+            # print(f"--- added welc message by {msg.author.name} ---")
 
         # TODO: delete intros when someone leaves
         # elif msg.channel.id == self.bot.vars.get("intros-channel-id") and "my intro" in msg.content.lower():
@@ -122,7 +122,7 @@ class Housekeeping(commands.Cog):
                 msg = await channel.fetch_message(urow["message_id"])
                 if (discord.utils.utcnow() - msg.created_at).total_seconds() > 7 * 86400:
                     await msg.delete()
-                    print(f"Deleted welc message by {msg.author.name}")
+                    # print(f"Deleted welc message by {msg.author.name}")
                 else:
                     bulk_delete.append(msg)
             
@@ -132,8 +132,8 @@ class Housekeeping(commands.Cog):
                     f"Bulk deleted {len(bulk_delete)} welc messages"
                 )
 
-                for msg in bulk_delete:
-                    print(f"Deleted welc message from {msg.author.name} ({msg.jump_url})")
+                # for msg in bulk_delete:
+                    # print(f"Deleted welc message from {msg.author.name} ({msg.jump_url})")
             
             query = "DELETE FROM user_welc_messages WHERE bot_message_id = $1" 
             await self.bot.db.execute(query, row["message_id"])
