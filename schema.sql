@@ -234,3 +234,8 @@ CREATE TABLE IF NOT EXISTS intro_messages (
   associated_user_id BIGINT,
   bot BOOLEAN
 );
+
+CREATE TABLE IF NOT EXISTS guild_server_joins(
+  user_id BIGINT PRIMARY KEY,
+  joined_at TIMESTAMP WITH TIME ZONE
+);

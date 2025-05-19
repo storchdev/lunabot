@@ -6,6 +6,7 @@ from discord.ext import commands, tasks
 import discord
 
 from .utils import LayoutContext
+from .utils import next_day
 
 from typing import TYPE_CHECKING
 
@@ -30,9 +31,11 @@ class Housekeeping(commands.Cog):
 
     async def cog_load(self):
         self.edit.start()
+        self.kick_task.start()
 
     async def cog_unload(self):
         self.edit.cancel()
+        self.kick_task.cancel()
 
     @tasks.loop(minutes=15)
     async def edit(self):
@@ -49,6 +52,10 @@ class Housekeeping(commands.Cog):
                 except discord.Forbidden:
                     print(f'failed to edit member count in {guild.name}')
                 await asyncio.sleep(3)
+    
+    @edit.before_loop
+    async def before_edit(self):
+        await asyncio.sleep(600)
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
@@ -82,7 +89,13 @@ class Housekeeping(commands.Cog):
         await asyncio.sleep(1)
         await member.edit(nick=f'✿❀﹕{name}﹕')
 
-        if member.guild.id == self.bot.GUILD_ID:
+        if member.guild.id == self.bot.vars.get("guild-server-id"):
+            # db
+            query = "INSERT INTO guild_server_joins (user_id, joined_at) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING"
+            await self.bot.db.execute(query, member.id, member.joined_at or discord.utils.utcnow())
+
+        elif member.guild.id == self.bot.vars.get("main-server-id"):
+            # welc
             layout = self.bot.get_layout('welc')
             ctx = LayoutContext(author=member)
             channel = self.bot.get_var_channel('welc')
@@ -175,9 +188,75 @@ class Housekeeping(commands.Cog):
         await channel.delete_messages(to_delete)
         await self.bot.get_var_channel("action-log").send(f"Deleted {len(to_delete)} promo messages by {member.name} ({member.id})")
 
-    
+    # Guild stuff
+
+    @commands.command(aliases=['ugsj'])
+    @commands.is_owner()
+    async def updateguildserverjoins(self, ctx):
+        guild = self.bot.get_guild(self.bot.vars.get("guild-server-id"))
+
+        if guild is None:
+            return await ctx.send("guild-server-id not set or guild not visible")
+
+        for member in guild.members:
+            query = "INSERT INTO guild_server_joins (user_id, joined_at) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING"
+            await self.bot.db.execute(query, member.id, member.joined_at or discord.utils.utcnow())
+        
+        await ctx.send("Done!")
+
+    async def kick_guild_members(self):
+        DRY_RUN = True  # set to false in production
+
+        main_server = self.bot.get_guild(self.bot.vars.get("main-server-id"))
+        guild_server = self.bot.get_guild(self.bot.vars.get("guild-server-id"))
+        
+        if main_server is None or guild_server is None:
+            print("main-server-id or guild-server-id not set, or one of them is not visible")
+            return
+        
+        seven_days_ago = discord.utils.utcnow() - timedelta(days=7)
+        id_set = set(m.id for m in main_server.members)
+
+        n = 0
+        layout = self.bot.get_layout("kicked-from-guild-server")
+
+        for member in guild_server.members:
+            if member.bot:
+                continue
+
+            if member.id in id_set:
+                continue
+
+            if member in guild_server.premium_subscribers:
+                continue
+
+            query = "SELECT 1 FROM guild_server_joins WHERE user_id = $1 AND joined_at < $2"
+            val = await self.bot.db.fetchval(query, member.id, seven_days_ago)
+            # query = "SELECT 1 FROM guild_server_joins WHERE user_id = $1"
+            # val = await self.bot.db.fetchval(query, member.id)
+            if val:
+
+                if not DRY_RUN:
+                    try:
+                        await layout.send(member)
+                    except discord.Forbidden:
+                        pass
+                    await member.kick(reason="did not join main server within 7 days")
+
+                n += 1
+
+                # print(f"Kicked {member.name} ({member.id})")
+
+        await self.bot.get_var_channel("action-log").send(f"Kicked {n} users from guild server")
+
+    @tasks.loop(hours=24)
+    async def kick_task(self):
+        await self.kick_guild_members()
+
+    @kick_task.before_loop
+    async def before_kick_task(self):
+        await discord.utils.sleep_until(next_day())
+        
 
 async def setup(bot):
     await bot.add_cog(Housekeeping(bot))
-
-from .utils import LayoutContext
