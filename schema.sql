@@ -236,6 +236,9 @@ CREATE TABLE IF NOT EXISTS intro_messages (
 );
 
 CREATE TABLE IF NOT EXISTS guild_server_joins(
-  user_id BIGINT PRIMARY KEY,
-  joined_at TIMESTAMP WITH TIME ZONE
+  id SERIAL PRIMARY KEY,
+  guild_id BIGINT, 
+  user_id BIGINT,
+  joined_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(guild_id, user_id)
 );
