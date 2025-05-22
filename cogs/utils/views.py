@@ -453,8 +453,8 @@ class ChannelSelectView(View):
 
 class ConfirmView(View):
     
-    def __init__(self, ctx):
-        super().__init__(timeout=300, bot=ctx.bot, owner=ctx.author)
+    def __init__(self, ctx, *, timeout: float = 300):
+        super().__init__(timeout=timeout, bot=ctx.bot, owner=ctx.author)
         self.final_interaction = None
         self.choice = None
 

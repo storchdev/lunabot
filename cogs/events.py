@@ -14,6 +14,9 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
     def __init__(self, bot):
         self.bot: 'LunaBot' = bot 
 
+        with open("guild_data.json") as f:
+            self.guild_data = json.load(f)
+
     async def cog_check(self, ctx):
         return ctx.author.guild_permissions.administrator or ctx.author.id == self.bot.owner_id
     
@@ -26,10 +29,13 @@ class Events(commands.Cog, description='Manage join, leave, boost, and birthday 
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        if member.guild.id == self.bot.vars.get('guild-server-id'):
+        # this handles guild server welcs
+        # main server welcs are in housekeeping.py
+        if str(member.guild.id) in self.guild_data:
+            channel = self.bot.get_channel(self.guild_data[str(member.guild.id)]["welc-channel-id"]) 
             layout = self.bot.get_layout('welc')
             ctx = LayoutContext(author=member)
-            channel = self.bot.get_var_channel('guild-welc')
+            # channel = self.bot.get_var_channel('guild-welc')
             await layout.send(channel, ctx)
         # if member.guild.id == self.bot.GUILD_ID:
         #     layout = self.bot.get_layout('welc')
