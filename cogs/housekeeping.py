@@ -6,19 +6,32 @@ from discord.ext import commands, tasks
 import discord
 
 from .utils import LayoutContext
+from .utils.checks import admin_only
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bot import LunaBot
 
+import json
+
 
 VC_IDS = {
+    # main server
     899108709450543115: 1041061422706204802,
     # 1068342105006673972: 1068342105006673977,
+
+    # guild server 1
     1314357693384888451: 1370519328608485417,   
+
+    # emote hub
     1004878848262934538: 1004881486991851570,
+
+    # guild hub 
     1041468894487003176: 1041472654537932911,
+
+    # guild server 2
+    1140171950552002612: 1373443007260524635
 }
 
 # haha funny
@@ -27,6 +40,14 @@ class Housekeeping(commands.Cog):
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
+
+        with open("guild_data.json") as f:
+            self.guild_data = json.load(f)
+
+        self.guild_server_ids = [int(gid) for gid in self.guild_data]
+
+        self.kick_progress = 0
+        self.role_progress = 0
 
     async def cog_load(self):
         self.edit.start()
@@ -49,6 +70,10 @@ class Housekeeping(commands.Cog):
                 except discord.Forbidden:
                     print(f'failed to edit member count in {guild.name}')
                 await asyncio.sleep(3)
+    
+    @edit.before_loop
+    async def before_edit(self):
+        await asyncio.sleep(600)
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
@@ -82,7 +107,13 @@ class Housekeeping(commands.Cog):
         await asyncio.sleep(1)
         await member.edit(nick=f'✿❀﹕{name}﹕')
 
-        if member.guild.id == self.bot.GUILD_ID:
+        if member.guild.id in self.guild_server_ids:
+            # db
+            query = "INSERT INTO guild_server_joins (guild_id, user_id, joined_at) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO NOTHING"
+            await self.bot.db.execute(query, member.guild.id, member.id, member.joined_at or discord.utils.utcnow())
+
+        elif member.guild.id == self.bot.vars.get("main-server-id"):
+            # welc
             layout = self.bot.get_layout('welc')
             ctx = LayoutContext(author=member)
             channel = self.bot.get_var_channel('welc')
@@ -175,9 +206,134 @@ class Housekeeping(commands.Cog):
         await channel.delete_messages(to_delete)
         await self.bot.get_var_channel("action-log").send(f"Deleted {len(to_delete)} promo messages by {member.name} ({member.id})")
 
+    # Guild stuff
+
+    @commands.command(aliases=['ugsj'])
+    @commands.is_owner()
+    async def updateguildserverjoins(self, ctx):
+        if ctx.guild.id not in self.guild_server_ids:
+            return await ctx.send("This server isn't a guild server!")
+
+        for member in ctx.guild.members:
+            query = "INSERT INTO guild_server_joins (guild_id, user_id, joined_at) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO NOTHING"
+            await self.bot.db.execute(query, ctx.guild.id, member.id, member.joined_at or discord.utils.utcnow())
+        
+        await ctx.send("Done!")
+
+    @commands.command()
+    @commands.max_concurrency(1)
+    @admin_only()
+    async def kickguildmembers(self, ctx):
+        # DRY_RUN = True  # set to false in production
+
+        if ctx.guild.id not in self.guild_server_ids:
+            return await ctx.send("This server isn't a guild server!")
+
+        main_server = self.bot.get_guild(self.bot.vars.get("main-server-id"))
+        if main_server is None:
+            return await ctx.send("main-server-id not set, or one of them is not visible")
+        
+        seven_days_ago = discord.utils.utcnow() - timedelta(days=7)
+        id_set = set(m.id for m in main_server.members)
+
+        # layout = self.bot.get_layout("kicked-from-guild-server")
+        to_kick = []
+        to_not_kick = [m for m in ctx.guild.members] 
+
+        for member in ctx.guild.members:
+            if member.bot:
+                continue
+
+            if member.id in id_set:
+                continue
+
+            if member in ctx.guild.premium_subscribers:
+                continue
+
+            query = "SELECT 1 FROM guild_server_joins WHERE user_id = $1 AND joined_at < $2"
+            val = await self.bot.db.fetchval(query, member.id, seven_days_ago)
+            # query = "SELECT 1 FROM guild_server_joins WHERE user_id = $1"
+            # val = await self.bot.db.fetchval(query, member.id)
+            if val:
+                to_kick.append(member)
+                to_not_kick.remove(member)
+
+        temp = await ctx.send(f"**CHOOSE YOUR ACTION FOR {len(to_kick)} MEMBERS:** `role`, `kick`, `cancel`") 
+
+        try:
+            user_msg = await self.bot.wait_for(
+                "message",
+                check=lambda m: m.channel == ctx.channel and m.author == ctx.author,
+                timeout=300
+            )
+        except asyncio.TimeoutError:
+            await temp.delete()
+            return 
+
+        if user_msg.content.lower() == 'role':
+            await temp.edit(content=f"Roleing {len(to_kick)} members. Do `!guildroleprogress` or `!grp` to see progress.")
+
+            role = ctx.guild.get_role(self.guild_data[str(ctx.guild.id)]["kick-warning-role-id"])
+
+            try:
+                for member in to_kick:
+                    if role not in member.roles:
+                        await member.add_roles(role)
+                    self.role_progress += 1
+            except (discord.Forbidden, discord.HTTPException):
+                self.role_progress = 0
+                return await ctx.send("Roleing failed")
+
+            self.role_progress = 0
+
+            await ctx.send("Now removing the role from those who already joined...")
+            for member in to_not_kick:
+                if role in member.roles:
+                    await member.remove_roles(role)
+
+            await ctx.send(f"Finished roleing users in this guild server.")
+
+        
+        elif user_msg.content.lower() == 'kick':
+            await temp.edit(content=f"Kicking {len(to_kick)} members. Do `!guildkickprogress` or `!gkp` to see progress.")
+
+            try:
+                for member in to_kick:
+                    await member.kick(reason="did not join main server")
+                    self.kick_progress += 1
+            except (discord.Forbidden, discord.HTTPException):
+                self.kick_progress = 0
+                return await ctx.send("Kicking failed")
+
+            self.kick_progress = 0
+            await ctx.send(f"Finished kicking users from guild server.")
+        else:
+            await temp.edit(content="Cancelled.")
     
+    @commands.command(aliases=['gkp'])
+    @admin_only()
+    async def guildkickprogress(self, ctx):
+        if self.kick_progress == 0:
+            return await ctx.send("No kicking is happening now.")
+
+        await ctx.send(self.kick_progress)
+
+    @commands.command(aliases=['grp'])
+    @admin_only()
+    async def guildroleprogress(self, ctx):
+        if self.role_progress == 0:
+            return await ctx.send("No roleing is happening now.")
+
+        await ctx.send(self.role_progress)
+
+    # @tasks.loop(hours=24)
+    # async def kick_task(self):
+    #     await self.kick_guild_members()
+
+    # @kick_task.before_loop
+    # async def before_kick_task(self):
+    #     await discord.utils.sleep_until(next_day())
+        
 
 async def setup(bot):
     await bot.add_cog(Housekeeping(bot))
-
-from .utils import LayoutContext
