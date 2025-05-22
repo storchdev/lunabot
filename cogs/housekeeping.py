@@ -238,7 +238,7 @@ class Housekeeping(commands.Cog):
 
         # layout = self.bot.get_layout("kicked-from-guild-server")
         to_kick = []
-        to_not_kick = []
+        to_not_kick = [m for m in ctx.guild.members] 
 
         for member in ctx.guild.members:
             if member.bot:
@@ -256,8 +256,7 @@ class Housekeeping(commands.Cog):
             # val = await self.bot.db.fetchval(query, member.id)
             if val:
                 to_kick.append(member)
-            else:
-                to_not_kick.append(member)
+                to_not_kick.remove(member)
 
         temp = await ctx.send(f"**CHOOSE YOUR ACTION FOR {len(to_kick)} MEMBERS:** `role`, `kick`, `cancel`") 
 
@@ -287,12 +286,12 @@ class Housekeeping(commands.Cog):
 
             self.role_progress = 0
 
-            await ctx.send("Now removing roles from those who already joined...")
+            await ctx.send("Now removing the role from those who already joined...")
             for member in to_not_kick:
                 if role in member.roles:
                     await member.remove_roles(role)
 
-            await ctx.send(f"Finished roleing users from this guild server.")
+            await ctx.send(f"Finished roleing users in this guild server.")
 
         
         elif user_msg.content.lower() == 'kick':
