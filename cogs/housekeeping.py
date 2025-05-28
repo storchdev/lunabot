@@ -235,19 +235,17 @@ class Housekeeping(commands.Cog):
         
         seven_days_ago = discord.utils.utcnow() - timedelta(days=7)
         id_set = set(m.id for m in main_server.members)
+        whitelist = [int(id) for id in str(self.bot.vars.get("guild-kick-whitelisted-ids")).split(',')]
 
         # layout = self.bot.get_layout("kicked-from-guild-server")
         to_kick = []
         to_not_kick = [m for m in ctx.guild.members] 
 
         for member in ctx.guild.members:
-            if member.bot:
-                continue
-
-            if member.id in id_set:
-                continue
-
-            if member in ctx.guild.premium_subscribers:
+            if member.bot or \
+            member.id in id_set or \
+            member in ctx.guild.premium_subscribers or \
+            member.id in whitelist:
                 continue
 
             query = "SELECT 1 FROM guild_server_joins WHERE user_id = $1 AND joined_at < $2"
