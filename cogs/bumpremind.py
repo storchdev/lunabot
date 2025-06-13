@@ -135,6 +135,9 @@ class BumpRemind(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, msg):
+        if not msg.guild:
+            return
+
         if msg.guild.id != self.bot.vars.get('main-server-id'):
             return 
 
