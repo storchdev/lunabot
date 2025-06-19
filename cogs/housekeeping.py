@@ -39,7 +39,7 @@ class Housekeeping(commands.Cog):
         with open("guild_data.json") as f:
             self.guild_data = json.load(f)
 
-        self.guild_server_ids = [int(gid) for gid in self.guild_data]
+        self.guild_server_ids = [int(gid) for gid in self.guild_data if gid != self.bot.vars.get("main-server-id")]
 
         self.kick_progress = 0
         self.role_progress = 0
@@ -121,20 +121,22 @@ class Housekeeping(commands.Cog):
                 member.joined_at or discord.utils.utcnow(),
             )
 
-        elif member.guild.id == self.bot.vars.get("main-server-id"):
-            # welc
-            layout = self.bot.get_layout("welc")
-            ctx = LayoutContext(author=member)
-            channel = self.bot.get_var_channel("welc")
-            bot_msg = await layout.send(channel, ctx)
+        # all welcs are handled in events.py now
 
-            query = """INSERT INTO
-                         welc_messages (user_id, channel_id, message_id)
-                       VALUES
-                         ($1, $2, $3)
-                    """
-            await self.bot.db.execute(query, member.id, bot_msg.channel.id, bot_msg.id)
+        # elif member.guild.id == self.bot.vars.get("main-server-id"):
+        #     # welc
+        #     layout = self.bot.get_layout('welc')
+        #     ctx = LayoutContext(author=member)
+        #     channel = self.bot.get_var_channel('welc')
+        #     bot_msg = await layout.send(channel, ctx)
 
+        #     query = """INSERT INTO
+        #                  welc_messages (user_id, channel_id, message_id)
+        #                VALUES
+        #                  ($1, $2, $3)
+        #             """
+        #     await self.bot.db.execute(query, member.id, bot_msg.channel.id, bot_msg.id)
+    
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         query = """SELECT * FROM welc_messages WHERE user_id = $1"""

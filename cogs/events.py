@@ -33,16 +33,31 @@ class Events(
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        # this handles guild server welcs
-        # main server welcs are in housekeeping.py
+        # this handles all server welcs
         if str(member.guild.id) in self.guild_data:
             channel = self.bot.get_channel(
                 self.guild_data[str(member.guild.id)]["welc-channel-id"]
             )
+            
+            role_id = self.guild_data[str(member.guild.id)].get("new-welc-role-id")
+            if role_id is None:
+                role_text = ""
+            else:
+                role_text = member.guild.get_role(role_id).mention
+
             layout = self.bot.get_layout("welc")
             ctx = LayoutContext(author=member)
             # channel = self.bot.get_var_channel('guild-welc')
-            await layout.send(channel, ctx)
+            bot_msg = await layout.send(channel, ctx, repls={"newwelcrole": role_text})
+        
+            if member.guild.id == self.bot.vars.get("main-server-id"):
+                query = """INSERT INTO
+                            welc_messages (user_id, channel_id, message_id)
+                        VALUES
+                            ($1, $2, $3)
+                        """
+                await self.bot.db.execute(query, member.id, bot_msg.channel.id, bot_msg.id)
+
         # if member.guild.id == self.bot.GUILD_ID:
         #     layout = self.bot.get_layout('welc')
         #     ctx = LayoutContext(author=member)
