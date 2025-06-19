@@ -1,35 +1,37 @@
-import json 
+import json
 import logging
-from pkgutil import iter_modules
-from typing import Union, Optional, Dict, Set, TYPE_CHECKING
 from datetime import datetime, timedelta
+from pkgutil import iter_modules
+from typing import TYPE_CHECKING, Dict, Optional, Set, Union
 
-import aiohttp 
-import discord 
-from discord.ext import commands 
+import aiohttp
+import discord
+from discord.ext import commands
 
-from cogs.utils import Layout, InvalidURL, View
 from cogs.future_tasks import FutureTask
+from cogs.utils import InvalidURL, Layout, View
 from cogs.utils.checks import guild_only
-
 
 if TYPE_CHECKING:
     from asyncpg import Pool
-    from cogs.tickets import Ticket
 
+    from cogs.tickets import Ticket
 
 
 class LunaBot(commands.Bot):
     def __init__(self, *args, **kwargs):
-        super().__init__('!', *args, 
-                         intents=discord.Intents.all(), 
-                         status=discord.Status.idle,
-                         **kwargs)
+        super().__init__(
+            "!",
+            *args,
+            intents=discord.Intents.all(),
+            status=discord.Status.idle,
+            **kwargs,
+        )
         self.STORCH_ID = 718475543061987329
         self.GUILD_ID = 899108709450543115
         self.owner_id = self.STORCH_ID
         self.owner_ids = [self.STORCH_ID]
-        self.DEFAULT_EMBED_COLOR = 0xcab7ff
+        self.DEFAULT_EMBED_COLOR = 0xCAB7FF
         self.views: Set[View] = set()
         self.session = aiohttp.ClientSession()
         self.embeds: Dict[str, discord.Embed] = {}
@@ -48,53 +50,55 @@ class LunaBot(commands.Bot):
         # return
         self.add_check(guild_only)
         await self.load_extension("jishaku")
-        priority = ['cogs.db', 'cogs.vars', 'cogs.tools']
-        not_cogs = ['cogs.utils']
+        priority = ["cogs.db", "cogs.vars", "cogs.tools"]
+        not_cogs = ["cogs.utils"]
 
         for cog in priority:
             await self.load_extension(cog)
-            logging.info(f'Loaded cog {cog}')
-        
-        for cog in [m.name for m in iter_modules(['cogs'], prefix='cogs.')]:
+            logging.info(f"Loaded cog {cog}")
+
+        for cog in [m.name for m in iter_modules(["cogs"], prefix="cogs.")]:
             if cog in priority:
                 continue
             if cog in not_cogs:
                 continue
             await self.load_extension(cog)
-            logging.info(f'Loaded cog {cog}')
-        
-        logging.info('LunaBot is ready')
-        
+            logging.info(f"Loaded cog {cog}")
+
+        logging.info("LunaBot is ready")
+
     async def close(self):
         for view in self.views:
             try:
                 await view.on_timeout()
             except Exception as e:
-                print(f'Couldnt stop view: {e}')
+                print(f"Couldnt stop view: {e}")
         await self.session.close()
         await super().close()
 
     def get_embed(self, name: str) -> discord.Embed:
         if name not in self.embeds:
-            return discord.Embed(title=f'Embed "{name}" not found', color=self.DEFAULT_EMBED_COLOR)
+            return discord.Embed(
+                title=f'Embed "{name}" not found', color=self.DEFAULT_EMBED_COLOR
+            )
 
-        return self.embeds[name].copy() 
-    
+        return self.embeds[name].copy()
+
     def get_layout(self, name: str) -> Layout:
         if name not in self.layouts:
             return Layout(self, name, f'`Layout "{name}" not found`', [])
         return self.layouts[name]
-    
+
     def get_layout_from_json(self, data: Union[str, dict]) -> Layout:
         if isinstance(data, str):
             data = json.loads(data)
-        if data['name'] is not None:
-            return self.get_layout(data['name'])
-        
-        return Layout(self, None, data['content'], data['embeds'])
+        if data["name"] is not None:
+            return self.get_layout(data["name"])
+
+        return Layout(self, None, data["content"], data["embeds"])
 
     async def fetch_message_from_url(self, url: str) -> discord.Message:
-        tokens = url.split('/')
+        tokens = url.split("/")
         try:
             channel_id = int(tokens[-2])
             message_id = int(tokens[-1])
@@ -109,7 +113,7 @@ class LunaBot(commands.Bot):
             return await channel.fetch_message(message_id)
         except discord.NotFound:
             raise InvalidURL()
-    
+
     async def schedule_future_task(self, action: str, time: datetime, **kwargs):
         query = """INSERT INTO
                        future_tasks (action, time, data)
@@ -118,44 +122,53 @@ class LunaBot(commands.Bot):
                    RETURNING
                        id
                 """
-        task_id = await self.db.fetchval(query, action, time, json.dumps(kwargs, indent=4))
+        task_id = await self.db.fetchval(
+            query, action, time, json.dumps(kwargs, indent=4)
+        )
         task = FutureTask(self, task_id, action, time, **kwargs)
         self.future_tasks[task_id] = task
         task.start()
 
-    async def get_cooldown_end(self, action: str, duration: float, *, rate: int = 1, obj: Optional[Union[discord.Member, discord.TextChannel]] = None, update=True) -> Optional[datetime]:
+    async def get_cooldown_end(
+        self,
+        action: str,
+        duration: float,
+        *,
+        rate: int = 1,
+        obj: Optional[Union[discord.Member, discord.TextChannel]] = None,
+        update=True,
+    ) -> Optional[datetime]:
         if isinstance(obj, discord.Member):
-            bucket = 'user'
+            bucket = "user"
         elif isinstance(obj, discord.TextChannel):
-            bucket = 'channel'
+            bucket = "channel"
         else:
-            bucket = 'global'
+            bucket = "global"
 
         if obj:
             obj_id = obj.id
         else:
             obj_id = None
 
-
         # query = 'UPDATE cooldowns SET count = count + 1 WHERE action = $1 AND object_id = $2 AND bucket = $3 AND end_time > NOW() RETURNING end_time'
         # row = await self.db.fetchrow(query, action, obj_id, bucket)
         # if row is not None:
         #     return row['end_time']
-            
-        query = 'SELECT count, end_time FROM cooldowns WHERE action = $1 AND object_id = $2 AND bucket = $3'
+
+        query = "SELECT count, end_time FROM cooldowns WHERE action = $1 AND object_id = $2 AND bucket = $3"
         row = await self.db.fetchrow(query, action, obj_id, bucket)
-        time_ok = True 
+        time_ok = True
         count_ok = True
 
         if row is not None:
-            time_ok = row['end_time'] < discord.utils.utcnow()
-            count_ok = row['count'] < rate
+            time_ok = row["end_time"] < discord.utils.utcnow()
+            count_ok = row["count"] < rate
 
             if not time_ok and not count_ok:
-                return row['end_time']
+                return row["end_time"]
 
             if not time_ok:
-                query = 'UPDATE cooldowns SET count = count + 1 WHERE action = $1 AND object_id = $2'
+                query = "UPDATE cooldowns SET count = count + 1 WHERE action = $1 AND object_id = $2"
                 await self.db.execute(query, action, obj_id)
 
         if update and time_ok:
@@ -166,16 +179,15 @@ class LunaBot(commands.Bot):
                     """
             end_time = discord.utils.utcnow() + timedelta(seconds=duration)
             await self.db.execute(query, action, obj_id, bucket, end_time)
-        
 
         return None
-    
+
     def get_var_channel(self, name: str) -> discord.TextChannel:
-        name = name + '-channel-id'
+        name = name + "-channel-id"
         if name not in self.vars:
             return None
         return self.get_channel(self.vars[name])
-    
+
     async def get_count(self, name, *, update=True):
         if update:
             query = """INSERT INTO
@@ -200,12 +212,7 @@ class LunaBot(commands.Bot):
                            COUNT
                     """
             return await self.db.fetchval(query, name)
-    
+
     async def dm_owner(self, message: str):
         owner = self.get_user(self.owner_id)
         await owner.send(message)
-
-
-
-    
-    
