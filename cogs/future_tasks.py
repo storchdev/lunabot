@@ -1,11 +1,10 @@
-from discord.ext import commands 
-from discord.ext import commands 
-import json 
-import discord 
-import asyncio 
-import time 
-from typing import TYPE_CHECKING, Optional 
-from datetime import datetime, timedelta
+import asyncio
+import json
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+import discord
+from discord.ext import commands
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -13,89 +12,91 @@ if TYPE_CHECKING:
 
 class FutureTask:
     def __init__(self, bot, task_id, action, dt, **kwargs):
-        self.bot: 'LunaBot' = bot
+        self.bot: "LunaBot" = bot
         self.id: int = task_id
         self.action: str = action
         self.kwargs = kwargs
         self.dt: datetime = dt
         self.task = None
 
-    @classmethod 
+    @classmethod
     def from_db_row(cls, bot, row):
-        kwargs = json.loads(row['data'])
-        return cls(bot, row['id'], row['action'], row['time'], **kwargs)
+        kwargs = json.loads(row["data"])
+        return cls(bot, row["id"], row["action"], row["time"], **kwargs)
 
     async def remove_role(self):
         guild = self.bot.get_guild(self.bot.GUILD_ID)
-        member = guild.get_member(self.kwargs.get('user_id'))
+        member = guild.get_member(self.kwargs.get("user_id"))
         if member:
-            role = guild.get_role(self.kwargs.get('role_id'))
+            role = guild.get_role(self.kwargs.get("role_id"))
             await member.remove_roles(role)
 
     async def lock_thread(self):
         guild = self.bot.get_guild(self.bot.GUILD_ID)
-        thread = guild.get_channel_or_thread(self.kwargs.get('thread_id'))
+        thread = guild.get_channel_or_thread(self.kwargs.get("thread_id"))
         await thread.edit(locked=True)
-    
+
     async def kick_sus_member(self):
         guild = self.bot.get_guild(self.bot.GUILD_ID)
-        role = guild.get_role(self.bot.vars.get('sus-role-id'))
-        member = guild.get_member(self.kwargs.get('user_id'))
+        role = guild.get_role(self.bot.vars.get("sus-role-id"))
+        member = guild.get_member(self.kwargs.get("user_id"))
         if member and role in member.roles:
             await member.kick(reason="suspicious account")
 
     async def task_coro(self):
-        if self.action == 'remove_role':
+        if self.action == "remove_role":
             query = """INSERT INTO
                            sticky_roles (user_id, role_id, until)
                        VALUES
                            ($1, $2, $3)
                     """
-            await self.bot.db.execute(query, self.kwargs.get('user_id'), self.kwargs.get('role_id'), self.dt)
+            await self.bot.db.execute(
+                query, self.kwargs.get("user_id"), self.kwargs.get("role_id"), self.dt
+            )
 
         await asyncio.sleep((self.dt - discord.utils.utcnow()).total_seconds())
 
-        if self.action == 'remove_role':
+        if self.action == "remove_role":
             await self.remove_role()
-        elif self.action == 'lock_thread':
+        elif self.action == "lock_thread":
             await self.lock_thread()
-        elif self.action == 'kick_sus_member':
+        elif self.action == "kick_sus_member":
             await self.kick_sus_member()
 
-        query = 'DELETE FROM future_tasks WHERE id = $1'
-        await self.bot.db.execute(query, self.id) 
-    
+        query = "DELETE FROM future_tasks WHERE id = $1"
+        await self.bot.db.execute(query, self.id)
+
     def start(self):
         self.task = self.bot.loop.create_task(self.task_coro())
-    
+
     def cancel(self):
         if self.task:
             self.task.cancel()
-    
+
     def __repr__(self):
-        return f'<FutureTask id={self.id} action={self.action} dt={self.dt} kwargs={self.kwargs}>'
+        return f"<FutureTask id={self.id} action={self.action} dt={self.dt} kwargs={self.kwargs}>"
 
 
 class FutureTasksCog(commands.Cog):
     def __init__(self, bot):
-        self.bot: 'LunaBot' = bot 
+        self.bot: "LunaBot" = bot
 
     async def spawn_tasks(self):
-        query = 'SELECT * FROM future_tasks'
+        query = "SELECT * FROM future_tasks"
         rows = await self.bot.db.fetch(query)
 
         for row in rows:
             task = FutureTask.from_db_row(self.bot, row)
-            self.bot.future_tasks[task.id] = task 
+            self.bot.future_tasks[task.id] = task
             task.start()
-   
+
     async def cog_load(self):
         await self.spawn_tasks()
 
     async def cog_unload(self):
         for task_id in self.bot.future_tasks:
             task = self.bot.future_tasks.pop(task_id)
-            task.cancel()   
+            task.cancel()
 
 
 async def setup(bot):

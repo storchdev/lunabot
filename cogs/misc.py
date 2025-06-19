@@ -1,79 +1,83 @@
-from discord.ext import commands
-import json 
-import random 
-import discord 
-import asyncio 
+import asyncio
+import json
+import random
+from typing import TYPE_CHECKING, Optional
 
+import discord
+from discord.ext import commands
 from fuzzywuzzy import process
 
-from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
-    from bot import LunaBot 
+    from bot import LunaBot
 
 
 class Misc(commands.Cog):
-
     def __init__(self, bot):
-        self.bot: 'LunaBot' = bot 
+        self.bot: "LunaBot" = bot
 
         # TODO: use db
-        with open('cogs/webhooks.json') as f:
+        with open("cogs/webhooks.json") as f:
             self.webhooks = json.load(f)
-        with open('cogs/static/8ball.json') as f:
+        with open("cogs/static/8ball.json") as f:
             self._8ball_answers = json.load(f)
 
-    
     @commands.hybrid_command()
     async def topic(self, ctx):
         """Get a random topic to talk about"""
-        with open('cogs/static/topics.json') as f:
+        with open("cogs/static/topics.json") as f:
             topics = json.load(f)
             topics.append(topics.pop(0))
-            topic = topics[0] 
-        with open('cogs/static/topics.json', 'w') as f:
+            topic = topics[0]
+        with open("cogs/static/topics.json", "w") as f:
             json.dump(topics, f, indent=4)
 
-        layout = self.bot.get_layout('topic')
-        await layout.send(ctx, repls={'question': topic})
-    
+        layout = self.bot.get_layout("topic")
+        await layout.send(ctx, repls={"question": topic})
+
     @commands.hybrid_command()
     async def polyjuice(self, ctx, member: discord.Member, *, sentence: str):
         """Send a message as another user"""
         if ctx.interaction is None:
             await ctx.message.delete()
         else:
-            await ctx.interaction.response.send_message('Sending...', ephemeral=True)
+            await ctx.interaction.response.send_message("Sending...", ephemeral=True)
         if str(ctx.channel.id) not in self.webhooks:
-            webhook = await ctx.channel.create_webhook(name='polyjuice')
+            webhook = await ctx.channel.create_webhook(name="polyjuice")
             self.webhooks[str(ctx.channel.id)] = webhook.url
-            with open('webhooks.json', 'w') as f:
+            with open("webhooks.json", "w") as f:
                 json.dump(self.webhooks, f)
         else:
-            webhook = discord.Webhook.from_url(self.webhooks[str(ctx.channel.id)], session=self.bot.session)
-        
-        await webhook.send(sentence, username=member.display_name, avatar_url=member.display_avatar.url)
+            webhook = discord.Webhook.from_url(
+                self.webhooks[str(ctx.channel.id)], session=self.bot.session
+            )
 
-    @commands.hybrid_command(name='8ball')
+        await webhook.send(
+            sentence, username=member.display_name, avatar_url=member.display_avatar.url
+        )
+
+    @commands.hybrid_command(name="8ball")
     async def _8ball(self, ctx, *, question: str):
         """Ask the magic 8ball a question"""
         answer = random.choice(self._8ball_answers)
-        answer = f'*{answer}*'
-        layout = self.bot.get_layout('8ball')
-        await layout.send(ctx, repls={'question': question, 'answer': answer})
-    
-    @commands.hybrid_command(name='qna')
+        answer = f"*{answer}*"
+        layout = self.bot.get_layout("8ball")
+        await layout.send(ctx, repls={"question": question, "answer": answer})
+
+    @commands.hybrid_command(name="qna")
     async def qna(self, ctx, *, question: str):
         """Ask a question to the QnA channel"""
-        channel = self.bot.get_var_channel('qna') 
-        layout = self.bot.get_layout('qna')
-        msg = await layout.send(channel, repls={'question': question})
+        channel = self.bot.get_var_channel("qna")
+        layout = self.bot.get_layout("qna")
+        msg = await layout.send(channel, repls={"question": question})
         await msg.create_thread(name="⁺﹒Luna's Answer﹗𖹭﹒⁺")
-        await ctx.send(f'Your question has been sent to the QnA channel! {msg.jump_url}')
-    
+        await ctx.send(
+            f"Your question has been sent to the QnA channel! {msg.jump_url}"
+        )
+
     @commands.command()
     async def userlookup(self, ctx, limit: Optional[int] = 5, *, query: str):
         search_terms = {}
-        
+
         # Gather search terms and allow multiple users with the same name
         for m in ctx.guild.members:
             terms = [m.display_name, m.global_name, m.name]
@@ -83,29 +87,37 @@ class Misc(commands.Cog):
                         search_terms[term].append(m)
                     else:
                         search_terms[term] = [m]
-        
+
         # Perform fuzzy matching
-        results = await asyncio.to_thread(process.extractBests, query, search_terms.keys(), limit=limit)
+        results = await asyncio.to_thread(
+            process.extractBests, query, search_terms.keys(), limit=limit
+        )
         embed = discord.Embed(title="Best Matches", color=self.bot.DEFAULT_EMBED_COLOR)
-        
+
         desc = []
         seen = set()
         for name, _ in results:
-            for member in search_terms[name]:  # Append all members with the matching name
+            for member in search_terms[
+                name
+            ]:  # Append all members with the matching name
                 if member in seen:
                     continue
                 seen.add(member)
-                desc.append(f'{member.mention} (`{member.name}` a.k.a. {member.display_name})')
-        
+                desc.append(
+                    f"{member.mention} (`{member.name}` a.k.a. {member.display_name})"
+                )
+
         embed.description = "\n".join(desc)
         await ctx.send(embed=embed)
 
     @commands.command()
     async def ratio(self, ctx):
         total = len(ctx.guild.members)
-        online = len([m for m in ctx.guild.members if m.status is not discord.Status.offline])
+        online = len(
+            [m for m in ctx.guild.members if m.status is not discord.Status.offline]
+        )
         pc = str(round(online / total * 100))
-        await ctx.send(f'{pc}% ({online}/{total})')
+        await ctx.send(f"{pc}% ({online}/{total})")
 
 
 async def setup(bot):

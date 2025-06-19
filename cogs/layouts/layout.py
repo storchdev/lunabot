@@ -1,8 +1,8 @@
-import re 
-import json 
-from typing import Optional, Union, List, Dict, TYPE_CHECKING
+import json
+import re
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-import discord 
+import discord
 from discord.ext import commands
 from jinja2 import Environment, TemplateError
 
@@ -29,23 +29,30 @@ class LayoutContext:
 
 
 SPECIAL_REPLS = {
-    'membercount': lambda ctx: ctx.guild.member_count,
-    'mention': lambda ctx: ctx.author.mention,
-    'username': lambda ctx: ctx.author.name,
-    'name': lambda ctx: ctx.author.display_name,
-    'nickname': lambda ctx: ctx.author.display_name,
-    'server': lambda ctx: ctx.guild.name,
-    'channel': lambda ctx: ctx.channel.mention,
-    'channelname': lambda ctx: ctx.channel.name,
-    'channelid': lambda ctx: ctx.channel.id,
-    'serverid': lambda ctx: ctx.guild.id,
-    'userid': lambda ctx: ctx.author.id,
-    'boostcount': lambda ctx: ctx.guild.premium_subscription_count,
-    'boostlevel': lambda ctx: ctx.guild.premium_tier,
+    "membercount": lambda ctx: ctx.guild.member_count,
+    "mention": lambda ctx: ctx.author.mention,
+    "username": lambda ctx: ctx.author.name,
+    "name": lambda ctx: ctx.author.display_name,
+    "nickname": lambda ctx: ctx.author.display_name,
+    "server": lambda ctx: ctx.guild.name,
+    "channel": lambda ctx: ctx.channel.mention,
+    "channelname": lambda ctx: ctx.channel.name,
+    "channelid": lambda ctx: ctx.channel.id,
+    "serverid": lambda ctx: ctx.guild.id,
+    "userid": lambda ctx: ctx.author.id,
+    "boostcount": lambda ctx: ctx.guild.premium_subscription_count,
+    "boostlevel": lambda ctx: ctx.guild.premium_tier,
 }
 
+
 class Layout:
-    def __init__(self, bot: Optional['LunaBot'] = None, name: Optional[str] = None, content: Optional[str] = None, embed_names: Optional[List[str]] = None):
+    def __init__(
+        self,
+        bot: Optional["LunaBot"] = None,
+        name: Optional[str] = None,
+        content: Optional[str] = None,
+        embed_names: Optional[List[str]] = None,
+    ):
         self.bot = bot
         self.name = name
         self.content = content
@@ -57,58 +64,57 @@ class Layout:
     # @staticmethod
     # def fill_text_one(text, key, value):
     #     return text.replace('{' + key + '}', str(value))
-    
-    # @staticmethod 
+
+    # @staticmethod
     # def fill_embed_one(embed, key, value):
     #     embed = embed.copy()
     #     for field in embed.fields:
     #         field.name = Layout.fill_text_one(field.name, key, value)
     #         field.value = Layout.fill_text_one(field.value, key, value)
-        
+
     #     if embed.title: embed.title = Layout.fill_text_one(embed.title, key, value)
     #     if embed.footer: embed.set_footer(text=Layout.fill_text_one(embed.footer.text, key, value))
     #     if embed.author: embed.author.name = Layout.fill_text_one(embed.author.name, key, value)
     #     if embed.description: embed.description = Layout.fill_text_one(embed.description, key, value)
-        
+
     #     return embed
 
-    @staticmethod 
-    async def fill_text(text: str,
-                        repls: Dict[str, str],
-                        *,
-                        ctx: Optional[LayoutContext] = None,
-                        special: Optional[bool] = True,
-                        jinja: Optional[bool] = False,
-                        ):
-
+    @staticmethod
+    async def fill_text(
+        text: str,
+        repls: Dict[str, str],
+        *,
+        ctx: Optional[LayoutContext] = None,
+        special: Optional[bool] = True,
+        jinja: Optional[bool] = False,
+    ):
         if special and ctx is None:
-            raise ValueError('Context is required for special replacements!')
-        
+            raise ValueError("Context is required for special replacements!")
+
         if jinja:
             try:
                 env = Environment(enable_async=True)
                 template = env.from_string(text)
                 return await template.render_async(repls)
             except TemplateError as e:
-                return f'`jinja error: {e}`'
-
+                return f"`jinja error: {e}`"
 
         def replace_special(match):
-            inside = match.group(1) 
+            inside = match.group(1)
             if inside in SPECIAL_REPLS:
                 return str(SPECIAL_REPLS[inside](ctx))
-            return f'{{{inside}}}' 
-        
+            return f"{{{inside}}}"
+
         def replace_single(match):
             inside = match.group(1)
             if inside in repls and not isinstance(repls[inside], list):
                 return str(repls[inside])
-            return f'{{{inside}}}' 
+            return f"{{{inside}}}"
 
         if special:
-            text = re.sub(r'{(.*?)}', replace_special, text) 
-        text = re.sub(r'{(.*?)}', replace_single, text) 
-        
+            text = re.sub(r"{(.*?)}", replace_special, text)
+        text = re.sub(r"{(.*?)}", replace_single, text)
+
         # def replace_repeating(match):
         #     # example syntax: hi my name is {name}. i like [playing {sports} with {friend} |and|].
         #     # sports is a list and friend is a string.
@@ -117,7 +123,7 @@ class Layout:
         #     delimiter = re.sub(r'(enter|return|newline|\\n)', '\n', delimiter, re.IGNORECASE)
         #     keys = re.findall(r'{(.*?)}', inside)
 
-        #     n = None    
+        #     n = None
         #     for key in keys:
         #         value = repls.get(key)
         #         if value is None:
@@ -136,33 +142,52 @@ class Layout:
         #             ith_repls[key] = value[i]
 
         #         blocks.append(await Layout.fill_text(inside, ith_repls, ctx=ctx, special=special))
-            
+
         #     return delimiter.join(blocks)
 
         # text = re.sub(r'\[(.*?)\s?\|((?:[^|\\]|\\.)*)\|\s?\]', replace_repeating, text, flags=re.DOTALL)
         return text
 
     @staticmethod
-    async def fill_embed(_embed: discord.Embed,
-                        repls: Dict[str, str],
-                        *,
-                        ctx: Optional[LayoutContext] = None,
-                        special: Optional[bool] = True,
-                        jinja: Optional[bool] = False,
-                        ):
+    async def fill_embed(
+        _embed: discord.Embed,
+        repls: Dict[str, str],
+        *,
+        ctx: Optional[LayoutContext] = None,
+        special: Optional[bool] = True,
+        jinja: Optional[bool] = False,
+    ):
         embed = _embed.copy()
         for field in embed.fields:
-            field.name = await Layout.fill_text(field.name, repls, ctx=ctx, special=special, jinja=jinja)
-            field.value = await Layout.fill_text(field.value, repls, ctx=ctx, special=special, jinja=jinja)
+            field.name = await Layout.fill_text(
+                field.name, repls, ctx=ctx, special=special, jinja=jinja
+            )
+            field.value = await Layout.fill_text(
+                field.value, repls, ctx=ctx, special=special, jinja=jinja
+            )
 
-        if embed.title: embed.title = await Layout.fill_text(embed.title, repls, ctx=ctx, special=special, jinja=jinja)
-        if embed.footer: embed.set_footer(text=await Layout.fill_text(embed.footer.text, repls, ctx=ctx, special=special, jinja=jinja))
-        if embed.author: embed.author.name = await Layout.fill_text(embed.author.name, repls, ctx=ctx, special=special, jinja=jinja)
-        if embed.description: embed.description = await Layout.fill_text(embed.description, repls, ctx=ctx, special=special, jinja=jinja)
+        if embed.title:
+            embed.title = await Layout.fill_text(
+                embed.title, repls, ctx=ctx, special=special, jinja=jinja
+            )
+        if embed.footer:
+            embed.set_footer(
+                text=await Layout.fill_text(
+                    embed.footer.text, repls, ctx=ctx, special=special, jinja=jinja
+                )
+            )
+        if embed.author:
+            embed.author.name = await Layout.fill_text(
+                embed.author.name, repls, ctx=ctx, special=special, jinja=jinja
+            )
+        if embed.description:
+            embed.description = await Layout.fill_text(
+                embed.description, repls, ctx=ctx, special=special, jinja=jinja
+            )
 
         return embed
 
-    @property 
+    @property
     def embeds(self):
         embeds = []
         for name in self.embed_names:
@@ -171,34 +196,29 @@ class Layout:
 
     def to_dict(self):
         if self.name is None:
-            return {
-                'name': None,
-                'content': self.content,
-                'embeds': self.embed_names
-            }
+            return {"name": None, "content": self.content, "embeds": self.embed_names}
         else:
             return {
-                'name': self.name,
+                "name": self.name,
             }
 
     def to_json(self, *, indent=4):
         return json.dumps(self.to_dict(), indent=indent)
-    
-    async def send(self, 
-                   msgble: Union[discord.abc.Messageable, discord.Interaction],
-                   ctx: Optional[Union[commands.Context, LayoutContext]] = None,
-                   *,
-                   repls: Optional[dict] = None,
-                   special: Optional[bool] = True,
-                   jinja: Optional[bool] = False,
-                   **kwargs,
-                   ) -> Optional[discord.Message]:
+
+    async def send(
+        self,
+        msgble: Union[discord.abc.Messageable, discord.Interaction],
+        ctx: Optional[Union[commands.Context, LayoutContext]] = None,
+        *,
+        repls: Optional[dict] = None,
+        special: Optional[bool] = True,
+        jinja: Optional[bool] = False,
+        **kwargs,
+    ) -> Optional[discord.Message]:
         if isinstance(msgble, discord.Message):
             if ctx is None:
-                ctx = LayoutContext(
-                    message=msgble
-                )
-            if 'reply' in kwargs and kwargs['reply']:
+                ctx = LayoutContext(message=msgble)
+            if "reply" in kwargs and kwargs["reply"]:
                 send_func = msgble.reply
             else:
                 send_func = msgble.channel.send
@@ -225,30 +245,34 @@ class Layout:
                 send_func = msgble.response.send_message
         else:
             if ctx is None:
-                ctx = LayoutContext(
-                    channel=msgble
-                )
+                ctx = LayoutContext(channel=msgble)
             send_func = msgble.send
 
         if repls is None:
-            repls = {} 
+            repls = {}
 
         if self.content:
-            content = await self.fill_text(self.content, repls, ctx=ctx, special=special, jinja=jinja)
+            content = await self.fill_text(
+                self.content, repls, ctx=ctx, special=special, jinja=jinja
+            )
         else:
-            content = None 
-        
+            content = None
+
         embeds = []
         for embed in self.embeds:
-            embeds.append(await self.fill_embed(embed, repls, ctx=ctx, special=special, jinja=jinja))
+            embeds.append(
+                await self.fill_embed(
+                    embed, repls, ctx=ctx, special=special, jinja=jinja
+                )
+            )
 
         cleaned_kwargs = {}
 
         if not isinstance(msgble, discord.Interaction):
             keys = ["mention_author", "delete_after"]
-                
+
             # cleaned_kwargs = {
-            #     'mention_author': kwargs.get('mention_author', False), 
+            #     'mention_author': kwargs.get('mention_author', False),
             #     'delete_after': kwargs.get('delete_after', None)
             # }
         else:
@@ -263,23 +287,21 @@ class Layout:
         try:
             return await send_func(content=content, embeds=embeds, **cleaned_kwargs)
         except discord.Forbidden:
-            pass 
-        
-    async def edit(self,
-                   editable: Union[discord.Message, discord.Interaction],
-                   ctx: Optional[Union[commands.Context, LayoutContext]] = None,
-                   *,
-                   repls: Optional[dict] = None,
-                   special: Optional[bool] = True,
-                   jinja: Optional[bool] = False,
-                   **kwargs
-                   ):
+            pass
 
+    async def edit(
+        self,
+        editable: Union[discord.Message, discord.Interaction],
+        ctx: Optional[Union[commands.Context, LayoutContext]] = None,
+        *,
+        repls: Optional[dict] = None,
+        special: Optional[bool] = True,
+        jinja: Optional[bool] = False,
+        **kwargs,
+    ):
         if isinstance(editable, discord.Message):
             if ctx is None:
-                ctx = LayoutContext(
-                    message=editable
-                )
+                ctx = LayoutContext(message=editable)
             edit_func = editable.edit
         elif isinstance(editable, discord.Interaction):
             if ctx is None:
@@ -289,23 +311,28 @@ class Layout:
                 )
             edit_func = editable.response.edit_message
         else:
-            raise ValueError('Editable must be a message or interaction.')
+            raise ValueError("Editable must be a message or interaction.")
 
         if repls is None:
-            repls = {} 
+            repls = {}
 
         if self.content:
-            content = await self.fill_text(self.content, repls, ctx=ctx, special=special, jinja=jinja)
+            content = await self.fill_text(
+                self.content, repls, ctx=ctx, special=special, jinja=jinja
+            )
         else:
-            content = None 
-        
+            content = None
+
         embeds = []
         for embed in self.embeds:
-            embeds.append(await self.fill_embed(embed, repls, ctx=ctx, special=special, jinja=jinja))
+            embeds.append(
+                await self.fill_embed(
+                    embed, repls, ctx=ctx, special=special, jinja=jinja
+                )
+            )
 
         cleaned_kwargs = {}
-        if 'view' in kwargs:
-            cleaned_kwargs['view'] = kwargs['view']
+        if "view" in kwargs:
+            cleaned_kwargs["view"] = kwargs["view"]
 
         return await edit_func(content=content, embeds=embeds, **cleaned_kwargs)
-
