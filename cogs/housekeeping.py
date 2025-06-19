@@ -1,38 +1,33 @@
-import asyncio 
+import asyncio
 import re
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
-from discord.ext import commands, tasks
 import discord
+from discord.ext import commands, tasks
 
 from .utils import LayoutContext
 from .utils.checks import admin_only
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bot import LunaBot
 
 import json
 
-
 VC_IDS = {
     # main server
     899108709450543115: 1041061422706204802,
     # 1068342105006673972: 1068342105006673977,
-
     # guild server 1
-    1314357693384888451: 1370519328608485417,   
-
+    1314357693384888451: 1370519328608485417,
     # emote hub
     1004878848262934538: 1004881486991851570,
-
-    # guild hub 
+    # guild hub
     1041468894487003176: 1041472654537932911,
-
     # guild server 2
-    1140171950552002612: 1373443007260524635
+    1140171950552002612: 1373443007260524635,
 }
+
 
 # haha funny
 class Housekeeping(commands.Cog):
@@ -48,6 +43,8 @@ class Housekeeping(commands.Cog):
 
         self.kick_progress = 0
         self.role_progress = 0
+
+        self.role_lock = True
 
     async def cog_load(self):
         self.edit.start()
@@ -71,17 +68,24 @@ class Housekeeping(commands.Cog):
         #         except discord.Forbidden:
         #             print(f'failed to edit member count in {guild.name}')
         #         await asyncio.sleep(3)
-    
+
     @edit.before_loop
     async def before_edit(self):
         await asyncio.sleep(600)
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
-        if msg.channel.id == self.bot.vars.get("welc-channel-id") and 'welc' in msg.content.lower():
+        if (
+            msg.channel.id == self.bot.vars.get("welc-channel-id")
+            and "welc" in msg.content.lower()
+        ):
             # remove emojis and links
 
-            cleaned = re.sub(r'(<a?:\w+:\d+>)|(https:\/\/(?:media\.)?tenor\.com\/\S+)', '', msg.content)
+            cleaned = re.sub(
+                r"(<a?:\w+:\d+>)|(https:\/\/(?:media\.)?tenor\.com\/\S+)",
+                "",
+                msg.content,
+            )
             if len(cleaned) > 20:
                 return
 
@@ -89,7 +93,7 @@ class Housekeeping(commands.Cog):
             bot_message_id = await self.bot.db.fetchval(query)
 
             if bot_message_id is None:
-                return 
+                return
 
             query = "INSERT INTO user_welc_messages (message_id, bot_message_id, channel_id) VALUES ($1, $2, $3)"
             await self.bot.db.execute(query, msg.id, bot_message_id, msg.channel.id)
@@ -98,26 +102,30 @@ class Housekeeping(commands.Cog):
 
         # TODO: delete intros when someone leaves
         # elif msg.channel.id == self.bot.vars.get("intros-channel-id") and "my intro" in msg.content.lower():
-            
-                
+
     @commands.Cog.listener()
     async def on_member_join(self, member):
         name = member.display_name
         if len(name) > 28:
             name = name[:28]
         await asyncio.sleep(1)
-        await member.edit(nick=f'✿❀﹕{name}﹕')
+        await member.edit(nick=f"✿❀﹕{name}﹕")
 
         if member.guild.id in self.guild_server_ids:
             # db
             query = "INSERT INTO guild_server_joins (guild_id, user_id, joined_at) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO NOTHING"
-            await self.bot.db.execute(query, member.guild.id, member.id, member.joined_at or discord.utils.utcnow())
+            await self.bot.db.execute(
+                query,
+                member.guild.id,
+                member.id,
+                member.joined_at or discord.utils.utcnow(),
+            )
 
         elif member.guild.id == self.bot.vars.get("main-server-id"):
             # welc
-            layout = self.bot.get_layout('welc')
+            layout = self.bot.get_layout("welc")
             ctx = LayoutContext(author=member)
-            channel = self.bot.get_var_channel('welc')
+            channel = self.bot.get_var_channel("welc")
             bot_msg = await layout.send(channel, ctx)
 
             query = """INSERT INTO
@@ -126,7 +134,7 @@ class Housekeeping(commands.Cog):
                          ($1, $2, $3)
                     """
             await self.bot.db.execute(query, member.id, bot_msg.channel.id, bot_msg.id)
-    
+
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         query = """SELECT * FROM welc_messages WHERE user_id = $1"""
@@ -152,22 +160,26 @@ class Housekeeping(commands.Cog):
 
             for urow in urows:
                 msg = await channel.fetch_message(urow["message_id"])
-                if (discord.utils.utcnow() - msg.created_at).total_seconds() > 7 * 86400:
+                if (
+                    discord.utils.utcnow() - msg.created_at
+                ).total_seconds() > 7 * 86400:
                     await msg.delete()
                     # print(f"Deleted welc message by {msg.author.name}")
                 else:
                     bulk_delete.append(msg)
-            
+
             if bulk_delete:
-                await channel.delete_messages(bulk_delete, reason="welcomed a user who left")
+                await channel.delete_messages(
+                    bulk_delete, reason="welcomed a user who left"
+                )
                 await self.bot.get_var_channel("action-log").send(
                     f"Bulk deleted {len(bulk_delete)} welc messages"
                 )
 
                 # for msg in bulk_delete:
-                    # print(f"Deleted welc message from {msg.author.name} ({msg.jump_url})")
-            
-            query = "DELETE FROM user_welc_messages WHERE bot_message_id = $1" 
+                # print(f"Deleted welc message from {msg.author.name} ({msg.jump_url})")
+
+            query = "DELETE FROM user_welc_messages WHERE bot_message_id = $1"
             await self.bot.db.execute(query, row["message_id"])
 
         query = """DELETE
@@ -178,6 +190,31 @@ class Housekeeping(commands.Cog):
                 """
         await self.bot.db.execute(query, member.id)
 
+    @commands.command()
+    async def mod(self, ctx, *, user: discord.Member):
+        # hardcoded ids
+        if ctx.author.id != 426110953021505549:
+            return await ctx.send("you are not miku")
+
+        role = ctx.guild.get_role(899119780701810718)
+        self.role_lock = False
+        await user.add_roles(role)
+        await ctx.send("Done!")
+        await asyncio.sleep(1)
+        self.role_lock = True
+
+    @commands.command()
+    async def admin(self, ctx, *, user: discord.Member):
+        # hardcoded ids
+        if ctx.author.id not in (496225545529327616, 675058943596298340):
+            return await ctx.send("you are not luna or molly")
+
+        role = ctx.guild.get_role(899119768567689237)
+        self.role_lock = False
+        await user.add_roles(role)
+        await ctx.send("Done!")
+        await asyncio.sleep(1)
+        self.role_lock = True
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
@@ -186,30 +223,45 @@ class Housekeeping(commands.Cog):
             await self.bot.schedule_future_task(
                 "kick_sus_member",
                 discord.utils.utcnow() + timedelta(days=1),
-                user_id=after.id
+                user_id=after.id,
             )
 
-            await self.bot.get_var_channel("action-log").send(f"Suspicious user scheduled for kicking: {after.mention}") 
-    
+            await self.bot.get_var_channel("action-log").send(
+                f"Suspicious user scheduled for kicking: {after.mention}"
+            )
+
+        before_role_ids = set(r.id for r in before.roles)
+        for role in after.roles:
+            if role.id not in before_role_ids:
+                if (
+                    role.permissions.administrator or role.permissions.manage_messages
+                ) and self.role_lock:
+                    await after.remove_roles(role)
+                    await self.bot.get_var_channel("mod").send(
+                        f"Removed `{role.name}` from {after.mention} ({after.id}) because it was not added using `!mod` or `!admin`."
+                    )
+
     @commands.Cog.listener()
     async def on_member_leave(self, member):
         channel = self.bot.get_var_channel("promo")
         if channel is None:
-            return 
+            return
 
-        to_delete = [] 
+        to_delete = []
         async for msg in channel.history(limit=100):
             if (discord.utils.utcnow() - msg.created_at).total_seconds() > 86400 * 14:
                 break
             if msg.author == member:
                 to_delete.append(msg)
-        
+
         await channel.delete_messages(to_delete)
-        await self.bot.get_var_channel("action-log").send(f"Deleted {len(to_delete)} promo messages by {member.name} ({member.id})")
+        await self.bot.get_var_channel("action-log").send(
+            f"Deleted {len(to_delete)} promo messages by {member.name} ({member.id})"
+        )
 
     # Guild stuff
 
-    @commands.command(aliases=['ugsj'])
+    @commands.command(aliases=["ugsj"])
     @commands.is_owner()
     async def updateguildserverjoins(self, ctx):
         if ctx.guild.id not in self.guild_server_ids:
@@ -217,8 +269,13 @@ class Housekeeping(commands.Cog):
 
         for member in ctx.guild.members:
             query = "INSERT INTO guild_server_joins (guild_id, user_id, joined_at) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO NOTHING"
-            await self.bot.db.execute(query, ctx.guild.id, member.id, member.joined_at or discord.utils.utcnow())
-        
+            await self.bot.db.execute(
+                query,
+                ctx.guild.id,
+                member.id,
+                member.joined_at or discord.utils.utcnow(),
+            )
+
         await ctx.send("Done!")
 
     @commands.command()
@@ -232,24 +289,33 @@ class Housekeeping(commands.Cog):
 
         main_server = self.bot.get_guild(self.bot.vars.get("main-server-id"))
         if main_server is None:
-            return await ctx.send("main-server-id not set, or one of them is not visible")
-        
+            return await ctx.send(
+                "main-server-id not set, or one of them is not visible"
+            )
+
         seven_days_ago = discord.utils.utcnow() - timedelta(days=7)
         id_set = set(m.id for m in main_server.members)
-        whitelist = [int(id) for id in str(self.bot.vars.get("guild-kick-whitelisted-ids")).split(',')]
+        whitelist = [
+            int(id)
+            for id in str(self.bot.vars.get("guild-kick-whitelisted-ids")).split(",")
+        ]
 
         # layout = self.bot.get_layout("kicked-from-guild-server")
         to_kick = []
-        to_not_kick = [m for m in ctx.guild.members] 
+        to_not_kick = [m for m in ctx.guild.members]
 
         for member in ctx.guild.members:
-            if member.bot or \
-            member.id in id_set or \
-            member in ctx.guild.premium_subscribers or \
-            member.id in whitelist:
+            if (
+                member.bot
+                or member.id in id_set
+                or member in ctx.guild.premium_subscribers
+                or member.id in whitelist
+            ):
                 continue
 
-            query = "SELECT 1 FROM guild_server_joins WHERE user_id = $1 AND joined_at < $2"
+            query = (
+                "SELECT 1 FROM guild_server_joins WHERE user_id = $1 AND joined_at < $2"
+            )
             val = await self.bot.db.fetchval(query, member.id, seven_days_ago)
             # query = "SELECT 1 FROM guild_server_joins WHERE user_id = $1"
             # val = await self.bot.db.fetchval(query, member.id)
@@ -257,22 +323,28 @@ class Housekeeping(commands.Cog):
                 to_kick.append(member)
                 to_not_kick.remove(member)
 
-        temp = await ctx.send(f"**CHOOSE YOUR ACTION FOR {len(to_kick)} MEMBERS:** `role`, `kick`, `cancel`") 
+        temp = await ctx.send(
+            f"**CHOOSE YOUR ACTION FOR {len(to_kick)} MEMBERS:** `role`, `kick`, `cancel`"
+        )
 
         try:
             user_msg = await self.bot.wait_for(
                 "message",
                 check=lambda m: m.channel == ctx.channel and m.author == ctx.author,
-                timeout=300
+                timeout=300,
             )
         except asyncio.TimeoutError:
             await temp.delete()
-            return 
+            return
 
-        if user_msg.content.lower() == 'role':
-            await temp.edit(content=f"Roleing {len(to_kick)} members. Do `!guildroleprogress` or `!grp` to see progress.")
+        if user_msg.content.lower() == "role":
+            await temp.edit(
+                content=f"Roleing {len(to_kick)} members. Do `!guildroleprogress` or `!grp` to see progress."
+            )
 
-            role = ctx.guild.get_role(self.guild_data[str(ctx.guild.id)]["kick-warning-role-id"])
+            role = ctx.guild.get_role(
+                self.guild_data[str(ctx.guild.id)]["kick-warning-role-id"]
+            )
 
             try:
                 for member in to_kick:
@@ -290,11 +362,12 @@ class Housekeeping(commands.Cog):
                 if role in member.roles:
                     await member.remove_roles(role)
 
-            await ctx.send(f"Finished roleing users in this guild server.")
+            await ctx.send("Finished roleing users in this guild server.")
 
-        
-        elif user_msg.content.lower() == 'kick':
-            await temp.edit(content=f"Kicking {len(to_kick)} members. Do `!guildkickprogress` or `!gkp` to see progress.")
+        elif user_msg.content.lower() == "kick":
+            await temp.edit(
+                content=f"Kicking {len(to_kick)} members. Do `!guildkickprogress` or `!gkp` to see progress."
+            )
 
             try:
                 for member in to_kick:
@@ -305,11 +378,11 @@ class Housekeeping(commands.Cog):
                 return await ctx.send("Kicking failed")
 
             self.kick_progress = 0
-            await ctx.send(f"Finished kicking users from guild server.")
+            await ctx.send("Finished kicking users from guild server.")
         else:
             await temp.edit(content="Cancelled.")
-    
-    @commands.command(aliases=['gkp'])
+
+    @commands.command(aliases=["gkp"])
     @admin_only()
     async def guildkickprogress(self, ctx):
         if self.kick_progress == 0:
@@ -317,7 +390,7 @@ class Housekeeping(commands.Cog):
 
         await ctx.send(self.kick_progress)
 
-    @commands.command(aliases=['grp'])
+    @commands.command(aliases=["grp"])
     @admin_only()
     async def guildroleprogress(self, ctx):
         if self.role_progress == 0:
@@ -332,7 +405,7 @@ class Housekeeping(commands.Cog):
     # @kick_task.before_loop
     # async def before_kick_task(self):
     #     await discord.utils.sleep_until(next_day())
-        
+
 
 async def setup(bot):
     await bot.add_cog(Housekeeping(bot))
