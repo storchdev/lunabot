@@ -5,7 +5,7 @@ main.sqlite
 !schema.sql
 config.py
 embed_editor/
-.vscode/
 __pycache__/
 start.sh
 .venv/
+guild_data.json
