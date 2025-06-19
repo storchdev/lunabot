@@ -1,10 +1,8 @@
-from datetime import datetime, timedelta 
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-__all__ = (
-    'next_sunday',
-    'next_day'
-)
+__all__ = ("next_sunday", "next_day")
+
 
 def next_sunday(tz=None):
     if tz is None:
@@ -15,7 +13,9 @@ def next_sunday(tz=None):
     if days_until_sunday == 0:  # If today is Sunday, go to next Sunday
         days_until_sunday = 7
     next_sunday = now + timedelta(days=days_until_sunday)
-    next_sunday_midnight = next_sunday.replace(hour=0, minute=0, second=0, microsecond=0)
+    next_sunday_midnight = next_sunday.replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
     return next_sunday_midnight
 
 

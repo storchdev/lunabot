@@ -1,28 +1,25 @@
+import asyncio
 from datetime import datetime, timedelta
-import asyncio 
+from typing import TYPE_CHECKING, Dict
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from typing import Dict
-from typing import TYPE_CHECKING
-
-
 if TYPE_CHECKING:
     from bot import LunaBot
 
 
-
 class AFKEntry:
-    def __init__(self,
-                 user_id: int,
-                 message: str,
-                 start_time: datetime,
-                ):
-        self.user_id = user_id 
-        self.message = message 
-        self.start_time = start_time 
+    def __init__(
+        self,
+        user_id: int,
+        message: str,
+        start_time: datetime,
+    ):
+        self.user_id = user_id
+        self.message = message
+        self.start_time = start_time
 
 
 class AFK(commands.Cog):
@@ -32,7 +29,7 @@ class AFK(commands.Cog):
         self.bot: "LunaBot" = bot
         self.afk: Dict[int, AFKEntry] = {}
         self.SET_AFK_DELAY = 15
-    
+
     async def cog_load(self):
         rows = await self.bot.db.fetch("SELECT * FROM afk")
         for row in rows:
@@ -48,10 +45,10 @@ class AFK(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         if not msg.guild:
-            return 
-        
+            return
+
         if msg.author.bot:
-            return 
+            return
 
         for abcuser in msg.mentions:
             if abcuser.id in self.afk:
@@ -61,9 +58,9 @@ class AFK(commands.Cog):
                     repls={
                         "mention": abcuser.mention,
                         "message": self.afk[abcuser.id].message,
-                    }
+                    },
                 )
-        
+
         if msg.author.id in self.afk:
             self.afk.pop(msg.author.id)
 
@@ -75,14 +72,16 @@ class AFK(commands.Cog):
 
             layout = self.bot.get_layout("afk/back")
             await layout.send(msg.channel)
-        
+
     @commands.hybrid_command(name="afk")
     @app_commands.describe(message="the reason that you are afk")
     async def afk(self, ctx, *, message: str):
         """Sets your AFK message that will send whenever someone pings you."""
 
         layout = self.bot.get_layout("afk/success")
-        time_md = discord.utils.format_dt(discord.utils.utcnow() + timedelta(seconds=self.SET_AFK_DELAY), 'R')
+        time_md = discord.utils.format_dt(
+            discord.utils.utcnow() + timedelta(seconds=self.SET_AFK_DELAY), "R"
+        )
 
         temp = await layout.send(
             ctx,
@@ -107,8 +106,6 @@ class AFK(commands.Cog):
                        ($1, $2)
                 """
         await self.bot.db.execute(query, ctx.author.id, message)
-
-
 
 
 async def setup(bot):

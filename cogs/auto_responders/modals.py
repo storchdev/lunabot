@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING
 
-import discord 
-from discord import ui 
-from discord.ext import commands 
+import discord
+from discord import ui
+from discord.ext import commands
 
-from cogs.utils import InvalidModalField, Cooldown
+from cogs.utils import Cooldown, InvalidModalField
+
 from .auto_responder import AutoResponderAction
-
 
 if TYPE_CHECKING:
     from .editor import AutoResponderEditor, SendMessageEditor
@@ -14,15 +14,16 @@ if TYPE_CHECKING:
 
 def to_boolean(argument: str) -> bool:
     lowered = argument.lower()
-    if lowered in ('yes', 'y', 'true', 't', '1', 'on'):
+    if lowered in ("yes", "y", "true", "t", "1", "on"):
         return True
-    elif lowered in ('no', 'n', 'false', 'f', '0', 'off'):
+    elif lowered in ("no", "n", "false", "f", "0", "off"):
         return False
     else:
-        raise InvalidModalField(f'{argument} is not a valid true/false value!')
+        raise InvalidModalField(f"{argument} is not a valid true/false value!")
+
 
 class AutoResponderEditorBaseModal(discord.ui.Modal):
-    def __init__(self, parent_view: 'AutoResponderEditor'):
+    def __init__(self, parent_view: "AutoResponderEditor"):
         self.parent_view = parent_view
         self.update_defaults()
         super().__init__()
@@ -31,12 +32,16 @@ class AutoResponderEditorBaseModal(discord.ui.Modal):
         raise NotImplementedError
 
     def update_defaults(self):
-        return 
+        return
 
-    async def on_error(self, interaction: discord.Interaction, error: Exception, /) -> None:
+    async def on_error(
+        self, interaction: discord.Interaction, error: Exception, /
+    ) -> None:
         if isinstance(error, InvalidModalField):
             # self.parent_view.update_buttons()
-            await interaction.response.edit_message(embed=self.parent_view.embed, view=self.parent_view)
+            await interaction.response.edit_message(
+                embed=self.parent_view.embed, view=self.parent_view
+            )
             await interaction.followup.send(str(error), ephemeral=True)
             return
         await super().on_error(interaction, error)
@@ -44,11 +49,13 @@ class AutoResponderEditorBaseModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction, /) -> None:
         self.update_parent()
         self.parent_view.update()
-        await interaction.response.edit_message(view=self.parent_view, embed=self.parent_view.embed)
+        await interaction.response.edit_message(
+            view=self.parent_view, embed=self.parent_view.embed
+        )
 
 
 class SendMessageEditorBaseModal(discord.ui.Modal):
-    def __init__(self, parent_view: 'SendMessageEditor'):
+    def __init__(self, parent_view: "SendMessageEditor"):
         self.parent_view = parent_view
         self.update_defaults()
         super().__init__()
@@ -57,9 +64,11 @@ class SendMessageEditorBaseModal(discord.ui.Modal):
         raise NotImplementedError
 
     def update_defaults(self):
-        return 
+        return
 
-    async def on_error(self, interaction: discord.Interaction, error: Exception, /) -> None:
+    async def on_error(
+        self, interaction: discord.Interaction, error: Exception, /
+    ) -> None:
         if isinstance(error, InvalidModalField):
             # self.parent_view.update_buttons()
             await interaction.response.edit_message(view=self.parent_view)
@@ -70,71 +79,88 @@ class SendMessageEditorBaseModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction, /) -> None:
         self.update_parent()
         self.parent_view.update()
-        await interaction.response.edit_message(view=self.parent_view, content=self.parent_view.layout.content, embeds=self.parent_view.layout.embeds)
+        await interaction.response.edit_message(
+            view=self.parent_view,
+            content=self.parent_view.layout.content,
+            embeds=self.parent_view.layout.embeds,
+        )
 
 
-class TriggerModal(AutoResponderEditorBaseModal, title='Enter trigger for autoresponder'):
-    trigger = ui.TextInput(label='Trigger', max_length=256, required=True)
+class TriggerModal(
+    AutoResponderEditorBaseModal, title="Enter trigger for autoresponder"
+):
+    trigger = ui.TextInput(label="Trigger", max_length=256, required=True)
 
     def __init__(self, parent_view, trigger, **kwargs):
         super().__init__(parent_view, **kwargs)
         self.trigger.default = trigger
         self.parent_view = parent_view
-    
+
     def update_defaults(self):
         self.trigger.default = self.parent_view.trigger
 
     def update_parent(self) -> None:
         self.parent_view.trigger = self.trigger.value
 
-class CreateLayoutModal(SendMessageEditorBaseModal, title='Enter Message Fields'):
-    content = ui.TextInput(label='Text', required=False, style=discord.TextStyle.long)
-    embed_names = ui.TextInput(label='Embed names (one per line)', required=False, style=discord.TextStyle.long)
 
-    def __init__(self, parent_view: 'SendMessageEditor'):
+class CreateLayoutModal(SendMessageEditorBaseModal, title="Enter Message Fields"):
+    content = ui.TextInput(label="Text", required=False, style=discord.TextStyle.long)
+    embed_names = ui.TextInput(
+        label="Embed names (one per line)", required=False, style=discord.TextStyle.long
+    )
+
+    def __init__(self, parent_view: "SendMessageEditor"):
         super().__init__(parent_view)
         self.parent_view = parent_view
 
     def update_defaults(self):
         self.content.default = self.parent_view.layout.content
-        self.embed_names.default = '\n'.join(self.parent_view.layout.embed_names)
+        self.embed_names.default = "\n".join(self.parent_view.layout.embed_names)
 
     def update_parent(self):
         if self.content.value is None and self.embed_names.value is None:
-            raise InvalidModalField('You must enter text or an embed name!')
+            raise InvalidModalField("You must enter text or an embed name!")
         names = []
-        if self.embed_names.value: 
-            for name in self.embed_names.value.split('\n'):
+        if self.embed_names.value:
+            for name in self.embed_names.value.split("\n"):
                 name = name.lower().strip()
                 if name not in self.parent_view.bot.embeds:
-                    raise InvalidModalField(f'Embed {name} does not exist!')
+                    raise InvalidModalField(f"Embed {name} does not exist!")
                 names.append(name)
         self.parent_view.layout.content = self.content.value
         self.parent_view.layout.embed_names = names
 
-class ChooseLayoutModal(SendMessageEditorBaseModal, title='Enter Layout'):
-    layout_name = ui.TextInput(label='Layout name', required=True)
 
-    def __init__(self, parent_view: 'SendMessageEditor'):
+class ChooseLayoutModal(SendMessageEditorBaseModal, title="Enter Layout"):
+    layout_name = ui.TextInput(label="Layout name", required=True)
+
+    def __init__(self, parent_view: "SendMessageEditor"):
         super().__init__(parent_view)
-        self.parent_view = parent_view 
+        self.parent_view = parent_view
 
     def update_parent(self):
         name = self.layout_name.value.lower().strip()
         if name not in self.parent_view.bot.layouts:
-            raise InvalidModalField(f'Layout {name} does not exist!')
-        
+            raise InvalidModalField(f"Layout {name} does not exist!")
+
         self.parent_view.layout = self.parent_view.bot.layouts[name]
 
-class DeleteAfterModal(SendMessageEditorBaseModal, title='Enter Delete After'):
-    delete_after = ui.TextInput(label='Delete after (in seconds, optional)', required=False)
 
-    def __init__(self, parent_view: 'SendMessageEditor'):
+class DeleteAfterModal(SendMessageEditorBaseModal, title="Enter Delete After"):
+    delete_after = ui.TextInput(
+        label="Delete after (in seconds, optional)", required=False
+    )
+
+    def __init__(self, parent_view: "SendMessageEditor"):
         super().__init__(parent_view)
         self.parent_view = parent_view
 
     def update_defaults(self):
-        self.delete_after.default = str(self.parent_view.delete_after) if self.parent_view.delete_after is not None else None 
+        self.delete_after.default = (
+            str(self.parent_view.delete_after)
+            if self.parent_view.delete_after is not None
+            else None
+        )
 
     def update_parent(self):
         if self.delete_after.value is None:
@@ -144,13 +170,13 @@ class DeleteAfterModal(SendMessageEditorBaseModal, title='Enter Delete After'):
         try:
             self.parent_view.delete_after = int(self.delete_after.value)
         except ValueError:
-            raise InvalidModalField('Delete after must be a number!')
-        
-        
-class RemoveActionModal(AutoResponderEditorBaseModal, title='Remove Action'):
-    index = ui.TextInput(label='Index of action to remove', required=True)
+            raise InvalidModalField("Delete after must be a number!")
 
-    def __init__(self, parent_view: 'AutoResponderEditor'):
+
+class RemoveActionModal(AutoResponderEditorBaseModal, title="Remove Action"):
+    index = ui.TextInput(label="Index of action to remove", required=True)
+
+    def __init__(self, parent_view: "AutoResponderEditor"):
         super().__init__(parent_view)
         self.parent_view = parent_view
 
@@ -158,18 +184,21 @@ class RemoveActionModal(AutoResponderEditorBaseModal, title='Remove Action'):
         try:
             index = int(self.index.value)
         except ValueError:
-            raise InvalidModalField('Index must be a number!') 
+            raise InvalidModalField("Index must be a number!")
 
-        index -= 1 
+        index -= 1
         if not (0 <= index < len(self.parent_view.actions)):
-            raise InvalidModalField(f'Index must be between 1 and {len(self.parent_view.actions)}!')
+            raise InvalidModalField(
+                f"Index must be between 1 and {len(self.parent_view.actions)}!"
+            )
 
         self.parent_view.actions.pop(index)
-    
-class SleepModal(AutoResponderEditorBaseModal, title='Enter Sleep Duration'):
-    duration = ui.TextInput(label='Duration (in seconds)', required=True)
 
-    def __init__(self, parent_view: 'AutoResponderEditor'):
+
+class SleepModal(AutoResponderEditorBaseModal, title="Enter Sleep Duration"):
+    duration = ui.TextInput(label="Duration (in seconds)", required=True)
+
+    def __init__(self, parent_view: "AutoResponderEditor"):
         super().__init__(parent_view)
         self.parent_view = parent_view
 
@@ -177,18 +206,22 @@ class SleepModal(AutoResponderEditorBaseModal, title='Enter Sleep Duration'):
         try:
             duration = float(self.duration.value)
         except ValueError:
-            raise InvalidModalField('Duration must be a number!')
+            raise InvalidModalField("Duration must be a number!")
 
-        self.parent_view.actions.append(AutoResponderAction(self.parent_view.bot, 'sleep', duration=duration))
+        self.parent_view.actions.append(
+            AutoResponderAction(self.parent_view.bot, "sleep", duration=duration)
+        )
 
 
-class CooldownModal(AutoResponderEditorBaseModal, title='Edit Cooldown'):
-    bucket = ui.TextInput(label='Bucket (g=global, c=channel, u=user)', default='g', required=True)
-    per = ui.TextInput(label='Duration of cooldown', required=True)
-    rate = ui.TextInput(label='Number of uses per duration', default='1', required=True)
-    layout = ui.TextInput(label='Layout to send when on cooldown', required=False)
+class CooldownModal(AutoResponderEditorBaseModal, title="Edit Cooldown"):
+    bucket = ui.TextInput(
+        label="Bucket (g=global, c=channel, u=user)", default="g", required=True
+    )
+    per = ui.TextInput(label="Duration of cooldown", required=True)
+    rate = ui.TextInput(label="Number of uses per duration", default="1", required=True)
+    layout = ui.TextInput(label="Layout to send when on cooldown", required=False)
 
-    def __init__(self, parent_view: 'AutoResponderEditor'):
+    def __init__(self, parent_view: "AutoResponderEditor"):
         super().__init__(parent_view)
         self.parent_view = parent_view
 
@@ -197,38 +230,37 @@ class CooldownModal(AutoResponderEditorBaseModal, title='Edit Cooldown'):
             return
 
         if self.parent_view.cooldown.type is commands.BucketType.default:
-            self.bucket.default = 'g'
+            self.bucket.default = "g"
         elif self.parent_view.cooldown.type == commands.BucketType.channel:
-            self.bucket.default = 'c'
+            self.bucket.default = "c"
         elif self.parent_view.cooldown.type == commands.BucketType.user:
-            self.bucket.default = 'u'
-        
+            self.bucket.default = "u"
+
         self.per.default = str(self.parent_view.cooldown.per)
         self.rate.default = str(self.parent_view.cooldown.rate)
-        
+
         self.layout.default = self.parent_view.on_cooldown_layout_name
 
-    def update_parent(self): 
-        
+    def update_parent(self):
         try:
             per = int(self.per.value)
         except ValueError:
-            raise InvalidModalField('Duration must be a number!')
-        
+            raise InvalidModalField("Duration must be a number!")
+
         try:
             rate = int(self.rate.value)
         except ValueError:
-            raise InvalidModalField('Rate must be a number!')
+            raise InvalidModalField("Rate must be a number!")
 
-        v = self.bucket.value.lower()  
-        if v == 'g':
-            bucket = 'global'
-        elif v == 'c':
-            bucket = 'channel'
-        elif v == 'u':
-            bucket = 'user'
+        v = self.bucket.value.lower()
+        if v == "g":
+            bucket = "global"
+        elif v == "c":
+            bucket = "channel"
+        elif v == "u":
+            bucket = "user"
         else:
-            raise InvalidModalField('Bucket must be g, c, or u!')
+            raise InvalidModalField("Bucket must be g, c, or u!")
 
         self.parent_view.cooldown = Cooldown(rate, per, bucket)
 

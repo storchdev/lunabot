@@ -1,13 +1,15 @@
 from typing import Any, Dict, Optional, Self
 
 import discord
-from discord.ext import menus, commands
+from discord.ext import commands, menus
 from discord.ui import Modal, TextInput
 
 
-class SkipToModal(Modal, title='Skip to page...'):
+class SkipToModal(Modal, title="Skip to page..."):
     page = TextInput[Self](
-        label='Which page do you want to skip to?', max_length=10, placeholder='This prompt times out in 20 seconds...'
+        label="Which page do you want to skip to?",
+        max_length=10,
+        placeholder="This prompt times out in 20 seconds...",
     )
 
     def __init__(self, **kwargs: Any):
@@ -79,7 +81,9 @@ class ViewMenuPages(discord.ui.View):
         else:
             return {}
 
-    async def show_page(self, interaction: discord.Interaction, page_number: int) -> None:
+    async def show_page(
+        self, interaction: discord.Interaction, page_number: int
+    ) -> None:
         page: Any = await self.source.get_page(page_number)
         self.current_page = page_number
         kwargs = await self._get_kwargs_from_page(page)
@@ -95,8 +99,12 @@ class ViewMenuPages(discord.ui.View):
         self.go_to_first_page.disabled = page_number == 0
         if self.compact:
             max_pages = self.source.get_max_pages()
-            self.go_to_last_page.disabled = max_pages is None or (page_number + 1) >= max_pages
-            self.go_to_next_page.disabled = max_pages is not None and (page_number + 1) >= max_pages
+            self.go_to_last_page.disabled = (
+                max_pages is None or (page_number + 1) >= max_pages
+            )
+            self.go_to_next_page.disabled = (
+                max_pages is not None and (page_number + 1) >= max_pages
+            )
             self.go_to_previous_page.disabled = page_number == 0
             return
 
@@ -112,12 +120,14 @@ class ViewMenuPages(discord.ui.View):
             self.go_to_last_page.disabled = (page_number + 1) >= max_pages
             if (page_number + 1) >= max_pages:
                 self.go_to_next_page.disabled = True
-                self.go_to_next_page.label = '…'
+                self.go_to_next_page.label = "…"
             if page_number == 0:
                 self.go_to_previous_page.disabled = True
-                self.go_to_previous_page.label = '…'
+                self.go_to_previous_page.label = "…"
 
-    async def show_checked_page(self, interaction: discord.Interaction, page_number: int) -> None:
+    async def show_checked_page(
+        self, interaction: discord.Interaction, page_number: int
+    ) -> None:
         max_pages = self.source.get_max_pages()
         try:
             if max_pages is None:
@@ -130,9 +140,12 @@ class ViewMenuPages(discord.ui.View):
             pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user and interaction.user.id in (self.ctx.bot.owner_id, self.ctx.author.id):
+        if interaction.user and interaction.user.id in (
+            self.ctx.bot.owner_id,
+            self.ctx.author.id,
+        ):
             return True
-        # defer 
+        # defer
         await interaction.response.defer()
         return False
 
@@ -155,12 +168,15 @@ class ViewMenuPages(discord.ui.View):
     #         await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
 
     async def start(self, edit_interaction: bool = False) -> None:
-        if self.check_embeds and not self.ctx.channel.permissions_for(self.ctx.guild.me).embed_links:  # type: ignore
+        if (
+            self.check_embeds
+            and not self.ctx.channel.permissions_for(self.ctx.guild.me).embed_links
+        ):  # type: ignore
             if isinstance(self.ctx, commands.Context):
-                await self.ctx.send('I need the `Embed Links` permission!')
+                await self.ctx.send("I need the `Embed Links` permission!")
             else:
                 if self.ctx.response.is_done():
-                    await self.ctx.followup.send('I need the `Embed Links` permission!')
+                    await self.ctx.followup.send("I need the `Embed Links` permission!")
             return
 
         await self.source._prepare_once()
@@ -177,33 +193,45 @@ class ViewMenuPages(discord.ui.View):
             self.message = await self.ctx.original_response()
         self.ctx.bot.views.add(self)
 
-    @discord.ui.button(label='≪', style=discord.ButtonStyle.grey)
-    async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
+    @discord.ui.button(label="≪", style=discord.ButtonStyle.grey)
+    async def go_to_first_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Self]
+    ):
         """go to the first page"""
         await self.show_page(interaction, 0)
 
-    @discord.ui.button(label='←', style=discord.ButtonStyle.blurple)
-    async def go_to_previous_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
+    @discord.ui.button(label="←", style=discord.ButtonStyle.blurple)
+    async def go_to_previous_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Self]
+    ):
         """go to the previous page"""
         await self.show_checked_page(interaction, self.current_page - 1)
 
-    @discord.ui.button(label='Current', style=discord.ButtonStyle.grey, disabled=True)
-    async def go_to_current_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="Current", style=discord.ButtonStyle.grey, disabled=True)
+    async def go_to_current_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         pass
 
-    @discord.ui.button(label='→', style=discord.ButtonStyle.blurple)
-    async def go_to_next_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
+    @discord.ui.button(label="→", style=discord.ButtonStyle.blurple)
+    async def go_to_next_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Self]
+    ):
         """go to the next page"""
         await self.show_checked_page(interaction, self.current_page + 1)
 
-    @discord.ui.button(label='≫', style=discord.ButtonStyle.grey)
-    async def go_to_last_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
+    @discord.ui.button(label="≫", style=discord.ButtonStyle.grey)
+    async def go_to_last_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Self]
+    ):
         """go to the last page"""
         # The call here is safe because it's guarded by skip_if
         await self.show_page(interaction, self.source.get_max_pages() - 1)  # type: ignore
 
-    @discord.ui.button(label='Jump to page', style=discord.ButtonStyle.grey)
-    async def numbered_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
+    @discord.ui.button(label="Jump to page", style=discord.ButtonStyle.grey)
+    async def numbered_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Self]
+    ):
         """lets you type a page number to go to"""
         if self.current_modal is not None and not self.current_modal.is_finished():
             self.current_modal.stop()
@@ -213,37 +241,44 @@ class ViewMenuPages(discord.ui.View):
         timed_out = await self.current_modal.wait()
 
         if timed_out:
-            await interaction.followup.send('You took too long.', ephemeral=True)
+            await interaction.followup.send("You took too long.", ephemeral=True)
         elif self.current_modal.interaction is None:
             return
         else:
             try:
                 page = int(self.current_modal.value)  # type: ignore
             except ValueError:
-                await self.current_modal.interaction.response.send_message('Invalid page number.', ephemeral=True)
+                await self.current_modal.interaction.response.send_message(
+                    "Invalid page number.", ephemeral=True
+                )
             else:
                 await self.current_modal.interaction.response.defer()
                 await self.show_checked_page(interaction, page - 1)
 
-    @discord.ui.button(label='Exit', style=discord.ButtonStyle.red)
-    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
+    @discord.ui.button(label="Exit", style=discord.ButtonStyle.red)
+    async def stop_pages(
+        self, interaction: discord.Interaction, button: discord.ui.Button[Self]
+    ):
         """stops the pagination session."""
         await interaction.response.defer()
         await interaction.delete_original_response()
         self.stop()
 
+
 class SimplePageSource(menus.ListPageSource):
     async def format_page(self, menu, entries):
         pages = []
         for index, entry in enumerate(entries, start=menu.current_page * self.per_page):
-            pages.append(f'{index + 1}. {entry}')
+            pages.append(f"{index + 1}. {entry}")
 
         maximum = self.get_max_pages()
         if maximum > 1:
-            footer = f'Page {menu.current_page + 1}/{maximum} ({len(self.entries)} entries)'
+            footer = (
+                f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} entries)"
+            )
             menu.embed.set_footer(text=footer)
 
-        menu.embed.description = '\n'.join(pages)
+        menu.embed.description = "\n".join(pages)
         return menu.embed
 
 
@@ -253,7 +288,9 @@ class SimplePages(ViewMenuPages):
     Basically an embed with some normal formatting.
     """
 
-    def __init__(self, entries, *, ctx, embed: Optional[discord.Embed] = None, per_page: int = 12):
+    def __init__(
+        self, entries, *, ctx, embed: Optional[discord.Embed] = None, per_page: int = 12
+    ):
         super().__init__(SimplePageSource(entries, per_page=per_page), ctx=ctx)
         if embed is None:
             self.embed = discord.Embed(colour=ctx.bot.DEFAULT_EMBED_COLOR)
