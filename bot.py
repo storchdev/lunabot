@@ -11,6 +11,7 @@ from discord.ext import commands
 from cogs.future_tasks import FutureTask
 from cogs.utils import InvalidURL, Layout, View
 from cogs.utils.checks import guild_only
+from config import LOG_FILE
 
 if TYPE_CHECKING:
     from asyncpg import Pool
@@ -39,6 +40,7 @@ class LunaBot(commands.Bot):
         self.future_tasks: Dict[int, FutureTask] = {}
         self.db: Optional[Pool] = None
         self.tickets: Dict[discord.Thread, Ticket] = {}
+        self.log_flags = []
 
     async def start_task(self):
         await self.wait_until_ready()
@@ -48,6 +50,8 @@ class LunaBot(commands.Bot):
         # await self.load_extension('cogs.db')
         # await self.load_extension('db_migration')
         # return
+        self.log("--- START TASK CALLED ---")
+
         self.add_check(guild_only)
         await self.load_extension("jishaku")
         priority = ["cogs.db", "cogs.vars", "cogs.tools"]
@@ -64,6 +68,11 @@ class LunaBot(commands.Bot):
                 continue
             await self.load_extension(cog)
             logging.info(f"Loaded cog {cog}")
+
+        # todo: command to edit these flags
+        log_flags = self.vars.get("log-flags")
+        if log_flags is not None:
+            self.log_flags = json.loads(log_flags)
 
         logging.info("LunaBot is ready")
 
@@ -216,3 +225,20 @@ class LunaBot(commands.Bot):
     async def dm_owner(self, message: str):
         owner = self.get_user(self.owner_id)
         await owner.send(message)
+
+    def log(self, message: str, flag: Optional[str] = None):
+        if flag and flag not in self.log_flags:
+            return
+
+        with open(LOG_FILE, "a") as f:
+            parts = []
+
+            now = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
+            parts.append(f"[{now}]")
+
+            if flag:
+                parts.append(f"[{flag}]")
+
+            parts.append(message)
+
+            f.write(" ".join(parts) + "\n")

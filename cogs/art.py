@@ -1,22 +1,26 @@
 import discord
+import json
 from discord.ext import commands
 
 from cogs.utils import Layout
 
-ART_HOF_CHANNEL_ID = 1191559069627060284
-ART_CHANNEL_IDS = [
-    1191555710291554395,
-    1191555765241131059,
-    1191558039636025485,
-    1191979119173447841,
-]
-THRESHOLD = 3
-ART_HOF_EMOTE = "<a:LC_star_jump_spin:1147776861154316328>"
+# ART_HOF_CHANNEL_ID = 1191559069627060284
+# ART_CHANNEL_IDS = [
+#     1191555710291554395,
+#     1191555765241131059,
+#     1191558039636025485,
+#     1191979119173447841,
+# ]
+# THRESHOLD = 3
+# ART_HOF_EMOTE = "<a:ML_star_jump_spin:1147776861154316328>"
 
 
 class Art(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.art_channel_ids = json.loads(self.bot.vars.get("art-channel-ids"))
+
+        self.bot.log(f"art channel ids: {self.art_channel_ids}", "art")
 
     async def create_embed(self, message, stars):
         embed = self.bot.get_embed("hof")
@@ -41,15 +45,15 @@ class Art(commands.Cog):
     async def on_message(self, msg):
         if msg.author.bot:
             return
-        if msg.channel.id in ART_CHANNEL_IDS:
-            await msg.add_reaction(ART_HOF_EMOTE)
+        if msg.channel.id in self.art_channel_ids:
+            await msg.add_reaction(self.bot.vars.get("art-hof-emote"))
             await msg.add_reaction("<a:ML_sparkles:899826759313293432>")
-            await msg.add_reaction("<a:LC_lilac_heart_NF2U_DNS:1046191564055138365>")
+            await msg.add_reaction("<a:ML_lilac_heart_NF2U_DNS:1046191564055138365>")
             await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
 
         elif msg.channel.id == self.bot.vars.get("fanart-channel-id"):
             emotes = [
-                "<a:LC_lilac_heart_NF2U_DNS:1046191564055138365>",
+                "<a:ML_lilac_heart_NF2U_DNS:1046191564055138365>",
                 "<a:ML_sparkles:899826759313293432>",
                 "<a:ML_kiss:923327145164546108>",
             ]
@@ -59,11 +63,20 @@ class Art(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if payload.channel_id not in ART_CHANNEL_IDS:
+        if payload.user_id == self.bot.user.id:
             return
 
-        if str(payload.emoji) != ART_HOF_EMOTE:
+        self.bot.log("reaction triggered", "art")
+
+        if payload.channel_id not in self.art_channel_ids:
             return
+
+        self.bot.log("passed channel id check", "art")
+
+        if str(payload.emoji) != self.bot.vars.get("art-hof-emote"):
+            return
+
+        self.bot.log("passed emote check", "art")
 
         message = await self.bot.get_channel(payload.channel_id).fetch_message(
             payload.message_id
@@ -88,6 +101,8 @@ class Art(commands.Cog):
             ]
         )
 
+        self.bot.log("row found", "art")
+
         if row is not None:
             hof_channel = self.bot.get_channel(row["hof_channel_id"])
             hof_msg = await hof_channel.fetch_message(row["hof_id"])
@@ -102,11 +117,15 @@ class Art(commands.Cog):
             await self.bot.db.execute(query, stars, payload.message_id)
             return
 
-        if stars < THRESHOLD:
+        threshold = self.bot.vars.get("art-hof-threshold")
+
+        self.bot.log(f"stars={stars}, threshold={threshold}", "art")
+
+        if stars < threshold:
             return
 
         embed = await self.create_embed(message, stars)
-        hof_channel = self.bot.get_channel(ART_HOF_CHANNEL_ID)
+        hof_channel = self.bot.get_var_channel("art-hof")
         hof_msg = await hof_channel.send(embed=embed)
         query = """INSERT INTO
                        art_hof (
@@ -129,12 +148,14 @@ class Art(commands.Cog):
             stars,
         )
 
+        self.bot.log("inserted into db", "art")
+
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
-        if payload.channel_id not in ART_CHANNEL_IDS:
+        if payload.channel_id not in self.art_channel_ids:
             return
 
-        if str(payload.emoji) != ART_HOF_EMOTE:
+        if str(payload.emoji) != self.bot.vars.get("art-hof-emote"):
             return
 
         message = await self.bot.get_channel(payload.channel_id).fetch_message(

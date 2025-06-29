@@ -242,3 +242,11 @@ CREATE TABLE IF NOT EXISTS guild_server_joins(
   joined_at TIMESTAMP WITH TIME ZONE,
   UNIQUE(guild_id, user_id)
 );
+
+CREATE TABLE IF NOT EXISTS exclusive_roles (
+  id SERIAL PRIMARY KEY,
+  guild_id BIGINT,
+  group_name TEXT,
+  role_id BIGINT,
+  UNIQUE(guild_id, group_name)
+);
