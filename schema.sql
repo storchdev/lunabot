@@ -247,6 +247,5 @@ CREATE TABLE IF NOT EXISTS exclusive_roles (
   id SERIAL PRIMARY KEY,
   guild_id BIGINT,
   group_name TEXT,
-  role_id BIGINT,
-  UNIQUE(guild_id, group_name)
+  role_id BIGINT
 );

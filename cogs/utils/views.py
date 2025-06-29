@@ -20,6 +20,7 @@ __all__ = (
     "TagView",
     "LayoutChooserOrEditor",
     "ChannelSelectView",
+    "RoleSelectView",
     "ConfirmView",
 )
 
@@ -494,13 +495,28 @@ class ChooseLayoutModal(BaseModal, title="Enter Layout"):
 
 
 class ChannelSelectView(View):
-    def __init__(self):
-        super().__init__(timeout=300)
+    def __init__(self, *, timeout=300):
+        super().__init__(timeout=timeout)
+        self.final_interaction: discord.Interaction = None
         self.channels = []
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, max_values=25)
     async def channelsel(self, inter, sel):
         self.channels = sel.values
+        self.cancelled = False
+        self.final_interaction = inter
+        self.stop()
+
+
+class RoleSelectView(View):
+    def __init__(self, *, timeout=300):
+        super().__init__(timeout=timeout)
+        self.final_interaction: discord.Interaction = None
+        self.roles = []
+
+    @discord.ui.select(cls=discord.ui.RoleSelect, max_values=25)
+    async def rolesel(self, inter, sel):
+        self.roles = sel.values
         self.cancelled = False
         self.final_interaction = inter
         self.stop()
