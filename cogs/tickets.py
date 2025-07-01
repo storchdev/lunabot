@@ -92,6 +92,10 @@ class TicketTypeMenu(View):
         await msg.edit(content=None, embed=embed)
 
     async def create_ticket(self):
+        self.bot.log(
+            f"create_ticket called by {self.owner} ({self.owner.id})", "ticket"
+        )
+
         ticket = Ticket(self.owner, discord.utils.utcnow())
 
         query = "UPDATE ticket_counter SET num = num + 1 RETURNING num"
@@ -106,8 +110,20 @@ class TicketTypeMenu(View):
             invitable=False,
         )
 
+        self.bot.log(f"thread created with id {ticket_id}", "ticket")
+
         await ticket.thread.send(embed=self.bot.get_embed("ticketinfo"))
-        await ticket.thread.add_user(self.owner)
+
+        try:
+            await ticket.thread.add_user(self.owner)
+            self.bot.log(
+                f"added {self.owner} ({self.owner.id}) to Ticket {ticket_id}", "ticket"
+            )
+        except Exception as e:
+            self.bot.log(
+                f"ERROR: failed to add {self.owner} ({self.owner.id}) to Ticket {ticket_id}. Error: {e}"
+            )
+
         query = """INSERT INTO
                        active_tickets (ticket_id, channel_id, opener_id, timestamp)
                    VALUES
