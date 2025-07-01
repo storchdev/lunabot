@@ -398,6 +398,32 @@ class Tools(commands.Cog, description="storchs tools"):
         view = CleanRoleView(ctx, roles)
         view.message = await ctx.send(embed=view.get_embed(), view=view)
 
+    @commands.command()
+    async def addlf(self, ctx, *, flag: str):
+        if flag in self.bot.log_flags:
+            return await ctx.send("flag already enabled")
+
+        self.bot.log_flags.append(flag)
+        jsonstr = json.dumps(self.bot.log_flags)
+        self.bot.vars["log-flags"] = jsonstr
+        query = "UPDATE vars SET value = $1 WHERE name = $2"
+        await self.bot.db.execute(query, jsonstr, "log-flags")
+
+        await ctx.send(f"Done! Current flags: `{jsonstr}`")
+
+    @commands.command()
+    async def removelf(self, ctx, *, flag: str):
+        if flag not in self.bot.log_flags:
+            return await ctx.send("flag not already enabled")
+
+        self.bot.log_flags.remove(flag)
+        jsonstr = json.dumps(self.bot.log_flags)
+        self.bot.vars["log-flags"] = jsonstr
+        query = "UPDATE vars SET value = $1 WHERE name = $2"
+        await self.bot.db.execute(query, jsonstr, "log-flags")
+
+        await ctx.send(f"Done! Current flags: `{jsonstr}`")
+
 
 async def setup(bot):
     await bot.add_cog(Tools(bot))
