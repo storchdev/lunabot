@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands, tasks
 
-from .utils import LayoutContext
 from .utils.checks import admin_only
 
 if TYPE_CHECKING:
@@ -39,12 +38,14 @@ class Housekeeping(commands.Cog):
         with open("guild_data.json") as f:
             self.guild_data = json.load(f)
 
-        self.guild_server_ids = [int(gid) for gid in self.guild_data if gid != self.bot.vars.get("main-server-id")]
+        self.guild_server_ids = [
+            int(gid)
+            for gid in self.guild_data
+            if gid != self.bot.vars.get("main-server-id")
+        ]
 
         self.kick_progress = 0
         self.role_progress = 0
-
-        self.role_lock = True
 
     async def cog_load(self):
         self.edit.start()
@@ -136,7 +137,7 @@ class Housekeeping(commands.Cog):
         #                  ($1, $2, $3)
         #             """
         #     await self.bot.db.execute(query, member.id, bot_msg.channel.id, bot_msg.id)
-    
+
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         query = """SELECT * FROM welc_messages WHERE user_id = $1"""
@@ -192,32 +193,6 @@ class Housekeeping(commands.Cog):
                 """
         await self.bot.db.execute(query, member.id)
 
-    @commands.command()
-    async def mod(self, ctx, *, user: discord.Member):
-        # hardcoded ids
-        if ctx.author.id != 426110953021505549:
-            return await ctx.send("you are not miku")
-
-        role = ctx.guild.get_role(899119780701810718)
-        self.role_lock = False
-        await user.add_roles(role)
-        await ctx.send("Done!")
-        await asyncio.sleep(1)
-        self.role_lock = True
-
-    @commands.command()
-    async def admin(self, ctx, *, user: discord.Member):
-        # hardcoded ids
-        if ctx.author.id not in (496225545529327616, 675058943596298340):
-            return await ctx.send("you are not luna or molly")
-
-        role = ctx.guild.get_role(899119768567689237)
-        self.role_lock = False
-        await user.add_roles(role)
-        await ctx.send("Done!")
-        await asyncio.sleep(1)
-        self.role_lock = True
-
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         role = after.guild.get_role(self.bot.vars.get("sus-role-id"))
@@ -231,17 +206,6 @@ class Housekeeping(commands.Cog):
             await self.bot.get_var_channel("action-log").send(
                 f"Suspicious user scheduled for kicking: {after.mention}"
             )
-
-        before_role_ids = set(r.id for r in before.roles)
-        for role in after.roles:
-            if role.id not in before_role_ids:
-                if (
-                    role.permissions.administrator or role.permissions.manage_messages
-                ) and self.role_lock:
-                    await after.remove_roles(role)
-                    await self.bot.get_var_channel("mod").send(
-                        f"Removed `{role.name}` from {after.mention} ({after.id}) because it was not added using `!mod` or `!admin`."
-                    )
 
     @commands.Cog.listener()
     async def on_member_leave(self, member):

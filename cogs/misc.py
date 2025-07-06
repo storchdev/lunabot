@@ -1,11 +1,9 @@
-import asyncio
 import json
 import random
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
-from fuzzywuzzy import process
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -73,42 +71,6 @@ class Misc(commands.Cog):
         await ctx.send(
             f"Your question has been sent to the QnA channel! {msg.jump_url}"
         )
-
-    @commands.command()
-    async def userlookup(self, ctx, limit: Optional[int] = 5, *, query: str):
-        search_terms = {}
-
-        # Gather search terms and allow multiple users with the same name
-        for m in ctx.guild.members:
-            terms = [m.display_name, m.global_name, m.name]
-            for term in terms:
-                if term:  # Ensure term is not None
-                    if term in search_terms:
-                        search_terms[term].append(m)
-                    else:
-                        search_terms[term] = [m]
-
-        # Perform fuzzy matching
-        results = await asyncio.to_thread(
-            process.extractBests, query, search_terms.keys(), limit=limit
-        )
-        embed = discord.Embed(title="Best Matches", color=self.bot.DEFAULT_EMBED_COLOR)
-
-        desc = []
-        seen = set()
-        for name, _ in results:
-            for member in search_terms[
-                name
-            ]:  # Append all members with the matching name
-                if member in seen:
-                    continue
-                seen.add(member)
-                desc.append(
-                    f"{member.mention} (`{member.name}` a.k.a. {member.display_name})"
-                )
-
-        embed.description = "\n".join(desc)
-        await ctx.send(embed=embed)
 
     @commands.command()
     async def ratio(self, ctx):
