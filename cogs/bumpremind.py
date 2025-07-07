@@ -77,7 +77,7 @@ def is_angry_available(dt=None):
 
 
 SCHEDULE_CHECKS = [
-    (718475543061987329, is_storch_available),
+    # (718475543061987329, is_storch_available),
     (496225545529327616, is_luna_available),
     # (100963686411169792, is_alex_available),
     (248224130221080577, is_wolfy_available),

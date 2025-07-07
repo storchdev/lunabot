@@ -16,6 +16,7 @@ from typing import Optional
 # from fuzzywuzzy import process
 # Custom rust module
 from fuzzy_rust import extract_bests
+from rapidfuzz import process
 
 
 class Staff(commands.Cog):
@@ -56,15 +57,11 @@ class Staff(commands.Cog):
             query,
             list(search_terms.keys()),
             limit,
-            # process.extractBests,
-            # query,
-            # search_terms.keys(),
-            # limit=limit,
         )
 
         # slow python-based
         # results = await asyncio.to_thread(
-        #     process.extractBests,
+        #     process.extract,
         #     query,
         #     search_terms.keys(),
         #     limit=limit,
@@ -75,7 +72,8 @@ class Staff(commands.Cog):
 
         desc = []
         seen = set()
-        for name, _ in results:
+        for x in results:
+            name = x[0]
             for member in search_terms[
                 name
             ]:  # Append all members with the matching name
