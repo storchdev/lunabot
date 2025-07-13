@@ -3,7 +3,7 @@ import json
 
 from discord import app_commands
 from discord.ext import commands
-from fuzzywuzzy import process
+from rapidfuzz import process
 
 from cogs.utils.paginators import SimplePages
 

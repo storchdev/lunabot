@@ -13,10 +13,8 @@ if TYPE_CHECKING:
 import time
 from typing import Optional
 
-# from fuzzywuzzy import process
 # Custom rust module
 from fuzzy_rust import extract_bests
-from rapidfuzz import process
 
 
 class Staff(commands.Cog):

@@ -1,5 +1,5 @@
 from discord.ext import commands
-from fuzzywuzzy import process
+from rapidfuzz import process
 
 
 class Vars(commands.Cog):

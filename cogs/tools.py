@@ -12,7 +12,7 @@ import discord
 from discord import ui
 from discord.ext import commands
 from discord.utils import escape_markdown
-from fuzzywuzzy import fuzz
+from rapidfuzz import fuzz
 
 from .utils import ConfirmView, EmbedEditor, View
 

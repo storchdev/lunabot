@@ -54,24 +54,6 @@ class Prune(commands.Cog):
             )
         )
 
-    def prune_dispatcher(self, members: List[discord.Member]) -> asyncio.Task:
-        if self.prune_progress != 0:
-            raise PruneHappening()
-
-        async def prune():
-            self.total_pruned = len(members)
-            for member in members:
-                try:
-                    await member.kick(reason="prune")
-                except discord.Forbidden:
-                    pass
-                self.prune_progress += 1
-
-            self.prune_progress = 0
-
-        self.prune_task = self.bot.loop.create_task(prune())
-        return self.prune_task
-
     def to_prune_from_n(self, guild: discord.Guild, n: int) -> List[discord.Member]:
         # only works for main server now
         verify_role = guild.get_role(self.bot.vars.get("verified-role-id"))
@@ -90,6 +72,26 @@ class Prune(commands.Cog):
                 key=lambda m: m.joined_at,
             )
         )[:n]
+
+    def prune_dispatcher(self, members: List[discord.Member]) -> asyncio.Task:
+        if self.prune_progress != 0:
+            raise PruneHappening()
+
+        async def prune():
+            self.total_pruned = len(members)
+            for member in members:
+                if member.status is not discord.Status.offline:
+                    continue
+                try:
+                    await member.kick(reason="prune")
+                except discord.Forbidden:
+                    pass
+                self.prune_progress += 1
+
+            self.prune_progress = 0
+
+        self.prune_task = self.bot.loop.create_task(prune())
+        return self.prune_task
 
     async def cog_check(self, ctx):
         return (

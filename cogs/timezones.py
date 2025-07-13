@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 import discord
 from discord import app_commands
 from discord.ext import commands
-from fuzzywuzzy import process
+from rapidfuzz import process
 from lxml import etree
 
 
@@ -93,7 +93,7 @@ class TimezoneCog(commands.Cog):
         """Sets the timezone for the user."""
         user_input = timezone
         all_timezones = list(self._timezone_aliases.keys()) + list(self.valid_timezones)
-        match, score = process.extractOne(user_input, all_timezones)
+        match, score, _ = process.extractOne(user_input, all_timezones)
 
         if score < 80:
             suggestions = process.extract(user_input, all_timezones, limit=5)

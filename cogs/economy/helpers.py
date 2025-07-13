@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, List
 
-from fuzzywuzzy import process
+from rapidfuzz import process
 
 if TYPE_CHECKING:
     from .items import BaseItem
@@ -20,7 +20,7 @@ def search_item(
     results = process.extract(query.lower(), names, limit=len(items))
 
     output = []
-    for name, sim in results:
+    for name, sim, _ in results:
         if item_map[name] in output or sim < threshold:
             continue
         output.append(item_map[name])
