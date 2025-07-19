@@ -381,7 +381,10 @@ class Tools(commands.Cog, description="storchs tools"):
             dt = await asyncio.to_thread(
                 dateparser.parse,
                 date_str,
-                settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+                settings={
+                    "TIMEZONE": "America/Chicago",
+                    "RETURN_AS_TIMEZONE_AWARE": True,
+                },
             )
             if dt is None:
                 await ctx.send("Invalid date string.")

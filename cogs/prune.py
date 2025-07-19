@@ -149,7 +149,10 @@ class Prune(commands.Cog):
         try:
             latest_dt = dateparser.parse(
                 datestr,
-                settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+                settings={
+                    "TIMEZONE": "America/Chicago",
+                    "RETURN_AS_TIMEZONE_AWARE": True,
+                },
             )
         except ValueError:
             return await ctx.send("bad date")

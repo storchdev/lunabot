@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 def get_post_date(days):
-    now = datetime.now(ZoneInfo("US/Central")).replace(
+    now = datetime.now(ZoneInfo("America/Chicago")).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
     dt = now + timedelta(days=days)

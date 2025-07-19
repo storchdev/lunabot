@@ -79,7 +79,7 @@ def plot_data_sync(data, stat=None):
     ax.tick_params(axis="both", colors="cyan")  # Set tick colors to cyan
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(
-        mdates.DateFormatter("%a %-m/%-d\n%-I:%M %p", tz=timezone("US/Central"))
+        mdates.DateFormatter("%a %-m/%-d\n%-I:%M %p", tz=timezone("America/Chicago"))
     )
 
     # Remove axis labels (but keep ticks and numbers)
@@ -275,11 +275,11 @@ class MemberStats(commands.Cog):
         stat = flags.stat
         start = parse(
             flags.start,
-            settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
         )
         end = parse(
             flags.end,
-            settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
         )
 
         if end <= start:
@@ -310,11 +310,11 @@ class MemberStats(commands.Cog):
     async def absstats(self, ctx, *, flags: StatsFlags):
         start = parse(
             flags.start,
-            settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
         )
         end = parse(
             flags.end,
-            settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
         )
 
         if end <= start:

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 def is_luna_available():
     return False
 
-    central = ZoneInfo("US/Central")
+    central = ZoneInfo("America/Chicago")
     now = datetime.now(central)
 
     return 10 <= now.hour <= 22
@@ -184,7 +184,10 @@ class BumpRemind(commands.Cog):
         else:
             parsed_time = parse(
                 time,
-                settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+                settings={
+                    "TIMEZONE": "America/Chicago",
+                    "RETURN_AS_TIMEZONE_AWARE": True,
+                },
             )
             if parsed_time is None:
                 await ctx.send("Invalid time format.")

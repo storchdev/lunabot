@@ -1,24 +1,24 @@
 from itertools import cycle
 from datetime import datetime, timedelta
 from textwrap import dedent
-import time 
-import random 
-import asyncio 
+import time
+import random
+import asyncio
 
-import discord 
-from discord.ext import commands, tasks 
+import discord
+from discord.ext import commands, tasks
 import dateparser
 
 from .graphs import plot_data
 from .trivia import parse_raw
-from .constants import * 
-from .player import Player 
+from .constants import *
+from .player import Player
 from .team import Team
 from .effects import (
     Powerup,
     Multiplier,
     CooldownReducer,
-) 
+)
 from .views import RedeemView, TeamLBView, DailyTasksView
 from cogs.utils import Layout, LayoutContext, View
 
@@ -34,19 +34,22 @@ if TYPE_CHECKING:
 
 
 class TeamStatsFlags(commands.FlagConverter):
-    # team: str = None 
+    # team: str = None
     stat: str
     start: str = None
-    end: str = 'now'
+    end: str = "now"
 
 
 class ActivityEvent(commands.Cog):
-
     def __init__(self, bot):
-        self.bot: "LunaBot" = bot 
+        self.bot: "LunaBot" = bot
         self.teams: Dict[str, Team] = {}
         self.players: Dict[int, Player] = {}
-        self.channel_ids: Dict[int] = {1158930467337293905, 1158931468664446986, GENERAL_ID}
+        self.channel_ids: Dict[int] = {
+            1158930467337293905,
+            1158931468664446986,
+            GENERAL_ID,
+        }
 
         if TEST:
             self.msgs_needed = 3
@@ -54,16 +57,16 @@ class ActivityEvent(commands.Cog):
         else:
             self.msgs_needed = random.randint(5, 10)
 
-        self.msg_counter = 0  
+        self.msg_counter = 0
 
-        self.has_welcomed: Set[int] = set() 
-        
+        self.has_welcomed: Set[int] = set()
+
         self.powerups_1k = {
             "topup": "Receive 15-20 points",
             "steal": "Steal 10-15 points from the other team",
             "double": "Double all incoming points for 30 minutes",
             "triple": "Triple all incoming points for 20 minutes",
-            "reduce_cd": "Reduce the cooldown for messages to 1 minute for 25 minutes"
+            "reduce_cd": "Reduce the cooldown for messages to 1 minute for 25 minutes",
         }
         self.powerup_names = [
             "trivia",
@@ -71,15 +74,15 @@ class ActivityEvent(commands.Cog):
             "reduced_cd",
             "double",
             "triple",
-        ] 
+        ]
         self.non_point_types = [
-            'all_msg',
-            'multi_powerup',
-            'cd_powerup',
-            '1k',
-            'trivia_powerup',
-            'steal_powerup',
-            'topup_powerup'
+            "all_msg",
+            "multi_powerup",
+            "cd_powerup",
+            "1k",
+            "trivia_powerup",
+            "steal_powerup",
+            "topup_powerup",
         ]
 
         self.team_members = {
@@ -92,7 +95,6 @@ class ActivityEvent(commands.Cog):
                 965552455993683978,
                 1119583389893279844,
                 949757993631748119,
-
             ],
             "poinsettia": [
                 496225545529327616,
@@ -103,7 +105,7 @@ class ActivityEvent(commands.Cog):
                 628091002997047298,
                 248224130221080577,
                 1063408231323549696,
-            ] 
+            ],
         }
         self.team_channels = {
             "mistletoe": TEAM_MISTLETOE_CHANNEL_ID,
@@ -118,25 +120,25 @@ class ActivityEvent(commands.Cog):
             "poinsettia": "<:ML_Team_Poinsettia:1302156805639503892>",
         }
         self.nick_dict = {
-            1011106833412403230: 'Val',
-            1061535351031746581: 'Mizuki',
-            1089275337633972306: 'Tea',
-            902448599542157322: 'Kyoka',
-            718475543061987329: 'Storch',
-            965552455993683978: 'Sid',
-            396740993115881492: 'Onyx',
-            675058943596298340: 'Molly',
-            496225545529327616: 'Luna',
-            1081628938394148884: 'Nester',
-            989623504867565588: 'Seabass',
-            628091002997047298: 'Yuriiko',
-            248224130221080577: 'Wolfy',
-            1063408231323549696: 'Ema',
-            949757993631748119: 'Wacky',
-            1119583389893279844: 'Koda',
+            1011106833412403230: "Val",
+            1061535351031746581: "Mizuki",
+            1089275337633972306: "Tea",
+            902448599542157322: "Kyoka",
+            718475543061987329: "Storch",
+            965552455993683978: "Sid",
+            396740993115881492: "Onyx",
+            675058943596298340: "Molly",
+            496225545529327616: "Luna",
+            1081628938394148884: "Nester",
+            989623504867565588: "Seabass",
+            628091002997047298: "Yuriiko",
+            248224130221080577: "Wolfy",
+            1063408231323549696: "Ema",
+            949757993631748119: "Wacky",
+            1119583389893279844: "Koda",
         }
 
-        self.powerup_emoji = '<a:ML_present_gift:1302182895020150804>'
+        self.powerup_emoji = "<a:ML_present_gift:1302182895020150804>"
 
         self.daily_message_task_cds = {}
 
@@ -218,11 +220,10 @@ class ActivityEvent(commands.Cog):
                     """
             for member_id in member_ids:
                 await self.bot.db.execute(query, member_id, team)
-            
+
         # rows = await self.bot.db.fetch("SELECT * FROM event_stats")
 
     async def cog_load(self):
-
         self.guild = self.bot.get_guild(self.bot.GUILD_ID)
 
         await self.create_tables()
@@ -240,7 +241,9 @@ class ActivityEvent(commands.Cog):
                 redeems = await self.bot.db.fetchval(query, team_name)
                 query = """SELECT option FROM saved_powerups WHERE team = $1"""
 
-                saved_powerups = [row['option'] for row in await self.bot.db.fetch(query, team_name)]
+                saved_powerups = [
+                    row["option"] for row in await self.bot.db.fetch(query, team_name)
+                ]
                 self.teams[team_name] = Team(
                     self.bot,
                     team_name,
@@ -248,14 +251,14 @@ class ActivityEvent(commands.Cog):
                     self.bot.get_channel(self.team_channels[team_name]),
                     self.guild.get_role(self.team_roles[team_name]),
                     redeems,
-                    saved_powerups
+                    saved_powerups,
                 )
 
-            for member_id in member_ids: 
+            for member_id in member_ids:
                 member = self.guild.get_member(member_id)
                 if member is None:
-                    continue 
-                
+                    continue
+
                 query = """SELECT
                                name,
                                value,
@@ -271,10 +274,16 @@ class ActivityEvent(commands.Cog):
                 rows = await self.bot.db.fetch(query, member.id, time.time())
                 powerups = []
                 for row in rows:
-                    if row['name'] == 'multi_powerup':
-                        powerups.append(Multiplier(row['value'], row['start_time'], row['end_time']))
-                    elif row['name'] == 'cd_powerup':
-                        powerups.append(CooldownReducer(row['value'], row['start_time'], row['end_time']))
+                    if row["name"] == "multi_powerup":
+                        powerups.append(
+                            Multiplier(row["value"], row["start_time"], row["end_time"])
+                        )
+                    elif row["name"] == "cd_powerup":
+                        powerups.append(
+                            CooldownReducer(
+                                row["value"], row["start_time"], row["end_time"]
+                            )
+                        )
 
                 query = f"""SELECT
                                sum(gain)
@@ -283,8 +292,10 @@ class ActivityEvent(commands.Cog):
                            WHERE
                                type != ALL($2)
                                AND user_id = $1 
-                        """ 
-                points = await self.bot.db.fetchval(query, member.id, self.non_point_types)
+                        """
+                points = await self.bot.db.fetchval(
+                    query, member.id, self.non_point_types
+                )
                 if points is None:
                     points = 0
 
@@ -295,14 +306,22 @@ class ActivityEvent(commands.Cog):
                            WHERE
                                type = $1 
                                AND user_id = $2
-                        """ 
-                msgs = await self.bot.db.fetchval(query, 'all_msg', member.id)
+                        """
+                msgs = await self.bot.db.fetchval(query, "all_msg", member.id)
                 if msgs is None:
-                    msgs = 0 
+                    msgs = 0
 
                 team = self.teams[team_name]
-                player = Player(self.bot, team, member, self.nick_dict[member.id], points, msgs, powerups)
-                self.players[member.id] = player 
+                player = Player(
+                    self.bot,
+                    team,
+                    member,
+                    self.nick_dict[member.id],
+                    points,
+                    msgs,
+                    powerups,
+                )
+                self.players[member.id] = player
                 team.players.append(player)
 
         self.teams["mistletoe"].create_captain()
@@ -323,11 +342,11 @@ class ActivityEvent(commands.Cog):
 
         self.sync_player_data.start()
         self.award_pension.start()
-    
+
     async def cog_unload(self):
         self.sync_player_data.cancel()
         self.award_pension.cancel()
-    
+
     @tasks.loop(hours=24)
     async def award_pension(self):
         ids = map(int, self.bot.vars.get("ae-break-ids").split(","))
@@ -340,13 +359,13 @@ class ActivityEvent(commands.Cog):
                 continue
             await player.add_points(amount, "pension", multi=False)
             nicks.append(player.nick)
-        
+
         channel = self.bot.get_var_channel("private")
-        await channel.send(f"Awarded pensions to {", ".join(nicks)}")
-    
+        await channel.send(f"Awarded pensions to {', '.join(nicks)}")
+
     @award_pension.before_loop
     async def before_award_pension(self):
-        await discord.utils.sleep_until(next_day(ZoneInfo("US/Central")))
+        await discord.utils.sleep_until(next_day(ZoneInfo("America/Chicago")))
 
     @tasks.loop(hours=1)
     async def sync_player_data(self):
@@ -363,7 +382,9 @@ class ActivityEvent(commands.Cog):
                     user_id = $1
                     AND type != ALL($2)
                 """
-                points = await self.bot.db.fetchval(points_query, player_id, self.non_point_types)
+                points = await self.bot.db.fetchval(
+                    points_query, player_id, self.non_point_types
+                )
                 if points is None:
                     points = 0
 
@@ -377,7 +398,7 @@ class ActivityEvent(commands.Cog):
                     user_id = $1
                     AND type = $2
                 """
-                msgs = await self.bot.db.fetchval(msgs_query, player_id, 'all_msg')
+                msgs = await self.bot.db.fetchval(msgs_query, player_id, "all_msg")
                 if msgs is None:
                     msgs = 0
 
@@ -385,9 +406,10 @@ class ActivityEvent(commands.Cog):
                 player.points = points
                 player.msg_count = msgs
 
-                logging.info(f"Updated Player {player.nick} (ID: {player_id}): "
-                                     f"Points: {player.points}, Msg Count: {player.msg_count}")
-
+                logging.info(
+                    f"Updated Player {player.nick} (ID: {player_id}): "
+                    f"Points: {player.points}, Msg Count: {player.msg_count}"
+                )
 
         except Exception as e:
             self.bot.logger.error(f"Error during player data synchronization: {e}")
@@ -399,8 +421,10 @@ class ActivityEvent(commands.Cog):
     async def cog_check(self, ctx):
         return ctx.author.id in self.players or ctx.author.id == 718475543061987329
 
-    async def trivia(self, player: Player, channel: discord.TextChannel, steal: bool = False):
-        await player.log_powerup('trivia_powerup')
+    async def trivia(
+        self, player: Player, channel: discord.TextChannel, steal: bool = False
+    ):
+        await player.log_powerup("trivia_powerup")
 
         question = self.questions[self.questions_i]
 
@@ -409,22 +433,22 @@ class ActivityEvent(commands.Cog):
             self.questions_i = 0
         else:
             self.questions_i += 1
-        
+
         question.shuffle_choices()
 
-        points = random.randint(1, 5) 
+        points = random.randint(1, 5)
         args = {
-            'mention': player.member.mention,
-            'team': player.team.name.capitalize(),
+            "mention": player.member.mention,
+            "team": player.team.name.capitalize(),
         } | question.get_main_layout_repls()
 
         if not steal:
-            layout = self.bot.get_layout('ae/trivia/main')
+            layout = self.bot.get_layout("ae/trivia/main")
         else:
-            args['otherteam'] = player.team.opp.name
-            layout = self.bot.get_layout('ae/stealtrivia/main')
+            args["otherteam"] = player.team.opp.name
+            layout = self.bot.get_layout("ae/stealtrivia/main")
 
-        bot_msg = await layout.send(channel, repls=args, special=False) 
+        bot_msg = await layout.send(channel, repls=args, special=False)
 
         emojis = [
             "<a:ML_red_flower:1308674651450511381>",
@@ -437,12 +461,18 @@ class ActivityEvent(commands.Cog):
             await bot_msg.add_reaction(emoji)
 
         def check(r, u):
-            return r.message == bot_msg and u.id == player.member.id and str(r.emoji) in emojis
-        
+            return (
+                r.message == bot_msg
+                and u.id == player.member.id
+                and str(r.emoji) in emojis
+            )
+
         try:
-            reaction, user = await self.bot.wait_for('reaction_add', check=check, timeout=45)
+            reaction, user = await self.bot.wait_for(
+                "reaction_add", check=check, timeout=45
+            )
         except asyncio.TimeoutError:
-            layout = self.bot.get_layout('ae/trivia/timeout')
+            layout = self.bot.get_layout("ae/trivia/timeout")
             await layout.send(bot_msg, reply=True)
             return
 
@@ -455,26 +485,28 @@ class ActivityEvent(commands.Cog):
             }
 
             if not steal:
-                points = await player.add_points(points, 'trivia')
+                points = await player.add_points(points, "trivia")
 
                 repls["team"] = player.team.name.capitalize()
                 layout = self.bot.get_layout("ae/trivia/correct")
             else:
-                await player.team.opp.captain.remove_points(points, 'steal_trivia')
-                points = await player.add_points(points, 'trivia')
+                await player.team.opp.captain.remove_points(points, "steal_trivia")
+                points = await player.add_points(points, "trivia")
 
                 repls["team"] = player.team.opp.name.capitalize()
                 layout = self.bot.get_layout("ae/stealtrivia/correct")
-            
+
             repls["points"] = points
             await layout.send(channel, repls=repls, delete_after=10)
         else:
             layout = self.bot.get_layout("ae/trivia/incorrect")
-            await layout.send(channel, repls={"answer": question.answer}, delete_after=10)
+            await layout.send(
+                channel, repls={"answer": question.answer}, delete_after=10
+            )
 
         await asyncio.sleep(10)
         await bot_msg.delete()
-    
+
     def can_snowball_fight(self):
         """returns True if there are at least two active players on each team"""
         mistletoe = 0
@@ -482,23 +514,27 @@ class ActivityEvent(commands.Cog):
         now = time.time()
 
         for player in self.players.values():
-            if player.team.name == "mistletoe" and \
-                (now - player.last_message_time) < 60:
+            if (
+                player.team.name == "mistletoe"
+                and (now - player.last_message_time) < 60
+            ):
                 mistletoe += 1
-            elif player.team.name == "poinsettia" and \
-                (now - player.last_message_time) < 60:
+            elif (
+                player.team.name == "poinsettia"
+                and (now - player.last_message_time) < 60
+            ):
                 poinsettia += 1
 
         if TEST:
             return mistletoe >= 1 and mistletoe == poinsettia
         else:
             return mistletoe >= 2 and mistletoe == poinsettia
-    
+
     async def snowball_fight(self, channel: discord.TextChannel):
         # whichever team spams the most snowballs in 15 seconds wins
 
         # dodge_phrases = ["dodge", "💨"]
-        
+
         self.num_snowballs["mistletoe"] = {}
         self.num_snowballs["poinsettia"] = {}
 
@@ -506,7 +542,7 @@ class ActivityEvent(commands.Cog):
         num_poinsettia = self.num_snowballs["poinsettia"]
 
         self.snowball_messages = []
-        self.intercept_snowballs = True 
+        self.intercept_snowballs = True
 
         layout = self.bot.get_layout("ae/snowballfight")
         await layout.send(channel)
@@ -520,26 +556,33 @@ class ActivityEvent(commands.Cog):
 
         totals_dict = {
             "mistletoe": sum(num_mistletoe.values()),
-            "poinsettia": sum(num_poinsettia.values())
-        } 
+            "poinsettia": sum(num_poinsettia.values()),
+        }
 
         def weighted_points(total_points: int, team: str) -> Dict[int, int]:
             # return a dict of player ids to points based on how many snowballs they threw
             # the ratio of snowballs thrown equals the ratio of points they get
-            return {k: round(v / totals_dict[team] * total_points) for k, v in self.num_snowballs[team].items()}
+            return {
+                k: round(v / totals_dict[team] * total_points)
+                for k, v in self.num_snowballs[team].items()
+            }
 
         if totals_dict["mistletoe"] == totals_dict["poinsettia"]:
             total_points = round(totals_dict["mistletoe"] / 5)
 
             for team_name in totals_dict.keys():
-                for member_id, points in weighted_points(total_points, team_name).items():
-                    await self.players[member_id].add_points(points, 'snowball_fight', multi=False)
+                for member_id, points in weighted_points(
+                    total_points, team_name
+                ).items():
+                    await self.players[member_id].add_points(
+                        points, "snowball_fight", multi=False
+                    )
 
             repls = {
                 "snowballs": sum(totals_dict.values()),
                 "points1": total_points,
-                "points2": total_points
-            } 
+                "points2": total_points,
+            }
             layout = self.bot.get_layout("ae/snowballfight/draw")
             await layout.send(channel, repls=repls)
         else:
@@ -551,10 +594,18 @@ class ActivityEvent(commands.Cog):
             winning_points = round(totals_dict[winning_team] / 4) + bonus_points
             losing_points = round(totals_dict[losing_team] / 4)
 
-            for member_id, points in weighted_points(winning_points, winning_team).items():
-                await self.players[member_id].add_points(points, 'snowball_fight', multi=False)
-            for member_id, points in weighted_points(losing_points, losing_team).items():
-                await self.players[member_id].add_points(points, 'snowball_fight', multi=False)
+            for member_id, points in weighted_points(
+                winning_points, winning_team
+            ).items():
+                await self.players[member_id].add_points(
+                    points, "snowball_fight", multi=False
+                )
+            for member_id, points in weighted_points(
+                losing_points, losing_team
+            ).items():
+                await self.players[member_id].add_points(
+                    points, "snowball_fight", multi=False
+                )
 
             if winning_team == "poinsettia":
                 points1 = losing_points
@@ -568,7 +619,7 @@ class ActivityEvent(commands.Cog):
                 "points1": points1,
                 "points2": points2,
                 "winningteam": winning_team.capitalize(),
-                "bonus": bonus_points
+                "bonus": bonus_points,
             }
             layout = self.bot.get_layout("ae/snowballfight/results")
             await layout.send(channel, repls=repls)
@@ -582,7 +633,7 @@ class ActivityEvent(commands.Cog):
 
         if msg.content not in snowball_phrases:
             return
-        
+
         num_mistletoe = self.num_snowballs["mistletoe"]
         num_poinsettia = self.num_snowballs["poinsettia"]
 
@@ -594,26 +645,26 @@ class ActivityEvent(commands.Cog):
             else:
                 num_mistletoe[msg.author.id] += 1
         else:
-
             if msg.author.id not in num_poinsettia:
                 num_poinsettia[msg.author.id] = 1
             else:
                 num_poinsettia[msg.author.id] += 1
 
-
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
-
         if msg.guild is None or msg.guild.id != self.bot.GUILD_ID:
-            return 
+            return
         if msg.author.bot:
-            return 
+            return
         if msg.author.id not in self.players:
-            return 
+            return
         if msg.channel.id != GENERAL_ID:
-            return 
+            return
 
-        if msg.author not in self.daily_message_task_cds or self.daily_message_task_cds[msg.author] < time.time():
+        if (
+            msg.author not in self.daily_message_task_cds
+            or self.daily_message_task_cds[msg.author] < time.time()
+        ):
             self.daily_message_task_cds[msg.author] = time.time() + 5
             await self.players[msg.author.id].increment_daily_task("messages")
 
@@ -626,12 +677,12 @@ class ActivityEvent(commands.Cog):
 
         if player.msg_count % LOW_PERIOD == 0:
             self.bot.loop.create_task(player.on_500())
-        
+
         if player.team.msg_count % HIGH_PERIOD == 0:
             self.bot.loop.create_task(player.team.on_1000())
 
         if msg.author.id not in self.has_welcomed:
-            if msg.content.lower().startswith('welc'):
+            if msg.content.lower().startswith("welc"):
                 self.has_welcomed.add(msg.author.id)
                 self.bot.loop.create_task(player.on_welc(msg.channel))
 
@@ -639,16 +690,16 @@ class ActivityEvent(commands.Cog):
         if self.msg_counter < self.msgs_needed:
             return
 
-        self.msg_counter = 0 
+        self.msg_counter = 0
         self.msgs_needed = random.randint(10, 25)
-        
-        #comment out later 
+
+        # comment out later
         # self.msgs_needed = 3
 
         # if random.random() < 0.5 and not TEST and not self.fresh:
         if random.random() < 0.5 and not TEST:
             return
-        
+
         # self.fresh = False
 
         if TEST:
@@ -656,7 +707,11 @@ class ActivityEvent(commands.Cog):
         else:
             snowball_threshold = 0.15
 
-        if not self.intercept_snowballs and self.can_snowball_fight() and random.random() < snowball_threshold:
+        if (
+            not self.intercept_snowballs
+            and self.can_snowball_fight()
+            and random.random() < snowball_threshold
+        ):
             await self.snowball_fight(msg.channel)
             return
 
@@ -675,16 +730,22 @@ class ActivityEvent(commands.Cog):
         await spawn_msg.add_reaction(self.powerup_emoji)
 
         def check(r, u):
-            return u.id in self.players and r.message == spawn_msg and str(r.emoji) == self.powerup_emoji
+            return (
+                u.id in self.players
+                and r.message == spawn_msg
+                and str(r.emoji) == self.powerup_emoji
+            )
 
         try:
-            reaction, user = await self.bot.wait_for('reaction_add', check=check, timeout=60)
+            reaction, user = await self.bot.wait_for(
+                "reaction_add", check=check, timeout=60
+            )
         except asyncio.TimeoutError:
             await spawn_msg.delete()
-            return 
-        
+            return
+
         player = self.players[user.id]
-        layout = None 
+        layout = None
 
         if powerup_name == "trivia":
             # await player.log_powerup('1k')
@@ -692,46 +753,64 @@ class ActivityEvent(commands.Cog):
         elif powerup_name == "steal_trivia":
             await self.trivia(player, msg.channel, steal=True)
         elif powerup_name == "reduced_cd":
-            await player.apply_powerup(CooldownReducer(INDIV_REDUCED_CD, time.time(), time.time() + INDIV_REDUCED_CD_TIME), log=True)
+            await player.apply_powerup(
+                CooldownReducer(
+                    INDIV_REDUCED_CD, time.time(), time.time() + INDIV_REDUCED_CD_TIME
+                ),
+                log=True,
+            )
 
             for other in player.team.players:
                 if other != player:
-                    await other.apply_powerup(CooldownReducer(TEAM_REDUCED_CD, time.time(), time.time() + TEAM_REDUCED_CD_TIME))
+                    await other.apply_powerup(
+                        CooldownReducer(
+                            TEAM_REDUCED_CD,
+                            time.time(),
+                            time.time() + TEAM_REDUCED_CD_TIME,
+                        )
+                    )
 
             layout = self.bot.get_layout("ae/reducedcd")
         elif powerup_name == "double":
-            await player.apply_powerup(Multiplier(2, time.time(), time.time() + INDIV_DOUBLE_TIME), log=True)
+            await player.apply_powerup(
+                Multiplier(2, time.time(), time.time() + INDIV_DOUBLE_TIME), log=True
+            )
 
             for other in player.team.players:
                 if other != player:
-                    await other.apply_powerup(Multiplier(2, time.time(), time.time() + TEAM_DOUBLE_TIME))
+                    await other.apply_powerup(
+                        Multiplier(2, time.time(), time.time() + TEAM_DOUBLE_TIME)
+                    )
 
             layout = self.bot.get_layout("ae/double")
         elif powerup_name == "triple":
-            await player.apply_powerup(Multiplier(3, time.time(), time.time() + INDIV_TRIPLE_TIME), log=True)
+            await player.apply_powerup(
+                Multiplier(3, time.time(), time.time() + INDIV_TRIPLE_TIME), log=True
+            )
 
             for other in player.team.players:
                 if other != player:
-                    await other.apply_powerup(Multiplier(3, time.time(), time.time() + TEAM_TRIPLE_TIME))
+                    await other.apply_powerup(
+                        Multiplier(3, time.time(), time.time() + TEAM_TRIPLE_TIME)
+                    )
 
             layout = self.bot.get_layout("ae/triple")
 
         if layout is not None:
             repls = {
-                'mention': player.member.mention,
-                'team': player.team.name.capitalize(),
-            }                    
+                "mention": player.member.mention,
+                "team": player.team.name.capitalize(),
+            }
             await layout.send(msg.channel, repls=repls, special=False)
 
     @commands.command()
     async def redeem(self, ctx):
-        
         for team in self.teams.values():
             if ctx.author == team.captain.member:
-                break 
+                break
         else:
-            return 
-        
+            return
+
         if team.redeems == 0:
             layout = self.bot.get_layout("ae/redeem/nopowerups")
             return await layout.send(ctx)
@@ -745,42 +824,50 @@ class ActivityEvent(commands.Cog):
 
         layout = self.bot.get_layout("ae/redeem")
         view = RedeemView(ctx, team, choices, self.powerups_1k)
-        view.message = await layout.send(ctx, repls={
-            f"powerup{i+1}": self.powerups_1k[choice]
-            for i, choice in enumerate(choices)
-        }, view=view)
-    
+        view.message = await layout.send(
+            ctx,
+            repls={
+                f"powerup{i + 1}": self.powerups_1k[choice]
+                for i, choice in enumerate(choices)
+            },
+            view=view,
+        )
+
     @commands.command()
     async def usepowerup(self, ctx):
         for team in self.teams.values():
             if ctx.author == team.captain.member:
-                break 
+                break
         else:
-            return 
+            return
 
         powerups = team.saved_powerups
         if len(powerups) == 0:
             layout = self.bot.get_layout("ae/usepowerup/nopowerups")
             await layout.send(ctx)
             return
-        
+
         powerups = [self.powerups_1k[name] for name in team.saved_powerups]
         layout = self.bot.get_layout("ae/usepowerup")
         temp = await layout.send(ctx, repls={"powerups": powerups}, jinja=True)
 
         def check(m):
             return m.author == ctx.author and m.channel == ctx.channel
-        
+
         try:
-            msg = await self.bot.wait_for('message', check=check, timeout=60)
+            msg = await self.bot.wait_for("message", check=check, timeout=60)
         except asyncio.TimeoutError:
             await temp.delete()
             return
-        
-        if not msg.content.isdigit() or int(msg.content) > len(powerups) or int(msg.content) < 1:
-            await ctx.send('That is not a valid number!', ephemeral=True)
+
+        if (
+            not msg.content.isdigit()
+            or int(msg.content) > len(powerups)
+            or int(msg.content) < 1
+        ):
+            await ctx.send("That is not a valid number!", ephemeral=True)
             return
-        
+
         powerup = team.saved_powerups.pop(int(msg.content) - 1)
         query = """WITH
                        P AS (
@@ -804,14 +891,16 @@ class ActivityEvent(commands.Cog):
         points = points if points is not None else ""
         layout = self.bot.get_layout(f"ae/usepowerup/{powerup}")
         await layout.send(ctx, repls={"points": points})
-    
+
     @commands.command()
     async def teampoints(self, ctx):
-        embed = discord.Embed(title='Points for each team', color=0xcab7ff)
+        embed = discord.Embed(title="Points for each team", color=0xCAB7FF)
         for team in self.teams:
-            embed.add_field(name=team.capitalize(), value=f'{self.teams[team].total_points:,}')
+            embed.add_field(
+                name=team.capitalize(), value=f"{self.teams[team].total_points:,}"
+            )
         await ctx.send(embed=embed)
-    
+
     @commands.command(aliases=["pts", "teamlb", "allpoints", "pointslb"])
     async def points(self, ctx):
         ok = False
@@ -819,25 +908,25 @@ class ActivityEvent(commands.Cog):
             for player in team.players:
                 if player.member == ctx.author:
                     ok = True
-                    break 
+                    break
             if ok:
                 break
         if not ok:
             await ctx.send("You aren't on a team!")
             return
-        
+
         view = TeamLBView(ctx, team)
         await view.update()
-         
-    @commands.command(alises=['effects'])
+
+    @commands.command(alises=["effects"])
     async def powerups(self, ctx, *, member: discord.Member = None):
         if member is None:
             member = ctx.author
 
         if member.id not in self.players:
             await ctx.send("You aren't on a team!")
-            return 
-        
+            return
+
         player = self.players[member.id]
 
         hearts = []
@@ -861,22 +950,28 @@ class ActivityEvent(commands.Cog):
             values.append(value)
             hearts.append(pink_heart if i % 2 == 0 else purple_heart)
             powerup_names.append(powerup.name)
-            timethingys.append(discord.utils.format_dt(datetime.fromtimestamp(powerup.end), 'R'))
-                
+            timethingys.append(
+                discord.utils.format_dt(datetime.fromtimestamp(powerup.end), "R")
+            )
+
         real_multi = f"x{player.real_multi}"
         minutes, seconds = divmod(player.cd, 60)
         real_cd = f"{minutes}:{seconds:02}"
 
         layout = self.bot.get_layout("ae/powerups")
-        await layout.send(ctx, repls={
-            "data": zip(hearts, powerup_names, values, timethingys),
-            "branch": self.bot.vars.get("branch-final-emoji"),
-            "exists": exists,
-            "realmulti": real_multi,
-            "realcd": real_cd
-        }, jinja=True)
+        await layout.send(
+            ctx,
+            repls={
+                "data": zip(hearts, powerup_names, values, timethingys),
+                "branch": self.bot.vars.get("branch-final-emoji"),
+                "exists": exists,
+                "realmulti": real_multi,
+                "realcd": real_cd,
+            },
+            jinja=True,
+        )
 
-    @commands.command(aliases=["dailys"]) 
+    @commands.command(aliases=["dailys"])
     async def dailies(self, ctx):
         if ctx.author.id not in self.players:
             return
@@ -887,19 +982,34 @@ class ActivityEvent(commands.Cog):
     @commands.command()
     async def teamstats(self, ctx, *, flags: TeamStatsFlags):
         VALID_STATS = {
-            'msgs', 'msg', 'message', 'messages',
-            'points', 'pts',
-            'powerup', 'powerups',
-            'bonuses', 'bonus',
-            'trivia',
-            'stolen', 'stole', 'steals',
-            'welc', 'welcs',
-            'snowball', 'snowballfight', 'snowballs', 'snowballfights', 'snow',
-            'daily', 'dailies', 'advent',
+            "msgs",
+            "msg",
+            "message",
+            "messages",
+            "points",
+            "pts",
+            "powerup",
+            "powerups",
+            "bonuses",
+            "bonus",
+            "trivia",
+            "stolen",
+            "stole",
+            "steals",
+            "welc",
+            "welcs",
+            "snowball",
+            "snowballfight",
+            "snowballs",
+            "snowballfights",
+            "snow",
+            "daily",
+            "dailies",
+            "advent",
         }
 
         if flags.stat.lower() not in VALID_STATS:
-            return await ctx.send('That is not a valid option!')
+            return await ctx.send("That is not a valid option!")
 
         # team = self._get_team(ctx, flags)
         # if team is None:
@@ -909,43 +1019,75 @@ class ActivityEvent(commands.Cog):
         query = "SELECT timezone FROM timezones WHERE user_id = $1"
         timezone = await self.bot.db.fetchval(query, ctx.author.id)
         if timezone is None:
-            timezone = 'US/Central'
+            timezone = "America/Chicago"
 
-        start = START_TIME if flags.start is None else \
-            dateparser.parse(
+        start = (
+            START_TIME
+            if flags.start is None
+            else dateparser.parse(
                 flags.start,
-                settings={
-                    "TIMEZONE": timezone,
-                    "RETURN_AS_TIMEZONE_AWARE": True
-                }
+                settings={"TIMEZONE": timezone, "RETURN_AS_TIMEZONE_AWARE": True},
             )
-
-        end = dateparser.parse(
-            flags.end,
-            settings={
-                "TIMEZONE": timezone,
-                "RETURN_AS_TIMEZONE_AWARE": True
-            }
         )
 
-        if flags.stat in {'msg', 'messages', 'message', 'msgs'}:
-            await self._process_stat(ctx, team, start, end, 'messages sent', 'all_msg', lambda x: x.msg_count, lambda t: t.msg_count)
-        elif flags.stat in {'points', 'pts'}:
-            await self._process_stat(ctx, team, start, end, 'points earned', None, lambda x: x.points, lambda t: t.total_points, exclude_types=self.non_point_types)
-        elif flags.stat in {'powerup', 'powerups'}:
-            await self._process_powerup(ctx, team, start, end, 'powerups obtained')
-        elif flags.stat in {'bonus', 'bonuses'}:
-            await self._process_bonus(ctx, team, start, end, 'bonus points earned', ['welc_bonus', '500_bonus', 'topup_bonus', 'steal_bonus'])
-        elif flags.stat == 'trivia':
-            await self._process_bonus(ctx, team, start, end, 'trivia points earned', ['trivia'])
-        elif flags.stat in {'stolen', 'stole', 'steals'}:
-            await self._process_bonus(ctx, team, start, end, 'points stolen', ['stolen', 'steal_trivia'])
-        elif flags.stat in {'snowball', "snowballfight"}:
-            await self._process_bonus(ctx, team, start, end, 'points from snowball fights', ['snowball_fight'])
-        elif flags.stat in {'welc', 'welcs'}:
-            await self._process_bonus(ctx, team, start, end, 'points from welcoming', ['welc_bonus'])
-        elif flags.stat in {'daily', 'dailies', 'advent'}:
-            await self._process_bonus(ctx, team, start, end, 'points from dailies', ['dailies_bonus'])
+        end = dateparser.parse(
+            flags.end, settings={"TIMEZONE": timezone, "RETURN_AS_TIMEZONE_AWARE": True}
+        )
+
+        if flags.stat in {"msg", "messages", "message", "msgs"}:
+            await self._process_stat(
+                ctx,
+                team,
+                start,
+                end,
+                "messages sent",
+                "all_msg",
+                lambda x: x.msg_count,
+                lambda t: t.msg_count,
+            )
+        elif flags.stat in {"points", "pts"}:
+            await self._process_stat(
+                ctx,
+                team,
+                start,
+                end,
+                "points earned",
+                None,
+                lambda x: x.points,
+                lambda t: t.total_points,
+                exclude_types=self.non_point_types,
+            )
+        elif flags.stat in {"powerup", "powerups"}:
+            await self._process_powerup(ctx, team, start, end, "powerups obtained")
+        elif flags.stat in {"bonus", "bonuses"}:
+            await self._process_bonus(
+                ctx,
+                team,
+                start,
+                end,
+                "bonus points earned",
+                ["welc_bonus", "500_bonus", "topup_bonus", "steal_bonus"],
+            )
+        elif flags.stat == "trivia":
+            await self._process_bonus(
+                ctx, team, start, end, "trivia points earned", ["trivia"]
+            )
+        elif flags.stat in {"stolen", "stole", "steals"}:
+            await self._process_bonus(
+                ctx, team, start, end, "points stolen", ["stolen", "steal_trivia"]
+            )
+        elif flags.stat in {"snowball", "snowballfight"}:
+            await self._process_bonus(
+                ctx, team, start, end, "points from snowball fights", ["snowball_fight"]
+            )
+        elif flags.stat in {"welc", "welcs"}:
+            await self._process_bonus(
+                ctx, team, start, end, "points from welcoming", ["welc_bonus"]
+            )
+        elif flags.stat in {"daily", "dailies", "advent"}:
+            await self._process_bonus(
+                ctx, team, start, end, "points from dailies", ["dailies_bonus"]
+            )
 
     def _data_from_rows(self, rows_list, start, end):
         ret = []
@@ -955,8 +1097,8 @@ class ActivityEvent(commands.Cog):
 
             # Add all rows before the start time to the cumulative sum
             for row in rows:
-                if row['time'] <= int(start.timestamp()):
-                    cumulative_sum += row['gain']
+                if row["time"] <= int(start.timestamp()):
+                    cumulative_sum += row["gain"]
                 else:
                     break
 
@@ -965,9 +1107,9 @@ class ActivityEvent(commands.Cog):
 
             # Add rows from the start time onward
             for row in rows:
-                if row['time'] > int(start.timestamp()):
-                    cumulative_sum += row['gain']
-                    data.append((row['time'], cumulative_sum))
+                if row["time"] > int(start.timestamp()):
+                    cumulative_sum += row["gain"]
+                    data.append((row["time"], cumulative_sum))
 
             # Ensure a data point at the end time
             if not data or data[-1][0] < int(end.timestamp()):
@@ -976,20 +1118,30 @@ class ActivityEvent(commands.Cog):
             ret.append((team, data))
         return ret
 
-
     def _get_team(self, ctx, flags):
         if flags.team is None:
             return self.players[ctx.author.id].team
-        elif flags.team.lower() == 'both':
-            return 'both'
+        elif flags.team.lower() == "both":
+            return "both"
         elif flags.team not in self.teams:
             return None
         else:
             return self.teams[flags.team]
 
-    async def _process_stat(self, ctx, team, start, end, title, stat_type, player_key, team_key, exclude_types=None):
+    async def _process_stat(
+        self,
+        ctx,
+        team,
+        start,
+        end,
+        title,
+        stat_type,
+        player_key,
+        team_key,
+        exclude_types=None,
+    ):
         rows_list = []
-        for t in (self.teams.values() if team == 'both' else [team]):
+        for t in self.teams.values() if team == "both" else [team]:
             rows = await self._fetch_rows(t.name, stat_type, start, end, exclude_types)
             rows_list.append((t, rows))
 
@@ -998,13 +1150,15 @@ class ActivityEvent(commands.Cog):
         embed = self.bot.get_embed("ae/teamstats")
         repls = self._get_stat_repls(title, start, end, player_key, team_key)
         embed = await Layout.fill_embed(embed, repls, special=False)
-        embed.set_image(url=f'attachment://plot.png')
+        embed.set_image(url=f"attachment://plot.png")
         await ctx.send(embed=embed, file=file)
 
     async def _process_bonus(self, ctx, team, start, end, title, types):
         rows_list, stats, player_stats = [], {}, {}
         for t in self.teams.values():
-            rows, stats, player_stats = await self._process_rows(t, types, end, stats, player_stats)
+            rows, stats, player_stats = await self._process_rows(
+                t, types, end, stats, player_stats
+            )
             rows_list.append((t, rows))
 
         data = self._data_from_rows(rows_list, start, end)
@@ -1012,7 +1166,7 @@ class ActivityEvent(commands.Cog):
         embed = self.bot.get_embed("ae/teamstats")
         repls = self._get_bonus_repls(title, team, stats, player_stats, start, end)
         embed = await Layout.fill_embed(embed, repls, special=False)
-        embed.set_image(url=f'attachment://plot.png')
+        embed.set_image(url=f"attachment://plot.png")
         await ctx.send(embed=embed, file=file)
 
     async def _fetch_rows(self, team, stat_type, start, end, exclude_types):
@@ -1021,7 +1175,9 @@ class ActivityEvent(commands.Cog):
             return await self.bot.db.fetch(query, team, stat_type, int(end.timestamp()))
         else:
             query = """SELECT gain, time FROM event_log WHERE team = $1 AND type != ALL($2) AND time < $3 ORDER BY time ASC"""
-            return await self.bot.db.fetch(query, team, exclude_types, int(end.timestamp()))
+            return await self.bot.db.fetch(
+                query, team, exclude_types, int(end.timestamp())
+            )
 
     async def _process_rows(self, team, types, end, stats, player_stats):
         if team.name not in stats:
@@ -1032,25 +1188,24 @@ class ActivityEvent(commands.Cog):
 
         total = 0
         for row in rows:
-            if row['user_id'] not in player_stats:
-                player_stats[row['user_id']] = 0
-            player_stats[row['user_id']] += row['gain']
-            total += row['gain']
+            if row["user_id"] not in player_stats:
+                player_stats[row["user_id"]] = 0
+            player_stats[row["user_id"]] += row["gain"]
+            total += row["gain"]
 
-        stats[team.name]['total'] = total
+        stats[team.name]["total"] = total
         return rows, stats, player_stats
-
 
     def _get_stat_repls(self, title, start, end, player_key, team_key):
         total = 0
         repls = {}
         for i, t in enumerate(self.teams.values()):
-            duration = (end.timestamp() - start.timestamp())
-            repls[f"mvp{i+1}"] = max(t.players, key=player_key).nick
-            repls[f"total{i+1}"] = team_key(t)
-            repls[f"houravg{i+1}"] = "{:.2f}".format(team_key(t) / (duration / 3600))
-            repls[f"dayavg{i+1}"] = "{:.2f}".format(team_key(t) / (duration / 86400))
-            repls[f"playeravg{i+1}"] = "{:.2f}".format(team_key(t) / len(t.players))
+            duration = end.timestamp() - start.timestamp()
+            repls[f"mvp{i + 1}"] = max(t.players, key=player_key).nick
+            repls[f"total{i + 1}"] = team_key(t)
+            repls[f"houravg{i + 1}"] = "{:.2f}".format(team_key(t) / (duration / 3600))
+            repls[f"dayavg{i + 1}"] = "{:.2f}".format(team_key(t) / (duration / 86400))
+            repls[f"playeravg{i + 1}"] = "{:.2f}".format(team_key(t) / len(t.players))
             total += team_key(t)
 
         repls["stattitle"] = title.title()
@@ -1065,21 +1220,25 @@ class ActivityEvent(commands.Cog):
         for i, t in enumerate(self.teams.values()):
             mvp = max(t.players, key=lambda x: player_stats.get(x.member.id, 0))
             count = player_stats.get(mvp.member.id, 0)
-            this_total = stats[t.name]['total']
-            repls[f"mvp{i+1}"] = mvp.nick
-            repls[f"total{i+1}"] = this_total 
-            repls[f"playeravg{i+1}"] = "{:.2f}".format(total / len(t.players))
-            repls[f"houravg{i+1}"] = "{:.2f}".format(total / (end.timestamp() - start.timestamp()) * 3600)
-            repls[f"dayavg{i+1}"] = "{:.2f}".format(total / (end.timestamp() - start.timestamp()) * 86400)
+            this_total = stats[t.name]["total"]
+            repls[f"mvp{i + 1}"] = mvp.nick
+            repls[f"total{i + 1}"] = this_total
+            repls[f"playeravg{i + 1}"] = "{:.2f}".format(total / len(t.players))
+            repls[f"houravg{i + 1}"] = "{:.2f}".format(
+                total / (end.timestamp() - start.timestamp()) * 3600
+            )
+            repls[f"dayavg{i + 1}"] = "{:.2f}".format(
+                total / (end.timestamp() - start.timestamp()) * 86400
+            )
 
             total += this_total
-        
+
         repls["title"] = title.title()
         repls["stat"] = title
         repls["total"] = total
 
         return repls
-    
+
     @commands.command()
     @commands.is_owner()
     async def announce(self, ctx, *, message):
@@ -1095,4 +1254,3 @@ async def setup(bot):
             await bot.add_cog(ActivityEvent(bot))
         else:
             await bot.add_cog(ActivityEvent(bot))
-

@@ -60,7 +60,7 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
         await self.send_bdays()
 
     async def send_bdays(self):
-        now = datetime.now(tz=ZoneInfo("US/Central"))
+        now = datetime.now(tz=ZoneInfo("America/Chicago"))
 
         query = "SELECT user_id FROM bdays WHERE month = $1 AND day = $2"
         rows = await self.bot.db.fetch(query, now.month, now.day)
@@ -110,7 +110,7 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
 
     @send_bdays_loop.before_loop
     async def wait_until_next_day(self):
-        now = datetime.now(tz=ZoneInfo("US/Central"))
+        now = datetime.now(tz=ZoneInfo("America/Chicago"))
         tomorrow = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(
             days=1
         )
@@ -181,7 +181,7 @@ class Birthdays(commands.Cog, description="Set your birthday, see other birthday
                 return date(now.year, m, d)
 
         rows = await self.bot.db.fetch("SELECT user_id, month, day FROM bdays")
-        now = datetime.now(tz=ZoneInfo("US/Central"))
+        now = datetime.now(tz=ZoneInfo("America/Chicago"))
         rows = sorted(rows, key=lambda row: magic(now, row["month"], row["day"]))
 
         entries = []

@@ -67,7 +67,7 @@ def plot_data_sync(data, title, ylabel):
     ax.tick_params(axis="both", colors="cyan")  # Set tick colors to cyan
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(
-        mdates.DateFormatter("%a %-m/%-d\n%-I:%M %p", tz=timezone("US/Central"))
+        mdates.DateFormatter("%a %-m/%-d\n%-I:%M %p", tz=timezone("America/Chicago"))
     )
 
     # Remove axis labels (but keep ticks and numbers)
@@ -199,11 +199,11 @@ class MessageStats(commands.Cog):
     async def msgstats(self, ctx, *, flags: MsgStatsFlags):
         start = parse(
             flags.start,
-            settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
         )
         end = parse(
             flags.end,
-            settings={"TIMEZONE": "US/Central", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
         )
 
         if end <= start:
