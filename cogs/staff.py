@@ -1,4 +1,6 @@
 import asyncio
+import json
+from datetime import timedelta
 from io import StringIO
 from typing import TYPE_CHECKING
 
@@ -201,43 +203,79 @@ class Staff(commands.Cog):
 
         lines = []
         msgs = []
+        msg_data = []
+
         async for msg in m1.channel.history(
-            limit=None, before=m2.created_at, after=m1.created_at, oldest_first=True
+            limit=None,
+            before=m2.created_at + timedelta(seconds=1),
+            after=m1.created_at - timedelta(seconds=1),
+            oldest_first=True,
         ):
             if msg.author.bot:
                 continue
+
             lines.append(f"{msg.author} ({msg.author.id}): {msg.content}")
             msgs.append(msg)
+            msg_data.append(
+                {
+                    "author": {
+                        "id": msg.author.id,
+                        "username": msg.author.name,
+                        "display_name": msg.author.display_name,
+                        "avatar_url": msg.author.avatar.with_format("png").url,
+                    },
+                    "content": msg.content,
+                    "timestamp": msg.created_at.timestamp(),
+                }
+            )
 
-        buf = StringIO()
-        buf.write("\n".join(lines) + "\n")
-        buf.seek(0)
+        if len(msgs) == 0:
+            return await ctx.send("No messages to save")
+
+        txtbuf = StringIO()
+        txtbuf.write("\n".join(lines))
+        txtbuf.seek(0)
+
+        jsonbuf = StringIO()
+        jsonbuf.write(json.dumps(msg_data))
+        jsonbuf.seek(0)
+
+        mod_channel = self.bot.get_var_channel("mod")
+        file_msg = await mod_channel.send(
+            f"Saved chat files from around [here]({msgs[0].jump_url}):\n-# Please do not delete this message",
+            files=[
+                discord.File(fp=txtbuf, filename="saved-chat.txt"),
+                discord.File(fp=jsonbuf, filename="saved-chat.json"),
+            ],
+        )
+        await mod_channel.send(
+            f"To view them in browser, click [here](https://hudsonshi.com/lunabot/saved-chat?channelId={file_msg.channel.id}&messageId={file_msg.id})"
+        )
 
         bot_msg = await ctx.send(
-            "Here's the file. Purge?",
-            file=discord.File(fp=buf, filename="savedchat.txt"),
+            "Files saved in mod channel. Type `purge` in the next minute to purge."
         )
+
         try:
             await self.bot.wait_for(
                 "message",
                 check=lambda m: m.channel == ctx.channel
                 and m.author == ctx.author
-                and m.content.lower() in ["y", "yes"],
+                and m.content.lower() == "purge",
                 timeout=60,
             )
         except asyncio.TimeoutError:
-            await bot_msg.edit(content="")
+            await bot_msg.delete()
             return
 
         chunks = [msgs[i : i + 100] for i in range(0, len(msgs), 100)]
-        purged = 0
         for chunk in chunks:
             try:
-                purged += len(await m1.channel.delete_messages(chunk))
-            except discord.Forbidden:
+                await m1.channel.delete_messages(chunk)
+            except (discord.HTTPException, discord.Forbidden):
                 pass
 
-        await ctx.send(f"Purged {purged} messages from {m1.channel.mention}")
+        await ctx.send("Finished purging!")
 
 
 async def setup(bot):
