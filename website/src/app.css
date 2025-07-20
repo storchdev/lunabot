@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+
+* {
+  background-color: #282b30
+}
+
+button {
+  cursor: pointer;
+}
