@@ -249,7 +249,7 @@ class Staff(commands.Cog):
             ],
         )
         await mod_channel.send(
-            f"To view them in browser, click [here](https://hudsonshi.com/lunabot/saved-chat?channelId={file_msg.channel.id}&messageId={file_msg.id})"
+            f"To view them in browser, click [here](https://hudsonshi.com/lunabot/saved-chat/?channelId={file_msg.channel.id}&messageId={file_msg.id})"
         )
 
         bot_msg = await ctx.send(
