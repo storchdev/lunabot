@@ -1,14 +1,16 @@
-import traceback
+from typing import TYPE_CHECKING
 
-import discord
 from discord.ext import commands
 
 from .utils.errors import GuildOnly
 
+if TYPE_CHECKING:
+    from bot import LunaBot
+
 
 class EH(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -29,27 +31,28 @@ class EH(commands.Cog):
                 f"Wrong usage, try `!help {ctx.command.qualified_name}`", ephemeral=True
             )
         else:
-            etype = type(error)
-            trace = error.__traceback__
-            lines = traceback.format_exception(etype, error, trace)
-            traceback_text = "".join(lines)
-            if len(traceback_text) > 4080:
-                traceback_text = traceback_text[:4080]
-                traceback_text += "..."
-            description = f"```py\n{traceback_text}```"
+            await self.bot.errors.add_error(error=error, ctx=ctx)
+            # etype = type(error)
+            # trace = error.__traceback__
+            # lines = traceback.format_exception(etype, error, trace)
+            # traceback_text = "".join(lines)
+            # if len(traceback_text) > 4080:
+            #     traceback_text = traceback_text[:4080]
+            #     traceback_text += "..."
+            # description = f"```py\n{traceback_text}```"
 
-            embed = (
-                discord.Embed(
-                    title=f"Error in !{ctx.command.qualified_name}",
-                    url=ctx.message.jump_url,
-                    description=description,
-                    color=ctx.author.color,
-                )
-                .add_field(name="Channel", value=ctx.channel.mention)
-                .add_field(name="User", value=ctx.author.mention)
-            )
-            storch = self.bot.get_user(self.bot.owner_ids[0])
-            await storch.send(embed=embed)
+            # embed = (
+            #     discord.Embed(
+            #         title=f"Error in !{ctx.command.qualified_name}",
+            #         url=ctx.message.jump_url,
+            #         description=description,
+            #         color=ctx.author.color,
+            #     )
+            #     .add_field(name="Channel", value=ctx.channel.mention)
+            #     .add_field(name="User", value=ctx.author.mention)
+            # )
+            # storch = self.bot.get_user(self.bot.owner_ids[0])
+            # await storch.send(embed=embed)
 
 
 async def setup(bot):

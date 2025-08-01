@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING, Dict, Optional, Set, Union
 import aiohttp
 import discord
 from discord.ext import commands
+from discord.ext.duck.errors import ErrorManager
 
 from cogs.future_tasks import FutureTask
 from cogs.utils import InvalidURL, Layout, View
 from cogs.utils.checks import guild_only
-from config import LOG_FILE
+from config import ERROR_WEBHOOK_URL, LOG_FILE
 
 if TYPE_CHECKING:
     from asyncpg import Pool
@@ -41,6 +42,12 @@ class LunaBot(commands.Bot):
         self.db: Optional[Pool] = None
         self.tickets: Dict[discord.Thread, Ticket] = {}
         self.log_flags = []
+        self.errors = ErrorManager(
+            self,
+            webhook_url=ERROR_WEBHOOK_URL,
+            session=self.session,
+            hijack_bot_on_error=True,
+        )
 
     async def start_task(self):
         await self.wait_until_ready()
@@ -69,7 +76,6 @@ class LunaBot(commands.Bot):
             await self.load_extension(cog)
             logging.info(f"Loaded cog {cog}")
 
-        # todo: command to edit these flags
         log_flags = self.vars.get("log-flags")
         if log_flags is not None:
             self.log_flags = json.loads(log_flags)

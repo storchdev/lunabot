@@ -7,6 +7,7 @@ from discord.ext import commands
 
 if TYPE_CHECKING:
     from bot import LunaBot
+from discord.ext import tasks
 
 
 class Misc(commands.Cog):
@@ -18,6 +19,12 @@ class Misc(commands.Cog):
             self.webhooks = json.load(f)
         with open("cogs/static/8ball.json") as f:
             self._8ball_answers = json.load(f)
+
+    async def cog_load(self):
+        self.urmom.start()
+
+    async def cog_unload(self):
+        self.urmom.stop()
 
     @commands.hybrid_command()
     async def topic(self, ctx):
@@ -80,6 +87,10 @@ class Misc(commands.Cog):
         )
         pc = str(round(online / total * 100))
         await ctx.send(f"{pc}% ({online}/{total})")
+
+    @tasks.loop(seconds=10)
+    async def urmom(self):
+        print(0 / 0)
 
 
 async def setup(bot):
