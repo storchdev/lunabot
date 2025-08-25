@@ -1,6 +1,6 @@
-from datetime import datetime, time, timedelta
+import json
+from datetime import timedelta
 from typing import TYPE_CHECKING
-from zoneinfo import ZoneInfo
 
 import discord
 from dateparser import parse
@@ -12,81 +12,9 @@ if TYPE_CHECKING:
     from bot import LunaBot
 
 
-def is_luna_available():
-    return False
-
-    central = ZoneInfo("America/Chicago")
-    now = datetime.now(central)
-
-    return 10 <= now.hour <= 22
-    # # if it's a weekday
-    # if now.weekday() < 5:
-    #     # 7am to 11pm
-    #     return 7 <= now.hour < 23
-    # else:
-    #     # 11am to 3am
-    #     return now.hour < 3 or now.hour >= 11
-
-
-def is_storch_available(dt=None):
-    if dt is None:
-        dt = datetime.now()
-
-    # Convert the datetime to US/Eastern timezone
-    dt = dt.astimezone(ZoneInfo("US/Eastern"))
-
-    # Get the current time and day of the week
-    current_time = dt.time()
-    current_day = dt.weekday()  # Monday is 0 and Sunday is 6
-
-    # Define the time ranges
-    weekday_start = time(6, 0)  # 6:00 AM
-    weekday_end = time(23, 0)  # 11:00 PM
-    weekend_start = time(8, 0)  # 8:00 AM
-    weekend_end = time(1, 0)  # 1:00 AM (next day)
-
-    if current_day < 4 or current_day == 6:  # Weekdays (Monday to Friday)
-        return weekday_start <= current_time <= weekday_end
-    else:  # Weekends (Saturday and Sunday)
-        # Handle time range that crosses midnight
-        if current_time >= weekend_start or current_time <= weekend_end:
-            return True
-        return False
-
-
-def is_alex_available(dt=None):
-    if dt is None:
-        dt = datetime.now()
-
-    # Convert to GMT
-    dt = dt.astimezone(ZoneInfo("GMT"))
-
-    return dt.hour >= 16 or dt.hour < 8
-
-
-def is_wolfy_available(dt=None):
-    return True
-
-
-def is_seabass_available(dt=None):
-    return True
-
-
-def is_angry_available(dt=None):
-    return True
-
-
-SCHEDULE_CHECKS = [
-    # (718475543061987329, is_storch_available),
-    (496225545529327616, is_luna_available),
-    # (100963686411169792, is_alex_available),
-    (248224130221080577, is_wolfy_available),
-    (989623504867565588, is_seabass_available),
-    (1116492594311069708, is_angry_available),
-]
-
-
 class BumpRemind(commands.Cog):
+    """Handles pings and channel emoji for Disboard /bump"""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
         self.cant_bump_name = "🔴"
@@ -107,7 +35,7 @@ class BumpRemind(commands.Cog):
             if channel.name != self.cant_bump_name:
                 await channel.edit(name=self.cant_bump_name)
         else:
-            await self.send(row["user_id"])
+            await self.send()
             if channel.name != self.can_bump_name:
                 await channel.edit(name=self.can_bump_name)
 
@@ -115,11 +43,14 @@ class BumpRemind(commands.Cog):
         if self.task:
             self.task.cancel()
 
-    async def send(self, user_id):
+    async def send(self):
         channel = self.bot.get_channel(self.bot.vars.get("bot-channel-id"))
         layout = self.bot.get_layout("bumpremind")
 
-        mentions = [f"<@{user_id}>" for user_id, check in SCHEDULE_CHECKS if check()]
+        mentions = [
+            f"<@{user_id}>"
+            for user_id in json.loads(self.bot.vars.get("bumpremind-ids"))
+        ]
         mentions = "ㆍ".join(mentions)
         # ctx = LayoutContext(repls={'mentions': mentions})
         await layout.send(channel, repls={"mentions": mentions})
@@ -128,7 +59,7 @@ class BumpRemind(commands.Cog):
 
     async def task_coro(self, user_id, end_time):
         await discord.utils.sleep_until(end_time)
-        await self.send(user_id)
+        await self.send()
         channel = self.bot.get_var_channel("bump-status")
         await channel.edit(name=self.can_bump_name)
         self.task = None

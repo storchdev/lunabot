@@ -38,7 +38,7 @@ class Events(
             channel = self.bot.get_channel(
                 self.guild_data[str(member.guild.id)]["welc-channel-id"]
             )
-            
+
             role_id = self.guild_data[str(member.guild.id)].get("new-welc-role-id")
             if role_id is None:
                 role_text = ""
@@ -49,14 +49,20 @@ class Events(
             ctx = LayoutContext(author=member)
             # channel = self.bot.get_var_channel('guild-welc')
             bot_msg = await layout.send(channel, ctx, repls={"newwelcrole": role_text})
-        
+
             if member.guild.id == self.bot.vars.get("main-server-id"):
                 query = """INSERT INTO
-                            welc_messages (user_id, channel_id, message_id)
-                        VALUES
-                            ($1, $2, $3)
+                             welc_messages (user_id, channel_id, message_id)
+                           VALUES
+                             ($1, $2, $3)
+                           ON CONFLICT (user_id) DO UPDATE
+                           SET
+                             channel_id = $2,
+                             message_id = $3
                         """
-                await self.bot.db.execute(query, member.id, bot_msg.channel.id, bot_msg.id)
+                await self.bot.db.execute(
+                    query, member.id, bot_msg.channel.id, bot_msg.id
+                )
 
         # if member.guild.id == self.bot.GUILD_ID:
         #     layout = self.bot.get_layout('welc')

@@ -5,7 +5,6 @@ from rapidfuzz import process
 class Vars(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.bot.vars = {}
 
     async def cog_check(self, ctx):
         return (

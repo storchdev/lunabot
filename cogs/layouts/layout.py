@@ -1,6 +1,6 @@
 import json
 import re
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
@@ -11,7 +11,14 @@ if TYPE_CHECKING:
 
 
 class LayoutContext:
-    def __init__(self, *, author=None, channel=None, guild=None, message=None):
+    def __init__(
+        self,
+        *,
+        author: discord.Member | None = None,
+        channel: discord.TextChannel | None = None,
+        guild: discord.Guild | None = None,
+        message: discord.Message | None = None,
+    ):
         if author is None and message is not None:
             author = message.author
         if channel is None and message is not None:
@@ -48,10 +55,10 @@ SPECIAL_REPLS = {
 class Layout:
     def __init__(
         self,
-        bot: Optional["LunaBot"] = None,
-        name: Optional[str] = None,
-        content: Optional[str] = None,
-        embed_names: Optional[List[str]] = None,
+        bot: "LunaBot" = None,
+        name: str | None = None,
+        content: str | None = None,
+        embed_names: list[str] | None = None,
     ):
         self.bot = bot
         self.name = name
@@ -82,12 +89,12 @@ class Layout:
     @staticmethod
     async def fill_text(
         text: str,
-        repls: Dict[str, str],
+        repls: dict[str, str],
         *,
-        ctx: Optional[LayoutContext] = None,
-        special: Optional[bool] = True,
-        jinja: Optional[bool] = False,
-    ):
+        ctx: LayoutContext | None = None,
+        special: bool = True,
+        jinja: bool = False,
+    ) -> str:
         if special and ctx is None:
             raise ValueError("Context is required for special replacements!")
 
@@ -151,12 +158,12 @@ class Layout:
     @staticmethod
     async def fill_embed(
         _embed: discord.Embed,
-        repls: Dict[str, str],
+        repls: dict[str, str],
         *,
-        ctx: Optional[LayoutContext] = None,
-        special: Optional[bool] = True,
-        jinja: Optional[bool] = False,
-    ):
+        ctx: LayoutContext | None = None,
+        special: bool = True,
+        jinja: bool = False,
+    ) -> discord.Embed:
         embed = _embed.copy()
         for field in embed.fields:
             field.name = await Layout.fill_text(
@@ -202,19 +209,19 @@ class Layout:
                 "name": self.name,
             }
 
-    def to_json(self, *, indent=4):
+    def to_json(self, *, indent: int = 4):
         return json.dumps(self.to_dict(), indent=indent)
 
     async def send(
         self,
-        msgble: Union[discord.abc.Messageable, discord.Interaction],
-        ctx: Optional[Union[commands.Context, LayoutContext]] = None,
+        msgble: discord.abc.Messageable | discord.Interaction,
+        ctx: commands.Context | LayoutContext | None = None,
         *,
-        repls: Optional[dict] = None,
-        special: Optional[bool] = True,
-        jinja: Optional[bool] = False,
+        repls: dict | None = None,
+        special: bool = True,
+        jinja: bool = False,
         **kwargs,
-    ) -> Optional[discord.Message]:
+    ) -> discord.Message | None:
         if isinstance(msgble, discord.Message):
             if ctx is None:
                 ctx = LayoutContext(message=msgble)
@@ -258,13 +265,10 @@ class Layout:
         else:
             content = None
 
-        embeds = []
-        for embed in self.embeds:
-            embeds.append(
-                await self.fill_embed(
-                    embed, repls, ctx=ctx, special=special, jinja=jinja
-                )
-            )
+        embeds = [
+            await self.fill_embed(embed, repls, ctx=ctx, special=special, jinja=jinja)
+            for embed in self.embeds
+        ]
 
         cleaned_kwargs = {}
 
@@ -279,6 +283,7 @@ class Layout:
             keys = ["ephemeral"]
 
         keys.append("view")
+        keys.append("allowed_mentions")
 
         for key in keys:
             if key in kwargs:
@@ -287,16 +292,16 @@ class Layout:
         try:
             return await send_func(content=content, embeds=embeds, **cleaned_kwargs)
         except discord.Forbidden:
-            pass
+            self.bot.log(f"failed to send layout, msgble={msgble}", "layout")
 
     async def edit(
         self,
-        editable: Union[discord.Message, discord.Interaction],
-        ctx: Optional[Union[commands.Context, LayoutContext]] = None,
+        editable: discord.Message | discord.Interaction,
+        ctx: commands.Context | LayoutContext | None = None,
         *,
-        repls: Optional[dict] = None,
-        special: Optional[bool] = True,
-        jinja: Optional[bool] = False,
+        repls: dict | None = None,
+        special: bool = True,
+        jinja: bool = False,
         **kwargs,
     ):
         if isinstance(editable, discord.Message):
@@ -334,5 +339,7 @@ class Layout:
         cleaned_kwargs = {}
         if "view" in kwargs:
             cleaned_kwargs["view"] = kwargs["view"]
+
+        # TODO: support more kwargs
 
         return await edit_func(content=content, embeds=embeds, **cleaned_kwargs)

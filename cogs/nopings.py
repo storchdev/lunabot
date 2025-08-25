@@ -69,7 +69,7 @@ class NoPings(commands.Cog):
                 await msg.delete()
                 layout = self.bot.get_layout("noping")
                 v = ResendView(self.bot, msg.author, msg.content)
-                await layout.send(msg.channel, view=v, delete_after=15)
+                await layout.send(msg.channel, view=v, delete_after=30)
 
     @commands.hybrid_command(name="noping", description="adds you to the no-ping list")
     async def noping(self, ctx):

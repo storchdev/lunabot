@@ -162,7 +162,10 @@ class Housekeeping(commands.Cog):
             bulk_delete = []
 
             for urow in urows:
-                msg = await channel.fetch_message(urow["message_id"])
+                try:
+                    msg = await channel.fetch_message(urow["message_id"])
+                except discord.NotFound:
+                    continue
                 if (
                     discord.utils.utcnow() - msg.created_at
                 ).total_seconds() > 7 * 86400:

@@ -1,8 +1,13 @@
-import discord
 import json
+from typing import TYPE_CHECKING
+
+import discord
 from discord.ext import commands
 
 from cogs.utils import Layout
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 # ART_HOF_CHANNEL_ID = 1191559069627060284
 # ART_CHANNEL_IDS = [
@@ -17,12 +22,12 @@ from cogs.utils import Layout
 
 class Art(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self.art_channel_ids = json.loads(self.bot.vars.get("art-channel-ids"))
 
         self.bot.log(f"art channel ids: {self.art_channel_ids}", "art")
 
-    async def create_embed(self, message, stars):
+    async def create_embed(self, message: discord.Message, stars: int):
         embed = self.bot.get_embed("hof")
         for a in message.attachments:
             if not a.is_spoiler():
@@ -42,7 +47,7 @@ class Art(commands.Cog):
         return embed
 
     @commands.Cog.listener()
-    async def on_message(self, msg):
+    async def on_message(self, msg: discord.Message):
         if msg.author.bot:
             return
         if msg.channel.id in self.art_channel_ids:
@@ -62,7 +67,7 @@ class Art(commands.Cog):
             await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         if payload.user_id == self.bot.user.id:
             return
 
@@ -151,7 +156,7 @@ class Art(commands.Cog):
         self.bot.log("inserted into db", "art")
 
     @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload):
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
         if payload.channel_id not in self.art_channel_ids:
             return
 

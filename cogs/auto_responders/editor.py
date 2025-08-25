@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Literal, TYPE_CHECKING
 
 import discord
 from discord import ButtonStyle, ui
@@ -18,28 +18,33 @@ from .modals import (
     TriggerModal,
 )
 
+if TYPE_CHECKING:
+    from bot import LunaBot
+
 __all__ = ("AutoResponderEditor",)
 
 
 class AutoResponderEditor(View):
     def __init__(
         self,
-        bot,
-        owner,
+        bot: "LunaBot",
+        owner: discord.Member,
         *,
-        default_trigger: Optional[str] = None,
-        ar: Optional[AutoResponder] = None,
+        default_trigger: str | None = None,
+        ar: AutoResponder | None = None,
         timeout: float = 600,
     ):
         self.bot = bot
-        self.owner: discord.Member = owner
+        self.owner = owner
 
         self.trigger = default_trigger
-        self.detection = None
-        self.actions = []
-        self.restrictions = {}
-        self.cooldown: Optional[Cooldown] = None
-        self.on_cooldown_layout_name = None
+        self.detection: Literal[
+            "matches", "contains", "starts", "contains_word", "regex"
+        ] = None
+        self.actions: list[AutoResponderAction] = []
+        self.restrictions: dict[str, list[int]] = {}
+        self.cooldown: Cooldown | None = None
+        self.on_cooldown_layout_name: str | None = None
 
         if ar is not None:
             self.trigger = ar.trigger
@@ -56,7 +61,7 @@ class AutoResponderEditor(View):
         self.update()
 
     @property
-    def embed(self):
+    def embed(self) -> discord.Embed:
         if len(self.actions) == 0:
             desc = "**No Actions**"
         else:
@@ -317,12 +322,12 @@ class AddActionView(View):
 class SendMessageEditor(View):
     def __init__(self, parent_view: AddActionView, *, timeout: float = 600):
         self.parent_view = parent_view
-        self.is_dm = False
-        self.channel = None
-        self.user = None
-        self.reply = False
-        self.ping_on_reply = True
-        self.delete_after = None
+        self.is_dm: bool = False
+        self.channel: discord.TextChannel = None
+        self.user: discord.Member = None
+        self.reply: bool = False
+        self.ping_on_reply: bool = True
+        self.delete_after: float | None = None
         super().__init__(timeout=timeout, parent_view=parent_view)
         self.layout = Layout(self.bot)
 
@@ -567,7 +572,7 @@ class AddReactionView(View):
 
 class RestrictionsView(View):
     def __init__(self, parent_view: AutoResponderEditor, *, timeout: float = 600):
-        self.setting = None
+        self.setting: str | None = None
         super().__init__(timeout=timeout, parent_view=parent_view)
         self.clear_items()
         self.add_items()

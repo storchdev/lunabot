@@ -2,6 +2,7 @@ import asyncio
 from time import time as rn
 
 import discord
+from asyncpg import Record
 from discord import app_commands
 from discord.ext import commands
 
@@ -11,17 +12,25 @@ from .utils import Layout, LayoutChooserOrEditor, TimeConverter
 
 
 class AutoMessage:
-    def __init__(self, bot, name, channel, layout, interval, lastsent):
-        self.bot: LunaBot = bot
-        self.channel: discord.TextChannel = channel
-        self.layout: Layout = layout
-        self.interval: int = interval
-        self.lastsent: int = lastsent
-        self.name: str = name
+    def __init__(
+        self,
+        bot: LunaBot,
+        name: str,
+        channel: discord.TextChannel,
+        layout: Layout,
+        interval: int,
+        lastsent: int,
+    ):
+        self.bot = bot
+        self.channel = channel
+        self.layout = layout
+        self.interval = interval
+        self.lastsent = lastsent
+        self.name = name
         self.task: asyncio.Task = None
 
     @classmethod
-    def from_db_row(cls, bot: LunaBot, row):
+    def from_db_row(cls, bot: LunaBot, row: Record):
         name = row["name"]
         channel = bot.get_channel(row["channel_id"])
         layout = bot.get_layout_from_json(row["layout"])
@@ -50,8 +59,8 @@ class AutoMessage:
 
 class Automessages(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
-        self.auto_messages = {}
+        self.bot: LunaBot = bot
+        self.auto_messages: dict[str, AutoMessage] = {}
 
     async def cog_load(self):
         query = "SELECT * FROM auto_messages"

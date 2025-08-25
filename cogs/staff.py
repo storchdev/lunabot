@@ -179,6 +179,9 @@ class Staff(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if self.bot.vars.get("role-protection") == 0:
+            return
+
         before_role_ids = set(r.id for r in before.roles)
         for role in after.roles:
             if role.id not in before_role_ids:

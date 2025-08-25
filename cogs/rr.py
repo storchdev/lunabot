@@ -2,10 +2,15 @@ import asyncio
 import datetime
 import json
 import textwrap
+from typing import TYPE_CHECKING
 
 import discord
 from discord import ButtonStyle, TextStyle, app_commands, ui
 from discord.ext import commands
+
+if TYPE_CHECKING:
+    from bot import LunaBot
+    from discord import RawReactionActionEvent
 
 # TODO: fix this whole thing later its messy asf
 
@@ -306,7 +311,13 @@ class RRView3(ui.View):
 
 class RR(commands.Cog, name="Reaction Roles"):
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
+
+    async def remove_reaction(self, payload: "RawReactionActionEvent"):
+        message = await self.bot.get_channel(payload.channel_id).fetch_message(
+            payload.message_id
+        )
+        await message.remove_reaction(payload.emoji, discord.Object(payload.user_id))
 
     async def cog_load(self):
         # make the rr_selections table
@@ -459,7 +470,7 @@ class RR(commands.Cog, name="Reaction Roles"):
         await ctx.send("Successfully removed reaction role :white_check_mark:")
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload: "RawReactionActionEvent"):
         query = "SELECT map, max_sel, req_role_id, no_role_msg, req_time, no_time_msg FROM rrs WHERE channel_id = $1 AND message_id = $2"
         row = await self.bot.db.fetchrow(query, payload.channel_id, payload.message_id)
         if row is None:
@@ -469,21 +480,11 @@ class RR(commands.Cog, name="Reaction Roles"):
             if row["req_role_id"] not in [role.id for role in payload.member.roles]:
                 if row["no_role_msg"] is not None:
                     await payload.member.send(row["no_role_msg"])
-                return await payload.member.remove_reaction(
-                    payload.emoji,
-                    payload.member.guild.get_channel(
-                        payload.channel_id
-                    ).get_partial_message(payload.message_id),
-                )
+                return await self.remove_reaction(payload)
 
         if row["req_time"] is not None:
             if payload.member.joined_at is None:
-                return await payload.member.remove_reaction(
-                    payload.emoji,
-                    payload.member.guild.get_channel(
-                        payload.channel_id
-                    ).get_partial_message(payload.message_id),
-                )
+                return await self.remove_reaction(payload)
             if (
                 discord.utils.utcnow() - payload.member.joined_at
             ).total_seconds() < row["req_time"]:
@@ -498,12 +499,7 @@ class RR(commands.Cog, name="Reaction Roles"):
                             ),
                         )
                     )
-                return await payload.member.remove_reaction(
-                    payload.emoji,
-                    payload.member.guild.get_channel(
-                        payload.channel_id
-                    ).get_partial_message(payload.message_id),
-                )
+                return await self.remove_reaction(payload)
 
         if row["max_sel"] != -1:
             query = "SELECT COUNT(*) FROM rr_selections WHERE user_id = $1 AND channel_id = $2 AND message_id = $3"
@@ -511,33 +507,18 @@ class RR(commands.Cog, name="Reaction Roles"):
                 query, payload.user_id, payload.channel_id, payload.message_id
             )
             if count >= row["max_sel"]:
-                return await payload.member.remove_reaction(
-                    payload.emoji,
-                    payload.member.guild.get_channel(
-                        payload.channel_id
-                    ).get_partial_message(payload.message_id),
-                )
+                return await self.remove_reaction(payload)
 
         query = "SELECT role_id FROM rr_selections WHERE user_id = $1 AND channel_id = $2 AND message_id = $3"
         rows = await self.bot.db.fetch(
             query, payload.user_id, payload.channel_id, payload.message_id
         )
         if str(payload.emoji) in [str(row["role_id"]) for row in rows]:
-            return await payload.member.remove_reaction(
-                payload.emoji,
-                payload.member.guild.get_channel(
-                    payload.channel_id
-                ).get_partial_message(payload.message_id),
-            )
+            return await self.remove_reaction(payload)
 
         map = json.loads(row["map"])
         if str(payload.emoji) not in map:
-            return await payload.member.remove_reaction(
-                payload.emoji,
-                payload.member.guild.get_channel(
-                    payload.channel_id
-                ).get_partial_message(payload.message_id),
-            )
+            return await self.remove_reaction(payload)
 
         role = payload.member.guild.get_role(map[str(payload.emoji)])
         await payload.member.add_roles(role)

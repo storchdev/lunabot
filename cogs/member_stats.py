@@ -8,7 +8,9 @@ import discord
 import matplotlib.dates as mdates
 from dateparser import parse
 from discord.ext import commands
+from datetime import datetime
 from matplotlib import pyplot as plt
+import numpy as np
 from pytz import timezone
 
 from .utils.checks import staff_only
@@ -17,15 +19,29 @@ if TYPE_CHECKING:
     from bot import LunaBot
 
 
+def grad_data(data: tuple[datetime, float]) -> tuple[datetime, float]:
+    times_list = [t for t, _ in data]
+    times_dt = np.array(times_list, dtype="datetime64[ns]")
+    values = np.array([v for _, v in data], dtype=float)
+
+    # Convert datetimes to elapsed seconds from the first timestamp
+    t_sec = (times_dt - times_dt[0]) / np.timedelta64(1, "s")
+
+    # Gradient handles non-uniform spacing when you pass x=t_sec
+    dvals_dt = np.gradient(values, t_sec)
+    return list(zip(times_list, dvals_dt))
+
+
 class StatsFlags(commands.FlagConverter):
     stat: str = "net"
     start: str = "1 week ago"
     end: str = "now"
     tick: str = None
     ticks: int = 21
+    grad: bool = False
 
 
-def plot_data_sync(data, stat=None):
+def plot_data_sync(data: list[tuple[datetime, float]], stat=None):
     """
     Plot data synchronously.
     :param data: A dictionary with join, leave, and net data.
@@ -164,7 +180,9 @@ class MemberStats(commands.Cog):
             query, member.id, member.guild.id, member_count, discord.utils.utcnow()
         )
 
-    async def generate_absolute_data(self, start, end, guild_id):
+    async def generate_absolute_data(
+        self, start, end, guild_id
+    ) -> list[tuple[datetime, int]]:
         """
         Generate absolute member counts data from the database.
         :param start: Start time for the data range.
@@ -271,7 +289,7 @@ class MemberStats(commands.Cog):
         return embed
 
     @commands.command()
-    async def stats(self, ctx, *, flags: StatsFlags):
+    async def altstats(self, ctx, *, flags: StatsFlags):
         stat = flags.stat
         start = parse(
             flags.start,
@@ -306,8 +324,8 @@ class MemberStats(commands.Cog):
 
         await ctx.send(file=file, embed=embed)
 
-    @commands.command()
-    async def absstats(self, ctx, *, flags: StatsFlags):
+    @commands.command(aliases=["absstats"])
+    async def stats(self, ctx, *, flags: StatsFlags):
         start = parse(
             flags.start,
             settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
@@ -325,6 +343,9 @@ class MemberStats(commands.Cog):
             end = discord.utils.utcnow()
 
         absolute_data = await self.generate_absolute_data(start, end, ctx.guild.id)
+        if flags.grad:
+            absolute_data = grad_data(absolute_data)
+
         buf = await asyncio.to_thread(plot_data_sync, absolute_data)
         file = discord.File(buf, filename="plot.png")
         embed = await self.generate_base_embed(start, end, ctx.guild.id)

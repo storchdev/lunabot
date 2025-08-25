@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 import discord
 from discord import app_commands
@@ -27,7 +27,7 @@ class AFK(commands.Cog):
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
-        self.afk: Dict[int, AFKEntry] = {}
+        self.afk: dict[int, AFKEntry] = {}
         self.SET_AFK_DELAY = 15
 
     async def cog_load(self):

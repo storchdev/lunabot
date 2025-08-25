@@ -2,10 +2,11 @@ import json
 import logging
 from datetime import datetime, timedelta
 from pkgutil import iter_modules
-from typing import TYPE_CHECKING, Dict, Optional, Set, Union
+from typing import TYPE_CHECKING
 
 import aiohttp
 import discord
+from discord import Member, TextChannel
 from discord.ext import commands
 from discord.ext.duck.errors import ErrorManager
 
@@ -29,25 +30,28 @@ class LunaBot(commands.Bot):
             status=discord.Status.idle,
             **kwargs,
         )
-        self.STORCH_ID = 718475543061987329
+        self.DEFAULT_EMBED_COLOR = 0xCAB7FF
         self.GUILD_ID = 899108709450543115
+        self.STORCH_ID = 718475543061987329
+
         self.owner_id = self.STORCH_ID
         self.owner_ids = [self.STORCH_ID]
-        self.DEFAULT_EMBED_COLOR = 0xCAB7FF
-        self.views: Set[View] = set()
+
+        self.db: Pool | None = None
+        self.embeds: dict[str, discord.Embed] = {}
         self.session = aiohttp.ClientSession()
-        self.embeds: Dict[str, discord.Embed] = {}
-        self.layouts: Dict[str, Layout] = {}
-        self.future_tasks: Dict[int, FutureTask] = {}
-        self.db: Optional[Pool] = None
-        self.tickets: Dict[discord.Thread, Ticket] = {}
-        self.log_flags = []
         self.errors = ErrorManager(
             self,
             webhook_url=ERROR_WEBHOOK_URL,
             session=self.session,
             hijack_bot_on_error=True,
         )
+        self.future_tasks: dict[int, FutureTask] = {}
+        self.layouts: dict[str, Layout] = {}
+        self.log_flags: list[str] = []
+        self.tickets: dict[discord.Thread, Ticket] = {}
+        self.views: set[View] = set()
+        self.vars: dict[str, str | int] = {}
 
     async def start_task(self):
         await self.wait_until_ready()
@@ -104,7 +108,7 @@ class LunaBot(commands.Bot):
             return Layout(self, name, f'`Layout "{name}" not found`', [])
         return self.layouts[name]
 
-    def get_layout_from_json(self, data: Union[str, dict]) -> Layout:
+    def get_layout_from_json(self, data: str | dict) -> Layout:
         if isinstance(data, str):
             data = json.loads(data)
         if data["name"] is not None:
@@ -150,12 +154,12 @@ class LunaBot(commands.Bot):
         duration: float,
         *,
         rate: int = 1,
-        obj: Optional[Union[discord.Member, discord.TextChannel]] = None,
+        obj: Member | TextChannel | None = None,
         update=True,
-    ) -> Optional[datetime]:
-        if isinstance(obj, discord.Member):
+    ) -> datetime | None:
+        if isinstance(obj, Member):
             bucket = "user"
-        elif isinstance(obj, discord.TextChannel):
+        elif isinstance(obj, TextChannel):
             bucket = "channel"
         else:
             bucket = "global"
@@ -197,13 +201,13 @@ class LunaBot(commands.Bot):
 
         return None
 
-    def get_var_channel(self, name: str) -> discord.TextChannel:
+    def get_var_channel(self, name: str) -> TextChannel:
         name = name + "-channel-id"
         if name not in self.vars:
             return None
         return self.get_channel(self.vars[name])
 
-    async def get_count(self, name, *, update=True):
+    async def get_count(self, name: str, *, update=True):
         if update:
             query = """INSERT INTO
                            counters (name, COUNT)
@@ -232,7 +236,7 @@ class LunaBot(commands.Bot):
         owner = self.get_user(self.owner_id)
         await owner.send(message)
 
-    def log(self, message: str, flag: Optional[str] = None):
+    def log(self, message: str, flag: str | None = None):
         if flag and flag not in self.log_flags:
             return
 

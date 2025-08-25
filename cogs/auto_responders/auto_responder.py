@@ -1,16 +1,20 @@
 import asyncio
 import json
 import random
-from typing import List, Optional
+from typing import TYPE_CHECKING
 
 import discord
+from asyncpg import Record
 
 from cogs.utils import Cooldown, LayoutContext
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 class AutoResponderAction:
     def __init__(self, bot, action_type, **kwargs):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self.type = action_type
         self.kwargs = kwargs
 
@@ -37,8 +41,16 @@ class AutoResponderAction:
 
             msgble = channel
 
+        if msg.author.id == self.bot.vars.get("luna-id"):
+            allowed_mentions = None
+        else:
+            allowed_mentions = discord.AllowedMentions.none()
+
         layout = self.bot.get_layout_from_json(self.kwargs["layout"])
         ctx = LayoutContext(message=msg)
+
+        self.kwargs["allowed_mentions"] = allowed_mentions
+
         await layout.send(msgble, ctx=ctx, **self.kwargs)
 
     async def add_roles(self, msg: discord.Message):
@@ -90,11 +102,21 @@ class AutoResponderAction:
         query = "UPDATE balances SET balance = balance + $1 WHERE user_id = $2"
         await self.bot.db.execute(query, amount, msg.author.id)
 
+    async def delete_message(self, msg: discord.Message):
+        try:
+            await msg.delete()
+        except discord.NotFound:
+            self.bot.log(
+                f"message `{msg.content}` by {msg.author.name} {msg.author.mention} failed to delete"
+            )
+            return
+
     async def execute(self, msg: discord.Message):
+        # TODO: clean by using switch or dict
         if self.type == "send_message":
             await self.send_message(msg)
         elif self.type == "delete_trigger_message":
-            await msg.delete()
+            await self.delete_message(msg)
         elif self.type == "add_roles":
             await self.add_roles(msg)
         elif self.type == "remove_roles":
@@ -113,10 +135,10 @@ class AutoResponder:
         name: str,
         trigger: str,
         detection: str,
-        actions: List[AutoResponderAction],
-        restrictions: dict,
-        cooldown: Optional[Cooldown] = None,
-        on_cooldown_layout_name: Optional[str] = None,
+        actions: list[AutoResponderAction],
+        restrictions: dict[str, list[int]],
+        cooldown: Cooldown | None = None,
+        on_cooldown_layout_name: str | None = None,
     ):
         self.name = name
         self.trigger = trigger
@@ -141,8 +163,11 @@ class AutoResponder:
         self.cooldown = cooldown
         self.on_cooldown_layout_name = on_cooldown_layout_name
 
+    def __str__(self):
+        return f"<AR name={self.name} trigger={self.trigger}>"
+
     @classmethod
-    def from_db_row(cls, bot, row):
+    def from_db_row(cls, bot: "LunaBot", row: Record):
         actions = []
         for action in json.loads(row["actions"]):
             actions.append(AutoResponderAction(bot, action["type"], **action["kwargs"]))

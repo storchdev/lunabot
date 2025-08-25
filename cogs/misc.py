@@ -57,7 +57,10 @@ class Misc(commands.Cog):
             )
 
         await webhook.send(
-            sentence, username=member.display_name, avatar_url=member.display_avatar.url
+            sentence,
+            username=member.display_name,
+            avatar_url=member.display_avatar.url,
+            allowed_mentions=discord.AllowedMentions.none(),
         )
 
     @commands.hybrid_command(name="8ball")

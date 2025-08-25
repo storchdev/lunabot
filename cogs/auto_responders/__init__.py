@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import discord
 from discord import app_commands
@@ -36,7 +36,7 @@ class AutoResponderCog(
             or ctx.author.id in self.bot.owner_ids
         )
 
-    async def ar_check(self, msg: discord.Message) -> Optional[AutoResponder]:
+    async def ar_check(self, msg: discord.Message) -> AutoResponder | None:
         for ar in self.auto_responders:
             if ar.wl_users and msg.author.id not in ar.wl_users:
                 continue
@@ -83,7 +83,7 @@ class AutoResponderCog(
         return None
 
     @commands.Cog.listener()
-    async def on_message(self, msg):
+    async def on_message(self, msg: discord.Message):
         if msg.author.bot:
             return
 
@@ -110,7 +110,10 @@ class AutoResponderCog(
                 return
         # try:
         for action in ar.actions:
-            await action.execute(msg)
+            try:
+                await action.execute(msg)
+            except discord.HTTPException:
+                await self.bot.dm_owner(f"ar error\n{ar}\n{msg.jump_url}")
         # except:
         #     print(ar)
         #     print(msg.jump_url)
@@ -129,7 +132,7 @@ class AutoResponderCog(
 
     @autoresponder.command(name="add", aliases=["create"])
     @app_commands.default_permissions()
-    async def add_autoresponder(self, ctx, *, name):
+    async def add_autoresponder(self, ctx, *, name: str):
         """Adds an auto-responder."""
         name = name.lower()
         if name in self.name_lookup:
@@ -187,7 +190,7 @@ class AutoResponderCog(
 
     @autoresponder.command(name="remove", aliases=["delete"])
     @app_commands.default_permissions()
-    async def remove_autoresponder(self, ctx, *, name):
+    async def remove_autoresponder(self, ctx, *, name: str):
         """Removes an auto-responder."""
         name = name.lower()
         if name not in self.name_lookup:
@@ -204,7 +207,7 @@ class AutoResponderCog(
 
     @autoresponder.command(name="edit")
     @app_commands.default_permissions()
-    async def edit_autoresponder(self, ctx, *, name):
+    async def edit_autoresponder(self, ctx, *, name: str):
         """Edits an auto-responder."""
         name = name.lower()
         if name not in self.name_lookup:
