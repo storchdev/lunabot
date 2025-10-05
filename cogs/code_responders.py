@@ -284,8 +284,8 @@ class CodeResponderAPI:
 class CodeResponders(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.lookup = {}
-        self.code_responders = []
+        self.lookup: dict[str, CodeResponderItem] = {}
+        self.code_responders: list[CodeResponderItem] = []
         self.process_n = 0
 
     async def cog_check(self, ctx):
@@ -349,7 +349,7 @@ class CodeResponders(commands.Cog):
         await ctx.send_help(ctx.command)
 
     @cr.command(aliases=["create"])
-    async def add(self, ctx, *, flags: AddCrFlags):
+    async def add(self, ctx, name, *, flags: AddCrFlags):
         name = name.lower()
         if name in self.lookup:
             await ctx.send("A coderesponder with this name already exists.")
@@ -357,11 +357,17 @@ class CodeResponders(commands.Cog):
 
         trigger = flags.trigger
         detection = flags.detection
+        detections = [
+            "matches",
+            "contains",
+            "contains_word",
+            "starts",
+            "ends",
+            "regex",
+        ]
 
-        if detection not in ["full", "word", "start", "end", "regex"]:
-            await ctx.send(
-                "Invalid detection method. Must be one of: `full`, `word`, `start`, `end`, `regex`."
-            )
+        if detection not in detections:
+            await ctx.send(f"Invalid detection method. Must be one of: {detections}")
             return
 
         ignore_errors = flags.ignoreErrors
@@ -451,8 +457,10 @@ class CodeResponders(commands.Cog):
                 )
 
         item = CodeResponderItem(name, trigger, detection, code, ignore_errors, cd)
-        self.lookup.add(name)
+        self.lookup[name] = item
         self.code_responders.append(item)
+        cd_json = cd.jsonify() if cd is not None else None
+
         query = """INSERT INTO
                       code_responders (
                           name,
@@ -467,11 +475,21 @@ class CodeResponders(commands.Cog):
                """
 
         await self.bot.db.execute(
-            query, name, trigger, detection, code, cd.jsonify(), ctx.author.id
+            query, name, trigger, detection, code, cd_json, ctx.author.id
         )
         await ctx.send(
             f"Congratulations, you successfully created a coderesponder named `{name}`!"
         )
+
+    @cr.command()
+    async def getcode(self, ctx, *, name: str):
+        name = name.lower()
+        if name not in self.lookup:
+            return await ctx.send("cr doesnt exist")
+
+        cr = self.lookup[name]
+        out = f"```py\n{cr.code}```"
+        await ctx.send(out)
 
     @cr.command(aliases=["delete"])
     async def remove(self, ctx, *, name):

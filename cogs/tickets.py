@@ -1,16 +1,17 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from io import StringIO
 from typing import TYPE_CHECKING, Optional
 
 import discord
+import dateparser
 from discord import ui
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from .utils import View, admin_only, staff_only
 
 if TYPE_CHECKING:
-    from bot import LunaBot
+    from bot import LunaBot, LunaCtx
 
 
 class Ticket:
@@ -142,11 +143,12 @@ class TicketTypeMenu(View):
         luna_id = self.bot.vars.get("luna-id")
         pm_id = self.bot.vars.get("pm-role-id")
         staff_id = self.bot.vars.get("staff-role-id")
+        molly_id = 675058943596298340
 
         if choice == "VIP Artist":
-            pings = f"<@{luna_id}>"
+            pings = f"<@{luna_id}> <@{molly_id}>"
         elif choice == "Trusted Seller":
-            pings = f"<@{luna_id}>"
+            pings = f"<@{luna_id}> <@{molly_id}>"
         elif choice == "Partnership Request":
             pings = f"<@&{pm_id}>"
         elif choice == "PM Request":
@@ -176,12 +178,48 @@ class TicketTypeMenu(View):
         return ticket
 
 
+REMIND_GAP = 86400 * 7
+
+
 class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 
     async def cog_load(self):
         self.bot.add_view(TicketView(self.bot))
+        self.remind_inactive.start()
+
+    async def cog_unload(self):
+        self.remind_inactive.cancel()
+
+    @tasks.loop(hours=1)
+    async def remind_inactive(self):
+        rows = await self.bot.db.fetch("SELECT * FROM active_tickets")
+        for row in rows:
+            channel: discord.Thread = self.bot.get_channel(row["channel_id"])
+            if channel is None:
+                query = "DELETE FROM active_tickets WHERE channel_id = $1"
+                await self.bot.db.execute(query, row["channel_id"])
+                continue
+            last_msg = await channel.fetch_message(channel.last_message_id)
+            if (discord.utils.utcnow() - last_msg.created_at).total_seconds() < 86400:
+                continue
+            if (
+                row["remind_after"] is None
+                or row["remind_after"] > discord.utils.utcnow()
+            ):
+                continue
+
+            layout = self.bot.get_layout("ticketreminder")
+            pings = [u.mention for u in await channel.fetch_members() if not u.bot]
+            await layout.send(channel, repls={"pings": "・".join(pings)})
+
+            query = "UPDATE active_tickets SET remind_after = $1 WHERE channel_id = $2"
+            await self.bot.db.execute(
+                query,
+                None,
+                channel.id,
+            )
 
     async def get_txt_file(self, ticket_id):
         query = "SELECT messages FROM ticket_transcripts WHERE ticket_id = $1"
@@ -238,7 +276,7 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
         query = "SELECT * FROM active_tickets WHERE channel_id = $1"
         row = await self.bot.db.fetchrow(query, ctx.channel.id)
         if row is None:
-            await ctx.send("This command can only be used in a ticket thread!")
+            await ctx.send("This command can only be used in an open ticket thread!")
             return
 
         query = "DELETE FROM active_tickets WHERE channel_id = $1"
@@ -257,6 +295,33 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
         archive = self.bot.get_var_channel("archive")
         layout = self.bot.get_layout("ticket/closed")
         await layout.send(archive, repls=repls)
+
+    @commands.command()
+    @staff_only()
+    async def extend(self, ctx: "LunaCtx", *, time: str):
+        query = "SELECT * FROM active_tickets WHERE channel_id = $1"
+        row = await self.bot.db.fetchrow(query, ctx.channel.id)
+        if row is None:
+            await ctx.send("This command can only be used in an open ticket thread!")
+            return
+
+        dt = dateparser.parse(
+            time,
+            settings={
+                "PREFER_DATES_FROM": "future",
+                "RETURN_AS_TIMEZONE_AWARE": True,
+                "TIMEZONE": await ctx.fetch_timezone(),
+            },
+        )
+        if dt < discord.utils.utcnow():
+            return await ctx.send("You can only enter a *future* time!")
+
+        query = "UPDATE active_tickets SET remind_after = $1 WHERE channel_id = $2"
+        await self.bot.db.execute(query, dt, ctx.channel.id)
+        mdtime = discord.utils.format_dt(dt, "d")
+        await ctx.send(
+            f"Extended this ticket to {mdtime}. I will not send out an inactivity reminder until then!"
+        )
 
 
 async def setup(bot):

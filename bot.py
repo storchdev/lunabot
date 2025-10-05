@@ -11,6 +11,7 @@ from discord.ext import commands
 from discord.ext.duck.errors import ErrorManager
 
 from cogs.future_tasks import FutureTask
+from zoneinfo import ZoneInfo
 from cogs.utils import InvalidURL, Layout, View
 from cogs.utils.checks import guild_only
 from config import ERROR_WEBHOOK_URL, LOG_FILE
@@ -38,7 +39,11 @@ class LunaBot(commands.Bot):
         self.owner_ids = [self.STORCH_ID]
 
         self.db: Pool | None = None
+        self.vars: dict[str, str | int] = {}
         self.embeds: dict[str, discord.Embed] = {}
+        self.future_tasks: dict[int, FutureTask] = {}
+        self.layouts: dict[str, Layout] = {}
+        self.log_flags: list[str] = []
         self.session = aiohttp.ClientSession()
         self.errors = ErrorManager(
             self,
@@ -46,12 +51,8 @@ class LunaBot(commands.Bot):
             session=self.session,
             hijack_bot_on_error=True,
         )
-        self.future_tasks: dict[int, FutureTask] = {}
-        self.layouts: dict[str, Layout] = {}
-        self.log_flags: list[str] = []
         self.tickets: dict[discord.Thread, Ticket] = {}
         self.views: set[View] = set()
-        self.vars: dict[str, str | int] = {}
 
     async def start_task(self):
         await self.wait_until_ready()
@@ -252,3 +253,19 @@ class LunaBot(commands.Bot):
             parts.append(message)
 
             f.write(" ".join(parts) + "\n")
+
+    async def on_message(self, message):
+        ctx = await self.get_context(message, cls=LunaCtx)
+        await self.invoke(ctx)
+
+
+class LunaCtx(commands.Context):
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+
+    async def fetch_timezone(self):
+        query = "SELECT timezone FROM timezones WHERE user_id = $1"
+        tz = await self.bot.db.fetchval(query, self.author.id)
+        if tz is None:
+            return ZoneInfo("America/Chicago")
+        return ZoneInfo(tz)

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from cogs.utils import InvalidURL
+from cogs.utils import InvalidURL, LayoutContext
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -17,6 +17,23 @@ from typing import Optional
 
 # Custom rust module
 from fuzzy_rust import extract_bests
+
+MOLLY_ID = 675058943596298340
+
+
+def is_luna_or_molly():
+    async def predicate(ctx: commands.Context):
+        if ctx.author.id not in [
+            ctx.bot.vars.get("luna-id"),
+            MOLLY_ID,
+            ctx.bot.owner_id,
+        ]:
+            # layout = ctx.bot.get_layout("lunaonly")
+            # await layout.send(ctx)
+            return False
+        return True
+
+    return commands.check(predicate)
 
 
 class Staff(commands.Cog):
@@ -279,6 +296,33 @@ class Staff(commands.Cog):
                 pass
 
         await ctx.send("Finished purging!")
+
+    @commands.command()
+    @is_luna_or_molly()
+    async def vip(self, ctx, *, member: discord.Member):
+        VIP_ROLE_ID = 1192676146911916092
+        await member.add_roles(discord.Object(VIP_ROLE_ID))
+        layout = self.bot.get_layout(".vip")
+        await layout.send(ctx, LayoutContext(author=member))
+        await ctx.message.delete()
+
+    @commands.command()
+    @is_luna_or_molly()
+    async def buyer(self, ctx, *, member: discord.Member):
+        BUYER_ROLE_ID = 1197373980416430090
+        await member.add_roles(discord.Object(BUYER_ROLE_ID))
+        layout = self.bot.get_layout(".buyer")
+        await layout.send(ctx, LayoutContext(author=member))
+        await ctx.message.delete()
+
+    @commands.command()
+    @is_luna_or_molly()
+    async def seller(self, ctx, *, member: discord.Member):
+        SELLER_ROLE_ID = 1197374014025371808
+        await member.add_roles(discord.Object(SELLER_ROLE_ID))
+        layout = self.bot.get_layout(".seller")
+        await layout.send(ctx, LayoutContext(author=member))
+        await ctx.message.delete()
 
 
 async def setup(bot):

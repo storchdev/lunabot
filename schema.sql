@@ -87,6 +87,15 @@ CREATE TABLE IF NOT EXISTS cooldowns (
   UNIQUE(action, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS active_tickets (
+  ticket_id SERIAL PRIMARY KEY,
+  channel_id BIGINT,
+  opener_id BIGINT,
+  timestamp INTEGER,
+  archive_id BIGINT,
+  remind_after TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS ticket_transcripts (
   id SERIAL PRIMARY KEY,
   ticket_id BIGINT,

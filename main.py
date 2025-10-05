@@ -1,11 +1,14 @@
 import asyncio
+import logging
+import sys
 
 import discord
 
 from bot import LunaBot
 from config import TOKEN
 
-discord.utils.setup_logging()
+discord.utils.setup_logging(handler=logging.FileHandler("lunabot.log"))
+sys.stderr = open("errors.log", "a", buffering=1)
 
 
 async def main():
