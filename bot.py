@@ -263,9 +263,9 @@ class LunaCtx(commands.Context):
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
 
-    async def fetch_timezone(self):
+    async def fetch_timezone(self) -> str:
         query = "SELECT timezone FROM timezones WHERE user_id = $1"
         tz = await self.bot.db.fetchval(query, self.author.id)
         if tz is None:
-            return ZoneInfo("America/Chicago")
-        return ZoneInfo(tz)
+            return "America/Chicago"
+        return tz

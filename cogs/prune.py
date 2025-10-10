@@ -150,7 +150,7 @@ class Prune(commands.Cog):
             latest_dt = dateparser.parse(
                 datestr,
                 settings={
-                    "TIMEZONE": "America/Chicago",
+                    "TIMEZONE": await ctx.fetch_timezone(),
                     "RETURN_AS_TIMEZONE_AWARE": True,
                 },
             )

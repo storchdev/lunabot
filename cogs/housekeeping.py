@@ -41,7 +41,7 @@ class Housekeeping(commands.Cog):
         self.guild_server_ids = [
             int(gid)
             for gid in self.guild_data
-            if gid != self.bot.vars.get("main-server-id")
+            if int(gid) != self.bot.vars.get("main-server-id")
         ]
 
         self.kick_progress = 0
@@ -111,6 +111,20 @@ class Housekeeping(commands.Cog):
             name = name[:28]
         await asyncio.sleep(1)
         await member.edit(nick=f"✿❀﹕{name}﹕")
+
+        if member.guild.id == self.bot.GUILD_ID:
+            for gid in self.guild_server_ids:
+                gguild = self.bot.get_guild(gid)
+                role = gguild.get_role(
+                    self.guild_data[str(gid)]["kick-warning-role-id"]
+                )
+                gmember = gguild.get_member(member.id)
+                if gmember and role in gmember.roles:
+                    await gmember.remove_roles(role)
+                    self.bot.log(
+                        f"removed kick warning role from {member} ({member.id})",
+                        "guildstuff",
+                    )
 
         if member.guild.id in self.guild_server_ids:
             # db
@@ -233,22 +247,41 @@ class Housekeeping(commands.Cog):
     @commands.command(aliases=["ugsj"])
     @commands.is_owner()
     async def updateguildserverjoins(self, ctx):
-        if ctx.guild.id not in self.guild_server_ids:
-            return await ctx.send("This server isn't a guild server!")
+        # n = 0
+        # mainids = set(m.id for m in self.bot.get_guild(self.bot.GUILD_ID))
 
-        for member in ctx.guild.members:
-            query = "INSERT INTO guild_server_joins (guild_id, user_id, joined_at) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO NOTHING"
-            await self.bot.db.execute(
-                query,
-                ctx.guild.id,
-                member.id,
-                member.joined_at or discord.utils.utcnow(),
-            )
+        for gid in self.guild_server_ids:
+            gguild = self.bot.get_guild(gid)
+            #     role = gguild.get_role(self.guild_data[str(gid)]["kick-warning-role-id"])
+            #     for gmember in gguild.members:
+            #         if gmember.id not in mainids:
+            #             continue
+            #         if role in gmember.roles:
+            #             await gmember.remove_roles(role)
+            # self.bot.log(
+            #     f"removed kick warning role from {gmember} ({gmember.id})",
+            #     "guildstuff",
+            # )
+            # n += 1
 
-        await ctx.send("Done!")
+            # if ctx.guild.id not in self.guild_server_ids:
+            #     return await ctx.send("This server isn't a guild server!")
+
+            for member in gguild.members:
+                query = "INSERT INTO guild_server_joins (guild_id, user_id, joined_at) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) DO NOTHING"
+                await self.bot.db.execute(
+                    query,
+                    ctx.guild.id,
+                    member.id,
+                    member.joined_at or discord.utils.utcnow(),
+                )
+        await ctx.send(
+            # f"Removed kick roles from members who have joined main server (x{n})\n"
+            "Updated join data for all guilds"
+        )
 
     @commands.command()
-    @commands.max_concurrency(1)
+    # @commands.max_concurrency(1)
     @admin_only()
     async def kickguildmembers(self, ctx):
         # DRY_RUN = True  # set to false in production

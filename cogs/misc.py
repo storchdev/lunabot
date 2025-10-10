@@ -7,7 +7,6 @@ from discord.ext import commands
 
 if TYPE_CHECKING:
     from bot import LunaBot
-from discord.ext import tasks
 
 
 class Misc(commands.Cog):
@@ -94,6 +93,20 @@ class Misc(commands.Cog):
     # @tasks.loop(seconds=10)
     # async def urmom(self):
     #     print(0 / 0)
+
+    @commands.command()
+    async def serverbanner(self, ctx, *, member: discord.Member = None):
+        if member is None:
+            member = ctx.author
+
+        banner = member.guild_banner or (await self.bot.fetch_user(member.id)).banner
+        if banner is None:
+            return await ctx.send("no banner :(")
+
+        embed = discord.Embed(
+            color=self.bot.DEFAULT_EMBED_COLOR, description="six seven"
+        ).set_image(url=banner.url)
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):

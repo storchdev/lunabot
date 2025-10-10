@@ -326,13 +326,14 @@ class MemberStats(commands.Cog):
 
     @commands.command(aliases=["absstats"])
     async def stats(self, ctx, *, flags: StatsFlags):
+        tz = await ctx.fetch_timezone()
         start = parse(
             flags.start,
-            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
         )
         end = parse(
             flags.end,
-            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
         )
 
         if end <= start:

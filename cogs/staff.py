@@ -242,7 +242,7 @@ class Staff(commands.Cog):
                         "id": msg.author.id,
                         "username": msg.author.name,
                         "display_name": msg.author.display_name,
-                        "avatar_url": msg.author.avatar.with_format("png").url,
+                        "avatar_url": msg.author.display_avatar.with_format("png").url,
                     },
                     "content": msg.content,
                     "timestamp": msg.created_at.timestamp(),

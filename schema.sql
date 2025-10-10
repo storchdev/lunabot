@@ -258,3 +258,9 @@ CREATE TABLE IF NOT EXISTS exclusive_roles (
   group_name TEXT,
   role_id BIGINT
 );
+
+CREATE TABLE IF NOT EXISTS candybals (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT UNIQUE,
+  balance INTEGER
+);

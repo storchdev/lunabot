@@ -382,7 +382,7 @@ class Tools(commands.Cog, description="storchs tools"):
                 dateparser.parse,
                 date_str,
                 settings={
-                    "TIMEZONE": "America/Chicago",
+                    "TIMEZONE": await ctx.fetch_timezone(),
                     "RETURN_AS_TIMEZONE_AWARE": True,
                 },
             )

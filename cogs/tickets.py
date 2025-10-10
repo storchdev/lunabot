@@ -1,10 +1,11 @@
 import json
-from datetime import datetime, timezone
+import logging
+from datetime import datetime
 from io import StringIO
 from typing import TYPE_CHECKING, Optional
 
-import discord
 import dateparser
+import discord
 from discord import ui
 from discord.ext import commands, tasks
 
@@ -121,8 +122,12 @@ class TicketTypeMenu(View):
                 f"added {self.owner} ({self.owner.id}) to Ticket {ticket_id}", "ticket"
             )
         except Exception as e:
-            self.bot.log(
-                f"ERROR: failed to add {self.owner} ({self.owner.id}) to Ticket {ticket_id}. Error: {e}"
+            await ticket.thread.send(
+                f"I failed to add {self.owner.mention} to this ticket normally. "
+                "Maybe pinging fixed it, or Storch will need to investigate."
+            )
+            logging.error(
+                f"failed to add {self.owner} ({self.owner.id}) to Ticket {ticket_id}. Error: {e}"
             )
 
         query = """INSERT INTO
@@ -211,8 +216,8 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
                 continue
 
             layout = self.bot.get_layout("ticketreminder")
-            pings = [u.mention for u in await channel.fetch_members() if not u.bot]
-            await layout.send(channel, repls={"pings": "・".join(pings)})
+            # pings = [u.mention for u in await channel.fetch_members()]
+            await layout.send(channel, repls={"pings": "@everyone"})
 
             query = "UPDATE active_tickets SET remind_after = $1 WHERE channel_id = $2"
             await self.bot.db.execute(

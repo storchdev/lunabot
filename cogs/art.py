@@ -112,7 +112,11 @@ class Art(commands.Cog):
             hof_channel = self.bot.get_channel(row["hof_channel_id"])
             hof_msg = await hof_channel.fetch_message(row["hof_id"])
             embed = await self.create_embed(message, stars)
-            await hof_msg.edit(embed=embed)
+            try:
+                await hof_msg.edit(embed=embed)
+            except discord.HTTPException:
+                self.bot.log(f"failed to edit message {hof_msg.jump_url}", "art")
+
             query = """UPDATE art_hof
                        SET
                            stars = $1
@@ -190,7 +194,10 @@ class Art(commands.Cog):
             hof_channel = self.bot.get_channel(row["hof_channel_id"])
             hof_msg = await hof_channel.fetch_message(row["hof_id"])
             embed = await self.create_embed(message, stars)
-            await hof_msg.edit(embed=embed)
+            try:
+                await hof_msg.edit(embed=embed)
+            except discord.HTTPException:
+                self.bot.log(f"failed to edit message {hof_msg.jump_url}", "art")
             query = """UPDATE art_hof
                        SET
                            stars = $1

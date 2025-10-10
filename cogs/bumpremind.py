@@ -9,7 +9,7 @@ from discord.ext import commands
 from .utils.checks import staff_only
 
 if TYPE_CHECKING:
-    from bot import LunaBot
+    from bot import LunaBot, LunaCtx
 
 RED_EMOJI = "🔴"
 GREEN_EMOJI = "🟢"
@@ -120,7 +120,7 @@ class BumpRemind(commands.Cog):
         name="bumpreset", aliases=["resetbump", "bump-reset", "reset-bump"]
     )
     @staff_only()
-    async def reset_bump(self, ctx, *, time: str = None):
+    async def reset_bump(self, ctx: "LunaCtx", *, time: str = None):
         channel = self.bot.get_var_channel("bump-status")
         if time is None:
             await self.edit(channel, "green")
@@ -128,7 +128,7 @@ class BumpRemind(commands.Cog):
             parsed_time = parse(
                 time,
                 settings={
-                    "TIMEZONE": "America/Chicago",
+                    "TIMEZONE": await ctx.fetch_timezone(),
                     "RETURN_AS_TIMEZONE_AWARE": True,
                 },
             )
@@ -146,7 +146,7 @@ class BumpRemind(commands.Cog):
                     """
             await self.bot.db.execute(query, ctx.author.id, parsed_time)
 
-            self.create_task(ctx.author.id, parsed_time)
+            self.create_task(parsed_time)
             # self.task = self.bot.loop.create_task(self.task_coro(ctx.author.id, parsed_time))
 
             await self.edit(channel, "red")

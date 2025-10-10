@@ -1,7 +1,8 @@
 import asyncio
 import math
 import random
-from typing import TYPE_CHECKING, Dict, Optional
+import time
+from typing import TYPE_CHECKING, Optional
 
 import discord
 from discord import app_commands
@@ -29,14 +30,19 @@ class Economy(commands.Cog):
         self.bot: "LunaBot" = bot
         self.lunara = self.bot.vars.get("lunara")
         self.msg_count = 0
-        self.drop_active = False
+        # self.drop_active = False
         self.low_drop = 1000
         self.high_drop = 5000
         self.pick_limit = 1
-        self.picker_amounts: Dict[discord.Member, int] = {}
-        self.drop_message: Optional[discord.Message] = None
+        self.candy_picker_amounts: dict[discord.Member, int] = {}
+        self.picker_amounts: dict[discord.Member, int] = {}
+        self.drop_message: discord.Message | None = None
+        self.candy_drop_msg_count = 0
+        self.candy_drop_message: discord.Message | None = None
         self.items = []
         self.categories = {}
+        self.skibidi = False
+        self.last_edit = time.time()
 
     def is_verified(self, member: discord.Member):
         return (
@@ -522,14 +528,14 @@ class Economy(commands.Cog):
 
     # Staff
 
-    @commands.command(name="addbal")
+    @commands.command(name="addbal", aliases=["givebal", "baladd", "balgive"])
     @staff_only()
     async def bal_add(self, ctx, member: discord.Member, amount: int):
         """Add balance to a user"""
         await self.add_balance(member.id, amount)
         await ctx.send(f"Added {amount}{self.lunara} to {member.mention}.")
 
-    @commands.command(name="removebal")
+    @commands.command(name="removebal", aliases=["balremove"])
     @staff_only()
     async def bal_remove(self, ctx, member: discord.Member, amount: int):
         """Remove balance from a user"""
@@ -545,7 +551,6 @@ class Economy(commands.Cog):
         As the message count increases, the probability of a drop happening increases.
         Returns True if the drop happens, otherwise False.
         """
-
         # Sigmoid function to scale probability between 0 and 1
         probability = 1 / (
             1 + math.exp(-steepness * (message_count - max_messages / 2))
@@ -557,6 +562,35 @@ class Economy(commands.Cog):
         # Randomly return True or False based on the probability
         return random.random() < probability
 
+    async def handle_candydrop(self, msg: discord.Message):
+        if self.candy_drop_message is None:
+
+            async def task():
+                self.candy_drop_msg_count += 1
+
+                if (
+                    self.check_for_drop(self.candy_drop_msg_count, 400, 0.025, 0.05)
+                    or self.skibidi
+                ):
+                    # if True:
+                    self.candy_msg_count = 0
+                    self.candy_picker_amounts = {}
+
+                    layout = self.bot.get_layout("hwn/candydrop")
+                    self.candy_drop_message = await layout.send(
+                        msg.channel, repls={"edited": False, "data": []}, jinja=True
+                    )
+
+                    await self.candy_drop_message.add_reaction(
+                        self.bot.vars.get("candy-emoji")
+                    )
+                    await asyncio.sleep(30)
+                    await self.candy_drop_message.delete()
+                    self.candy_drop_message = None
+                    self.skibidi = False
+
+            self.bot.loop.create_task(task())
+
     @commands.Cog.listener()
     async def on_message(self, msg):
         if msg.author.bot:
@@ -567,6 +601,8 @@ class Economy(commands.Cog):
 
         if not self.is_verified(msg.author):
             return
+
+        await self.handle_candydrop(msg)
 
         if not self.drop_message:
 
@@ -641,10 +677,63 @@ class Economy(commands.Cog):
     #     except discord.NotFound:
     #         print(f'Failed to delete {ctx.message.jump_url}')
 
+    async def handle_candy_reaction(self, payload: discord.RawReactionActionEvent):
+        if self.candy_drop_message is None:
+            return
+        if payload.message_id != self.candy_drop_message.id:
+            return
+        if payload.member in self.picker_amounts:
+            return
+
+        amount = random.randint(self.low_drop, self.high_drop)
+        self.candy_picker_amounts[payload.member] = amount
+
+        query = """INSERT INTO
+                     candybals (user_id, balance)
+                   values
+                     ($1, $2)
+                   on conflict (user_id) do update
+                   set
+                     balance = candybals.balance + $2
+                """
+        await self.bot.db.execute(query, payload.user_id, amount)
+        # await self.add_balance(payload.user_id, amount)
+
+        layout = self.bot.get_layout("hwn/candydrop")
+
+        # def amount_to_comment(amount: int):
+        #     if 1000 <= amount <= 1999:
+        #         return "...a low amount, but still better than nothing"
+        #     elif 2000 <= amount <= 3999:
+        #         return "...not a bad pick at all"
+        #     else:
+        #         return "...a truly impressive amount"
+
+        amounts = list(self.candy_picker_amounts.values())
+
+        await asyncio.sleep(self.last_edit + 1 - time.time())
+        self.last_edit = time.time()  # buffer to prevent desync
+        await layout.edit(
+            self.candy_drop_message,
+            repls={
+                "data": zip(
+                    [m.mention for m in self.candy_picker_amounts.keys()],
+                    amounts,
+                    # [amount_to_comment(a) for a in amounts],
+                ),
+                "edited": True,
+            },
+            jinja=True,
+        )
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         if payload.user_id == self.bot.user.id:
             return
+
+        if str(payload.emoji) == self.bot.vars.get("candy-emoji"):
+            await self.handle_candy_reaction(payload)
+
         if self.drop_message is None:
             return
         if payload.message_id != self.drop_message.id:
@@ -683,6 +772,37 @@ class Economy(commands.Cog):
             },
             jinja=True,
         )
+
+    @commands.command()
+    async def candylb(self, ctx):
+        rows = await self.bot.db.fetch(
+            "SELECT * FROM candybals ORDER BY balance DESC LIMIT 3"
+        )
+        mybal = await self.bot.db.fetchval(
+            "SELECT balance FROM candybals WHERE user_id = $1", ctx.author.id
+        )
+
+        if mybal is None:
+            mybal = 0
+
+        myplace = (
+            await self.bot.db.fetchval(
+                "SELECT COUNT(*) FROM candybals WHERE balance > $1", mybal
+            )
+            + 1
+        )
+
+        repls = {"place": myplace, "balance": mybal}
+
+        for i, row in enumerate(rows):
+            repls[f"mention{i + 1}"] = f"<@{row['user_id']}>"
+
+        for mentionn in [1, 2, 3]:
+            if f"mention{mentionn}" not in repls:
+                repls[f"mention{mentionn}"] = "N/A"
+
+        layout = self.bot.get_layout("hwn/candylb")
+        await layout.send(ctx, repls=repls)
 
 
 async def setup(bot):
