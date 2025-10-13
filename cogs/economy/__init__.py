@@ -682,7 +682,7 @@ class Economy(commands.Cog):
             return
         if payload.message_id != self.candy_drop_message.id:
             return
-        if payload.member in self.picker_amounts:
+        if payload.member in self.candy_picker_amounts:
             return
 
         amount = random.randint(self.low_drop, self.high_drop)

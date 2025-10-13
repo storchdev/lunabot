@@ -82,6 +82,10 @@ class Levels(commands.Cog):
         lb_layout = self.bot.get_layout("weeklylb")
         lb_repls = {}
 
+        ecocog = self.bot.get_cog("Economy")
+
+        prizes = [20_000, 15_000, 10_000]
+
         for i in range(3):
             row = rows[i]
             user_id = row["user_id"]
@@ -93,6 +97,9 @@ class Levels(commands.Cog):
             lb_repls[f"mention{i + 1}"] = mention
             lb_repls[f"xp{i + 1}"] = xp
             lb_repls[f"messages{i + 1}"] = msg_count
+
+            await ecocog.add_balance(user_id, prizes[i])
+            self.bot.log(f"added {prizes[i]} to user {user_id} for weekly xp lb", "xp")
 
         this_sunday = discord.utils.utcnow()
         next_sunday = this_sunday + datetime.timedelta(days=7)

@@ -1,4 +1,5 @@
 import json
+import secrets
 import re
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
@@ -11,7 +12,7 @@ from discord.ext import commands, tasks
 from .utils import ConfirmView, SimplePages, next_day, staff_only, user_cd_except_staff
 
 if TYPE_CHECKING:
-    from bot import LunaBot
+    from bot import LunaBot, LunaCtx
 
 # spotify_auth = ClientCredentialsFlow(
 #     client_id=SPOTIFY_CLIENT_ID,
@@ -125,8 +126,13 @@ class XoTD(commands.Cog):
     async def before_post_sotd(self):
         await discord.utils.sleep_until(next_day())
 
-    @commands.hybrid_command(name="add-qotd")
-    @user_cd_except_staff(86400)
+    @commands.group(name="qotd", invoke_without_command=True)
+    async def qotd(self, ctx: "LunaCtx"):
+        await ctx.invoke(self.add_sotd)
+
+    @qotd.command(name="add")
+    # @user_cd_except_staff(86400)
+    @staff_only()
     async def add_qotd(self, ctx, *, question: str):
         """Adds a question to the queue to be posted as the QoTD."""
         # end_time = await self.bot.get_cooldown_end('qotd', 86400, obj=ctx.author)
@@ -151,7 +157,40 @@ class XoTD(commands.Cog):
             f"A new question was added to the queue!\n\nQ: {question}\nUser: ||{ctx.author.mention}||"
         )
 
-    @commands.hybrid_command(name="add-sotd")
+    @qotd.command(name="view")
+    async def qotd_view(self, ctx):
+        if len(self.questions) == 0:
+            await ctx.send("No questions in queue.")
+            return
+        lines = []
+        dt = next_day()
+        for question in self.questions:
+            md = discord.utils.format_dt(dt, "d")
+            lines.append(f"{question['question']} - {md}")
+            dt += timedelta(days=1)
+        pages = SimplePages(lines, ctx=ctx)
+        await pages.start()
+
+    @qotd.command(name="remove")
+    async def qotd_remove(self, ctx, index: int):
+        if index < 1 or index > len(self.questions):
+            await ctx.send("Invalid index.")
+            return
+        question = self.questions.pop(index - 1)
+        await self.bot.db.execute(
+            "UPDATE queues SET items = $1 WHERE name = $2",
+            json.dumps(self.questions),
+            "qotd",
+        )
+        await ctx.send(
+            f"Question by <@{question['author_id']}> was removed from the queue."
+        )
+
+    @commands.group(name="sotd", invoke_without_command=True)
+    async def sotd(self, ctx: "LunaCtx"):
+        await ctx.invoke(self.add_sotd)
+
+    @sotd.command(name="add", aliases=["q"])
     @user_cd_except_staff(86400)
     async def add_sotd(self, ctx, *, data: str):
         """Adds a song to the queue to be posted as the SoTD."""
@@ -189,38 +228,96 @@ class XoTD(commands.Cog):
 
         name = data[0]
         artist = data[1]
-        # name, artist = await fetch_song(spotify_url)
-        self.songs.append(
-            {
-                "name": name,
-                "artist": artist,
-                "url": spotify_url,
-                "author_id": ctx.author.id,
-            }
+        data = {
+            "name": name,
+            "artist": artist,
+            "url": spotify_url,
+            # "author_id": ctx.author.id,
+        }
+
+        query = (
+            "INSERT INTO xotd_tba (kind,user_id,data) VALUES ($1,$2,$3) RETURNING id"
         )
+        row_id = await self.bot.db.fetchval(
+            query, "song", ctx.author.id, json.dumps(data)
+        )
+
+        staffch = self.bot.get_var_channel("mod")
+        layout = self.bot.get_layout("sotdapprove")
+        await layout.send(
+            staffch,
+            repls={"mention": ctx.author.mention, "id": hex(row_id * 67)[2:]},
+            special=False,
+        )
+
+        await ctx.send(
+            "I have submit your request to the staff team for approval! If you have them turned on, I'll send you a DM when it gets approved/rejected."
+        )
+
+    @sotd.command(name="approve")
+    async def approve_sotd(self, ctx, id: str):
+        idint = int(id, 16) // 67
+
+        query = "SELECT user_id, data FROM xotd_tba WHERE id = $1"
+        row = await self.bot.db.fetchrow(query, idint)
+        if row is None:
+            return await ctx.send("Request ID not found!")
+
+        data = row["data"]
+        song = json.loads(data)
+        self.songs.append(song)
         await self.bot.db.execute(
             "UPDATE queues SET items = $1 WHERE name = $2",
             json.dumps(self.songs),
             "sotd",
         )
 
+        query = "DELETE FROM xotd_tba WHERE id = $1"
+        await self.bot.db.execute(query, idint)
+
         md = get_post_date(len(self.songs))
-        await view.final_interaction.response.edit_message(
-            content=f"Your song was added to queue! It will be posted {md}. Note that songs are reviewed, and those that fail to follow the server rules will be removed.",
-            view=None,
-        )
-        channel = self.bot.get_var_channel("queue-log")
-        await channel.send(
-            f"A new song was added to the queue!\n\nSong: {spotify_url}\nUser: ||{ctx.author.mention}||"
-        )
+        try:
+            user = await self.bot.fetch_user(row["user_id"])
+            name, artist, url = song["name"], song["artist"], song["url"]
+            await user.send(
+                f"Your song-of-the-day request, [{name}]({url}) by {artist}, will be posted on {md}!",
+            )
+        except discord.Forbidden:
+            return await ctx.send(
+                "Song approved. Unfortunately, I wasn't able to DM them."
+            )
+        await ctx.send("Song approved.")
 
-    @commands.group(aliases=["sq"], invoke_without_command=True)
+    @sotd.command(name="deny")
+    async def deny_sotd(self, ctx, id: str, *, reason: str):
+        idint = int(id, 16) // 67
+
+        query = "SELECT user_id, data FROM xotd_tba WHERE id = $1"
+        row = await self.bot.db.fetchrow(query, idint)
+        if row is None:
+            return await ctx.send("Request ID not found!")
+
+        query = "DELETE FROM xotd_tba WHERE id = $1"
+        await self.bot.db.execute(query, idint)
+
+        try:
+            data = row["data"]
+            song = json.loads(data)
+            user = await self.bot.fetch_user(row["user_id"])
+            name, artist, url = song["name"], song["artist"], song["url"]
+            await user.send(
+                f"Your song-of-the-day request, [{name}]({url}) by {artist}, was denied for the following reason:\n"
+                f"`{reason}`"
+            )
+        except discord.Forbidden:
+            return await ctx.send(
+                "Song denied. Unfortunately, I wasn't able to DM them."
+            )
+        await ctx.send("Song denied.")
+
+    @sotd.command(name="view")
     @staff_only()
-    async def sotdqueue(self, ctx):
-        await ctx.send_help(ctx.command)
-
-    @sotdqueue.command(name="view")
-    async def sq_view(self, ctx):
+    async def sotd_view(self, ctx):
         if len(self.songs) == 0:
             await ctx.send("No songs in queue.")
             return
@@ -234,8 +331,8 @@ class XoTD(commands.Cog):
         pages = SimplePages(lines, ctx=ctx)
         await pages.start()
 
-    @sotdqueue.command(name="remove")
-    async def sq_remove(self, ctx, index: int):
+    @sotd.command(name="remove")
+    async def sotd_remove(self, ctx, index: int):
         if index < 1 or index > len(self.songs):
             await ctx.send("Invalid index.")
             return
@@ -246,40 +343,6 @@ class XoTD(commands.Cog):
             "sotd",
         )
         await ctx.send(f"Song by {song['artist']} was removed from the queue.")
-
-    @commands.group(aliases=["qq"], invoke_without_command=True)
-    @staff_only()
-    async def qotdqueue(self, ctx):
-        await ctx.send_help(ctx.command)
-
-    @qotdqueue.command(name="view")
-    async def qq_view(self, ctx):
-        if len(self.questions) == 0:
-            await ctx.send("No questions in queue.")
-            return
-        lines = []
-        dt = next_day()
-        for question in self.questions:
-            md = discord.utils.format_dt(dt, "d")
-            lines.append(f"{question['question']} - {md}")
-            dt += timedelta(days=1)
-        pages = SimplePages(lines, ctx=ctx)
-        await pages.start()
-
-    @qotdqueue.command(name="remove")
-    async def qq_remove(self, ctx, index: int):
-        if index < 1 or index > len(self.questions):
-            await ctx.send("Invalid index.")
-            return
-        question = self.questions.pop(index - 1)
-        await self.bot.db.execute(
-            "UPDATE queues SET items = $1 WHERE name = $2",
-            json.dumps(self.questions),
-            "qotd",
-        )
-        await ctx.send(
-            f"Question by <@{question['author_id']}> was removed from the queue."
-        )
 
 
 async def setup(bot):
