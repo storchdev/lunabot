@@ -108,6 +108,36 @@ class Misc(commands.Cog):
         ).set_image(url=banner.url)
         await ctx.send(embed=embed)
 
+    @commands.command()
+    @commands.is_owner()
+    async def cv2test(self, ctx):
+        class Components(discord.ui.LayoutView):
+            container1 = discord.ui.Container(
+                discord.ui.Section(
+                    discord.ui.TextDisplay(content="# welcome!"),
+                    # discord.ui.TextDisplay(
+                    #     content="Always lick a cactus before you become famous."
+                    # ),
+                    accessory=discord.ui.Thumbnail(
+                        media="https://media.discordapp.net/attachments/1122048063771512872/1150947556512251934/IMG_4612.jpg?ex=6913d171&is=69127ff1&hm=296f170740e4ef7f3787f6521c515ec4856ace391c14e2fe2c87adeaf85b608f&",
+                    ),
+                ),
+                discord.ui.Separator(
+                    visible=True, spacing=discord.SeparatorSpacing.large
+                ),
+                discord.ui.TextDisplay(
+                    content="True wisdom comes from hug a stranger during lazy times."
+                ),
+                discord.ui.Separator(
+                    visible=True, spacing=discord.SeparatorSpacing.large
+                ),
+                discord.ui.TextDisplay(content="-# fanart made by someone"),
+                accent_colour=discord.Colour(16711422),
+            )
+
+        view = Components()
+        await ctx.send(view=view)
+
 
 async def setup(bot):
     await bot.add_cog(Misc(bot))

@@ -133,9 +133,6 @@ class GuildTag(commands.Cog):
             if member.bot:
                 continue
 
-            if member.status == discord.Status.offline:
-                continue
-
             if self._has_guild_tag(member):
                 if role not in member.roles:
                     toadd.append(member)

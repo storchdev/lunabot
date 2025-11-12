@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from config import DEFAULT_TIMEZONE
+
 __all__ = ("next_sunday", "next_day")
 
 
 def next_sunday(tz=None):
     if tz is None:
-        tz = ZoneInfo("America/Chicago")
+        tz = ZoneInfo(DEFAULT_TIMEZONE)
     now = datetime.now(tz)
     # Calculate days until next Sunday (0 = Monday, 6 = Sunday)
     days_until_sunday = (6 - now.weekday()) % 7
@@ -21,8 +23,12 @@ def next_sunday(tz=None):
 
 def next_day(tz=None):
     if tz is None:
-        tz = ZoneInfo("America/Chicago")
+        tz = ZoneInfo(DEFAULT_TIMEZONE)
     now = datetime.now(tz)
     next_day = now + timedelta(days=1)
     next_day_midnight = next_day.replace(hour=0, minute=0, second=0, microsecond=0)
     return next_day_midnight
+
+
+def localnow():
+    return datetime.now(ZoneInfo(DEFAULT_TIMEZONE))

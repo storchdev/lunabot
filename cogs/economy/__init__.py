@@ -602,7 +602,7 @@ class Economy(commands.Cog):
         if not self.is_verified(msg.author):
             return
 
-        await self.handle_candydrop(msg)
+        # await self.handle_candydrop(msg)  # halloween
 
         if not self.drop_message:
 
@@ -731,8 +731,8 @@ class Economy(commands.Cog):
         if payload.user_id == self.bot.user.id:
             return
 
-        if str(payload.emoji) == self.bot.vars.get("candy-emoji"):
-            await self.handle_candy_reaction(payload)
+        # if str(payload.emoji) == self.bot.vars.get("candy-emoji"):
+        #     await self.handle_candy_reaction(payload)
 
         if self.drop_message is None:
             return
@@ -775,6 +775,8 @@ class Economy(commands.Cog):
 
     @commands.command()
     async def candylb(self, ctx):
+        return
+
         rows = await self.bot.db.fetch(
             "SELECT * FROM candybals ORDER BY balance DESC LIMIT 3"
         )

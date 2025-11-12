@@ -128,7 +128,7 @@ class XoTD(commands.Cog):
 
     @commands.group(name="qotd", invoke_without_command=True)
     async def qotd(self, ctx: "LunaCtx"):
-        await ctx.invoke(self.add_sotd)
+        await ctx.invoke(self.qotd_view)
 
     @qotd.command(name="add")
     # @user_cd_except_staff(86400)
@@ -188,7 +188,7 @@ class XoTD(commands.Cog):
 
     @commands.group(name="sotd", invoke_without_command=True)
     async def sotd(self, ctx: "LunaCtx"):
-        await ctx.invoke(self.add_sotd)
+        await ctx.invoke(self.sotd_view)
 
     @sotd.command(name="add", aliases=["q"])
     @user_cd_except_staff(86400)
@@ -251,7 +251,7 @@ class XoTD(commands.Cog):
         )
 
         await ctx.send(
-            "I have submit your request to the staff team for approval! If you have them turned on, I'll send you a DM when it gets approved/rejected."
+            "I have submitted your request to the staff team for approval! If you have them turned on, I'll send you a DM when it gets approved/rejected."
         )
 
     @sotd.command(name="approve")

@@ -1,4 +1,5 @@
 import asyncio
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
@@ -6,11 +7,15 @@ from discord.ext import commands
 from .utils import LayoutContext
 from .utils.checks import is_admin
 
+if TYPE_CHECKING:
+    from bot import LunaBot
+
 DEBOUNCE_SECONDS = 20  # wait this long before removing to survive activity blips
 
 
 class Vanity(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: "LunaBot"):
+        """Auto roleing for users with vanity invite in status"""
         self.bot = bot
         self.invite = (
             str(self.bot.vars.get("vanity-invite", "")).lower().strip().lstrip("/")
@@ -162,6 +167,7 @@ class Vanity(commands.Cog):
     @commands.command()
     @commands.check(is_admin)
     async def uvr(self, ctx):
+        """updates everyone's vanity roles"""
         await self.update_roles(ctx.channel)
 
 
