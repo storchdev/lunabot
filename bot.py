@@ -114,6 +114,8 @@ class LunaBot(commands.Bot):
     def get_layout_from_json(self, data: str | dict) -> Layout:
         if isinstance(data, str):
             d: dict = json.loads(data)
+        else:
+            d = data
         if d["name"] is not None:
             return self.get_layout(d["name"])
 

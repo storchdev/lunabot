@@ -50,6 +50,9 @@ class Art(commands.Cog):
     async def on_message(self, msg: discord.Message):
         if msg.author.bot:
             return
+        if msg.type is not discord.MessageType.default:
+            return
+
         if msg.channel.id in self.art_channel_ids:
             await msg.add_reaction(self.bot.vars.get("art-hof-emote"))
             await msg.add_reaction("<a:ML_sparkles:899826759313293432>")
