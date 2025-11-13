@@ -6,19 +6,18 @@ from typing import TYPE_CHECKING
 
 import aiohttp
 import discord
-from discord import Member, TextChannel
+from discord import Member, TextChannel, Thread
+from discord.abc import GuildChannel, PrivateChannel
 from discord.ext import commands
 from discord.ext.duck.errors import ErrorManager
 
+from cogs.db import init_db
 from cogs.future_tasks import FutureTask
-from zoneinfo import ZoneInfo
 from cogs.utils import InvalidURL, Layout, View
 from cogs.utils.checks import guild_only
 from config import ERROR_WEBHOOK_URL, LOG_FILE
 
 if TYPE_CHECKING:
-    from asyncpg import Pool
-
     from cogs.tickets import Ticket
 
 
@@ -38,7 +37,6 @@ class LunaBot(commands.Bot):
         self.owner_id = self.STORCH_ID
         self.owner_ids = [self.STORCH_ID]
 
-        self.db: Pool | None = None
         self.vars: dict[str, str | int] = {}
         self.embeds: dict[str, discord.Embed] = {}
         self.future_tasks: dict[int, FutureTask] = {}
@@ -63,11 +61,14 @@ class LunaBot(commands.Bot):
         # await self.load_extension('db_migration')
         # return
         self.log("--- START TASK CALLED ---")
-
         self.add_check(guild_only)
+
+        # connect to db
+        self.db = await init_db()
+
         await self.load_extension("jishaku")
-        priority = ["cogs.db", "cogs.vars", "cogs.tools"]
-        not_cogs = ["cogs.utils"]
+        priority = ["cogs.vars", "cogs.tools"]
+        not_cogs = ["cogs.utils", "cogs.db"]
 
         for cog in priority:
             await self.load_extension(cog)
@@ -82,6 +83,7 @@ class LunaBot(commands.Bot):
             logging.info(f"Loaded cog {cog}")
 
         log_flags = self.vars.get("log-flags")
+        assert isinstance(log_flags, str)
         if log_flags is not None:
             self.log_flags = json.loads(log_flags)
 
@@ -111,11 +113,11 @@ class LunaBot(commands.Bot):
 
     def get_layout_from_json(self, data: str | dict) -> Layout:
         if isinstance(data, str):
-            data = json.loads(data)
-        if data["name"] is not None:
-            return self.get_layout(data["name"])
+            d: dict = json.loads(data)
+        if d["name"] is not None:
+            return self.get_layout(d["name"])
 
-        return Layout(self, None, data["content"], data["embeds"])
+        return Layout(self, None, d["content"], d["embeds"])
 
     async def fetch_message_from_url(self, url: str) -> discord.Message:
         tokens = url.split("/")
@@ -126,7 +128,7 @@ class LunaBot(commands.Bot):
             raise InvalidURL()
 
         channel = self.get_channel(channel_id)
-        if channel is None:
+        if channel is None or not isinstance(channel, discord.TextChannel):
             raise InvalidURL()
 
         try:
@@ -202,11 +204,14 @@ class LunaBot(commands.Bot):
 
         return None
 
-    def get_var_channel(self, name: str) -> TextChannel:
+    def get_var_channel(
+        self, name: str
+    ) -> GuildChannel | Thread | PrivateChannel | TextChannel | None:
         name = name + "-channel-id"
         if name not in self.vars:
             return None
-        return self.get_channel(self.vars[name])
+
+        return self.get_channel(int(self.vars[name]))
 
     async def get_count(self, name: str, *, update=True):
         if update:
@@ -234,7 +239,9 @@ class LunaBot(commands.Bot):
             return await self.db.fetchval(query, name)
 
     async def dm_owner(self, message: str):
+        assert self.owner_id is not None
         owner = self.get_user(self.owner_id)
+        assert owner is not None
         await owner.send(message)
 
     def log(self, message: str, flag: str | None = None):
@@ -269,3 +276,15 @@ class LunaCtx(commands.Context):
         if tz is None:
             return "America/Chicago"
         return tz
+
+
+class AdminCog(commands.Cog):
+    async def cog_check(self, ctx):
+        assert ctx.bot.owner_ids is not None
+        if isinstance(ctx.author, discord.User):
+            return False
+
+        return (
+            ctx.author.guild_permissions.administrator
+            or ctx.author.id in ctx.bot.owner_ids
+        )

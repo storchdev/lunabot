@@ -2,20 +2,21 @@ import re
 from typing import TYPE_CHECKING
 
 import discord
-from discord import app_commands
+from discord import Member, app_commands
 from discord.ext import commands
 
 from cogs.utils import LayoutContext, SimplePages
 
+from ..utils import AdminCog
 from .auto_responder import AutoResponder
 from .editor import AutoResponderEditor
 
 if TYPE_CHECKING:
-    from bot import LunaBot
+    from bot import LunaBot, LunaCtx
 
 
 class AutoResponderCog(
-    commands.Cog, name="Autoresponders", description="Autoresponder stuff (admin only)"
+    AdminCog, name="Autoresponders", description="Autoresponder stuff (admin only)"
 ):
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
@@ -29,12 +30,6 @@ class AutoResponderCog(
             auto_responder = AutoResponder.from_db_row(self.bot, row)
             self.auto_responders.append(auto_responder)
             self.name_lookup[auto_responder.name] = auto_responder
-
-    async def cog_check(self, ctx):
-        return (
-            ctx.author.guild_permissions.administrator
-            or ctx.author.id in self.bot.owner_ids
-        )
 
     async def ar_check(self, msg: discord.Message) -> AutoResponder | None:
         for ar in self.auto_responders:
@@ -86,11 +81,11 @@ class AutoResponderCog(
     async def on_message(self, msg: discord.Message):
         if msg.author.bot:
             return
-
         if not msg.guild:
             return
 
         ar = await self.ar_check(msg)
+
         if not ar:
             return
         if ar.cooldown:
@@ -98,7 +93,7 @@ class AutoResponderCog(
                 f"autoresponder {ar.name}",
                 ar.cooldown.per,
                 rate=ar.cooldown.rate,
-                obj=msg.author,
+                obj=msg.author,  # pyright: ignore
             )
             if end_time is not None:
                 if ar.on_cooldown_layout_name:
@@ -118,9 +113,7 @@ class AutoResponderCog(
         #     print(ar)
         #     print(msg.jump_url)
 
-    @commands.hybrid_group(
-        name="autoresponder", aliases=["ar"], invoke_without_command=True
-    )
+    @commands.hybrid_group(name="autoresponder", aliases=["ar"])
     @app_commands.default_permissions()
     async def autoresponder(self, ctx):
         embed = discord.Embed(

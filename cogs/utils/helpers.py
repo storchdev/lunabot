@@ -112,3 +112,15 @@ class Cooldown:
         return json.dumps(
             {"rate": self.rate, "per": self.per, "bucket_type": self.typestr}, indent=4
         )
+
+
+class AdminCog(commands.Cog):
+    async def cog_check(self, ctx):
+        assert ctx.bot.owner_ids is not None
+        if isinstance(ctx.author, discord.User):
+            return False
+
+        return (
+            ctx.author.guild_permissions.administrator
+            or ctx.author.id in ctx.bot.owner_ids
+        )
