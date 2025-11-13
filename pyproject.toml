@@ -12,6 +12,8 @@ dependencies = [
     "discord-ext-menus>=1.1",
     "discord-py>=2.6.4",
     "fuzzy-rust",
+    "jinja2>=3.1.6",
+    "jishaku>=2.6.3",
     "lxml>=6.0.2",
     "matplotlib>=3.10.7",
     "num2words>=0.5.14",

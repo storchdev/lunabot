@@ -4,8 +4,8 @@ from config import DB_LOGIN
 
 async def init_db():
     pool = await asyncpg.create_pool(
-        user="awd_bot",
-        database="awd_bot",
+        user="lunabot",
+        database="lunabot",
         password=DB_LOGIN,
         host="localhost",
         port="5432",
