@@ -29,6 +29,17 @@ from cogs.utils import next_day
 from zoneinfo import ZoneInfo
 
 
+def break_check_2025():
+    async def pred(ctx):
+        if datetime.now().weekday() not in [5, 6]:
+            return True
+        else:
+            await ctx.send("Event is on break right now...")
+            return False
+
+    return commands.check(pred)
+
+
 if TYPE_CHECKING:
     from bot import LunaBot
 
@@ -661,6 +672,10 @@ class ActivityEvent(commands.Cog):
         if msg.channel.id != GENERAL_ID:
             return
 
+        # 2025 schedule
+        if datetime.now().weekday() in [5, 6]:
+            return
+
         if (
             msg.author not in self.daily_message_task_cds
             or self.daily_message_task_cds[msg.author] < time.time()
@@ -804,6 +819,7 @@ class ActivityEvent(commands.Cog):
             await layout.send(msg.channel, repls=repls, special=False)
 
     @commands.command()
+    @break_check_2025()
     async def redeem(self, ctx):
         for team in self.teams.values():
             if ctx.author == team.captain.member:
@@ -834,6 +850,7 @@ class ActivityEvent(commands.Cog):
         )
 
     @commands.command()
+    @break_check_2025()
     async def usepowerup(self, ctx):
         for team in self.teams.values():
             if ctx.author == team.captain.member:
@@ -972,6 +989,7 @@ class ActivityEvent(commands.Cog):
         )
 
     @commands.command(aliases=["dailys"])
+    @break_check_2025()
     async def dailies(self, ctx):
         if ctx.author.id not in self.players:
             return
@@ -1253,4 +1271,5 @@ async def setup(bot):
         if TEST:
             await bot.add_cog(ActivityEvent(bot))
         else:
+            await discord.utils.sleep_until(START_TIME)
             await bot.add_cog(ActivityEvent(bot))

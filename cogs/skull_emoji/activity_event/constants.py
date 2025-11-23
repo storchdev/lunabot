@@ -44,7 +44,7 @@ else:
     TEAM_MISTLETOE_CHANNEL_ID = 1302135339913052170
     TEAM_POINSETTIA_CHANNEL_ID = 1302135586865418334
 
-    START_TIME = datetime(2024, 12, 1, tzinfo=ZoneInfo("America/Chicago"))
+    START_TIME = datetime(2025, 12, 1, tzinfo=ZoneInfo("America/Chicago"))
 
     OPTION3_TIME = 30 * 60
     OPTION4_TIME = 20 * 60
