@@ -29,17 +29,6 @@ from cogs.utils import next_day
 from zoneinfo import ZoneInfo
 
 
-def break_check_2025():
-    async def pred(ctx):
-        if datetime.now().weekday() not in [5, 6]:
-            return True
-        else:
-            await ctx.send("Event is on break right now...")
-            return False
-
-    return commands.check(pred)
-
-
 if TYPE_CHECKING:
     from bot import LunaBot
 
@@ -56,11 +45,11 @@ class ActivityEvent(commands.Cog):
         self.bot: "LunaBot" = bot
         self.teams: Dict[str, Team] = {}
         self.players: Dict[int, Player] = {}
-        self.channel_ids: Dict[int] = {
-            1158930467337293905,
-            1158931468664446986,
-            GENERAL_ID,
-        }
+        # self.channel_ids: Dict[int] = {
+        #     1158930467337293905,
+        #     1158931468664446986,
+        #     GENERAL_ID,
+        # }
 
         if TEST:
             self.msgs_needed = 3
@@ -271,6 +260,7 @@ class ActivityEvent(commands.Cog):
                     continue
 
                 query = """SELECT
+                               id,
                                name,
                                value,
                                start_time,
@@ -287,16 +277,25 @@ class ActivityEvent(commands.Cog):
                 for row in rows:
                     if row["name"] == "multi_powerup":
                         powerups.append(
-                            Multiplier(row["value"], row["start_time"], row["end_time"])
+                            Multiplier(
+                                row["value"],
+                                row["start_time"],
+                                row["end_time"],
+                                id=row["id"],
+                            )
                         )
                     elif row["name"] == "cd_powerup":
                         powerups.append(
                             CooldownReducer(
-                                row["value"], row["start_time"], row["end_time"]
+                                row["id"],
+                                row["value"],
+                                row["start_time"],
+                                row["end_time"],
+                                id=row["id"],
                             )
                         )
 
-                query = f"""SELECT
+                query = """SELECT
                                sum(gain)
                            FROM
                                event_log
@@ -360,7 +359,10 @@ class ActivityEvent(commands.Cog):
 
     @tasks.loop(hours=24)
     async def award_pension(self):
-        ids = map(int, self.bot.vars.get("ae-break-ids").split(","))
+        tmp = self.bot.vars.get("ae-break-ids")
+        assert isinstance(tmp, str)
+        ids = map(int, tmp.split(","))
+
         amount = self.bot.vars.get("ae-pension-amount")
         nicks = []
         for user_id in ids:
@@ -372,6 +374,7 @@ class ActivityEvent(commands.Cog):
             nicks.append(player.nick)
 
         channel = self.bot.get_var_channel("private")
+        assert isinstance(channel, discord.TextChannel)
         await channel.send(f"Awarded pensions to {', '.join(nicks)}")
 
     @award_pension.before_loop
@@ -423,7 +426,7 @@ class ActivityEvent(commands.Cog):
                 )
 
         except Exception as e:
-            self.bot.logger.error(f"Error during player data synchronization: {e}")
+            self.bot.log(f"Error during player data synchronization: {e}", "ae")
 
     @sync_player_data.before_loop
     async def before_sync_player_data(self):
@@ -460,6 +463,7 @@ class ActivityEvent(commands.Cog):
             layout = self.bot.get_layout("ae/stealtrivia/main")
 
         bot_msg = await layout.send(channel, repls=args, special=False)
+        assert bot_msg is not None
 
         emojis = [
             "<a:ML_red_flower:1308674651450511381>",
@@ -490,10 +494,7 @@ class ActivityEvent(commands.Cog):
         if question.choices[emojis.index(str(reaction.emoji))] == question.answer:
             await player.increment_daily_task("trivia")
 
-            repls = {
-                "answer": question.answer,
-                "user": player.nick,
-            }
+            repls = {"answer": question.answer, "user": player.nick, "points": -1}
 
             if not steal:
                 points = await player.add_points(points, "trivia")
@@ -672,10 +673,6 @@ class ActivityEvent(commands.Cog):
         if msg.channel.id != GENERAL_ID:
             return
 
-        # 2025 schedule
-        if datetime.now().weekday() in [5, 6]:
-            return
-
         if (
             msg.author not in self.daily_message_task_cds
             or self.daily_message_task_cds[msg.author] < time.time()
@@ -768,7 +765,7 @@ class ActivityEvent(commands.Cog):
         elif powerup_name == "steal_trivia":
             await self.trivia(player, msg.channel, steal=True)
         elif powerup_name == "reduced_cd":
-            await player.apply_powerup(
+            await player.apply_new_powerup(
                 CooldownReducer(
                     INDIV_REDUCED_CD, time.time(), time.time() + INDIV_REDUCED_CD_TIME
                 ),
@@ -777,7 +774,7 @@ class ActivityEvent(commands.Cog):
 
             for other in player.team.players:
                 if other != player:
-                    await other.apply_powerup(
+                    await other.apply_new_powerup(
                         CooldownReducer(
                             TEAM_REDUCED_CD,
                             time.time(),
@@ -787,25 +784,25 @@ class ActivityEvent(commands.Cog):
 
             layout = self.bot.get_layout("ae/reducedcd")
         elif powerup_name == "double":
-            await player.apply_powerup(
+            await player.apply_new_powerup(
                 Multiplier(2, time.time(), time.time() + INDIV_DOUBLE_TIME), log=True
             )
 
             for other in player.team.players:
                 if other != player:
-                    await other.apply_powerup(
+                    await other.apply_new_powerup(
                         Multiplier(2, time.time(), time.time() + TEAM_DOUBLE_TIME)
                     )
 
             layout = self.bot.get_layout("ae/double")
         elif powerup_name == "triple":
-            await player.apply_powerup(
+            await player.apply_new_powerup(
                 Multiplier(3, time.time(), time.time() + INDIV_TRIPLE_TIME), log=True
             )
 
             for other in player.team.players:
                 if other != player:
-                    await other.apply_powerup(
+                    await other.apply_new_powerup(
                         Multiplier(3, time.time(), time.time() + TEAM_TRIPLE_TIME)
                     )
 
@@ -819,7 +816,6 @@ class ActivityEvent(commands.Cog):
             await layout.send(msg.channel, repls=repls, special=False)
 
     @commands.command()
-    @break_check_2025()
     async def redeem(self, ctx):
         for team in self.teams.values():
             if ctx.author == team.captain.member:
@@ -850,7 +846,6 @@ class ActivityEvent(commands.Cog):
         )
 
     @commands.command()
-    @break_check_2025()
     async def usepowerup(self, ctx):
         for team in self.teams.values():
             if ctx.author == team.captain.member:
@@ -935,7 +930,7 @@ class ActivityEvent(commands.Cog):
         view = TeamLBView(ctx, team)
         await view.update()
 
-    @commands.command(alises=["effects"])
+    @commands.command(aliases=["effects"])
     async def powerups(self, ctx, *, member: discord.Member = None):
         if member is None:
             member = ctx.author
@@ -989,7 +984,6 @@ class ActivityEvent(commands.Cog):
         )
 
     @commands.command(aliases=["dailys"])
-    @break_check_2025()
     async def dailies(self, ctx):
         if ctx.author.id not in self.players:
             return
@@ -1168,7 +1162,7 @@ class ActivityEvent(commands.Cog):
         embed = self.bot.get_embed("ae/teamstats")
         repls = self._get_stat_repls(title, start, end, player_key, team_key)
         embed = await Layout.fill_embed(embed, repls, special=False)
-        embed.set_image(url=f"attachment://plot.png")
+        embed.set_image(url="attachment://plot.png")
         await ctx.send(embed=embed, file=file)
 
     async def _process_bonus(self, ctx, team, start, end, title, types):
@@ -1184,7 +1178,7 @@ class ActivityEvent(commands.Cog):
         embed = self.bot.get_embed("ae/teamstats")
         repls = self._get_bonus_repls(title, team, stats, player_stats, start, end)
         embed = await Layout.fill_embed(embed, repls, special=False)
-        embed.set_image(url=f"attachment://plot.png")
+        embed.set_image(url="attachment://plot.png")
         await ctx.send(embed=embed, file=file)
 
     async def _fetch_rows(self, team, stat_type, start, end, exclude_types):
@@ -1201,7 +1195,7 @@ class ActivityEvent(commands.Cog):
         if team.name not in stats:
             stats[team.name] = {}
 
-        query = f"""SELECT user_id, gain, time FROM event_log WHERE team = $1 AND type = ANY($3) AND time < $2"""
+        query = """SELECT user_id, gain, time FROM event_log WHERE team = $1 AND type = ANY($3) AND time < $2"""
         rows = await self.bot.db.fetch(query, team.name, int(end.timestamp()), types)
 
         total = 0
@@ -1237,7 +1231,7 @@ class ActivityEvent(commands.Cog):
         repls = {}
         for i, t in enumerate(self.teams.values()):
             mvp = max(t.players, key=lambda x: player_stats.get(x.member.id, 0))
-            count = player_stats.get(mvp.member.id, 0)
+            # count = player_stats.get(mvp.member.id, 0)
             this_total = stats[t.name]["total"]
             repls[f"mvp{i + 1}"] = mvp.nick
             repls[f"total{i + 1}"] = this_total
@@ -1271,5 +1265,4 @@ async def setup(bot):
         if TEST:
             await bot.add_cog(ActivityEvent(bot))
         else:
-            await discord.utils.sleep_until(START_TIME)
             await bot.add_cog(ActivityEvent(bot))

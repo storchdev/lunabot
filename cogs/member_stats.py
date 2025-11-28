@@ -41,7 +41,9 @@ class StatsFlags(commands.FlagConverter):
     grad: bool = False
 
 
-def plot_data_sync(data: list[tuple[datetime, float]], stat=None):
+def plot_data_sync(
+    data: list[tuple[datetime, float]], tz: str, stat: str | None = None
+):
     """
     Plot data synchronously.
     :param data: A dictionary with join, leave, and net data.
@@ -95,7 +97,7 @@ def plot_data_sync(data: list[tuple[datetime, float]], stat=None):
     ax.tick_params(axis="both", colors="cyan")  # Set tick colors to cyan
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(
-        mdates.DateFormatter("%a %-m/%-d\n%-I:%M %p", tz=timezone("America/Chicago"))
+        mdates.DateFormatter("%a %-m/%-d\n%-I:%M %p", tz=timezone(tz))
     )
 
     # Remove axis labels (but keep ticks and numbers)
@@ -290,14 +292,15 @@ class MemberStats(commands.Cog):
 
     @commands.command()
     async def altstats(self, ctx, *, flags: StatsFlags):
+        tz = await ctx.fetch_timezone()
         stat = flags.stat
         start = parse(
             flags.start,
-            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
         )
         end = parse(
             flags.end,
-            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
         )
 
         if end <= start:
@@ -318,7 +321,7 @@ class MemberStats(commands.Cog):
         #  GENERATE DATA POINTS FOR THE PLOT BY QUERYING THE DATABASE
         tick = timedelta(seconds=tick)
         data = await self.generate_rate_data(stat, start, end, tick, ctx.guild.id)
-        buf = await asyncio.to_thread(plot_data_sync, data, stat)
+        buf = await asyncio.to_thread(plot_data_sync, data, tz, stat)
         file = discord.File(buf, filename="plot.png")
         embed = await self.generate_base_embed(start, end, ctx.guild.id)
 
@@ -347,7 +350,7 @@ class MemberStats(commands.Cog):
         if flags.grad:
             absolute_data = grad_data(absolute_data)
 
-        buf = await asyncio.to_thread(plot_data_sync, absolute_data)
+        buf = await asyncio.to_thread(plot_data_sync, absolute_data, tz)
         file = discord.File(buf, filename="plot.png")
         embed = await self.generate_base_embed(start, end, ctx.guild.id)
 

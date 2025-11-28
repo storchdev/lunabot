@@ -214,7 +214,7 @@ class Layout:
 
     async def send(
         self,
-        msgble: discord.abc.Messageable | discord.Interaction,
+        msgble: discord.abc.Messageable | discord.Interaction | discord.Message,
         ctx: commands.Context | LayoutContext | None = None,
         *,
         repls: dict | None = None,

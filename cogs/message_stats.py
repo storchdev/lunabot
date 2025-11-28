@@ -22,7 +22,7 @@ class MsgStatsFlags(commands.FlagConverter):
     ticks: int = None
 
 
-def plot_data_sync(data, title, ylabel):
+def plot_data_sync(data, title, ylabel, tz):
     """
     Plot data synchronously.
     :param data: A dictionary with join, leave, and net data.
@@ -67,7 +67,7 @@ def plot_data_sync(data, title, ylabel):
     ax.tick_params(axis="both", colors="cyan")  # Set tick colors to cyan
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(
-        mdates.DateFormatter("%a %-m/%-d\n%-I:%M %p", tz=timezone("America/Chicago"))
+        mdates.DateFormatter("%a %-m/%-d\n%-I:%M %p", tz=timezone(tz))
     )
 
     # Remove axis labels (but keep ticks and numbers)
@@ -197,13 +197,14 @@ class MessageStats(commands.Cog):
 
     @commands.command()
     async def msgstats(self, ctx, *, flags: MsgStatsFlags):
+        tz = await ctx.fetch_timezone()
         start = parse(
             flags.start,
-            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
         )
         end = parse(
             flags.end,
-            settings={"TIMEZONE": "America/Chicago", "RETURN_AS_TIMEZONE_AWARE": True},
+            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
         )
 
         if end <= start:
@@ -222,7 +223,7 @@ class MessageStats(commands.Cog):
             start, end, delta, not flags.all_channels
         )
         buf = await asyncio.to_thread(
-            plot_data_sync, data, "messages sent", "# of new messages"
+            plot_data_sync, data, "messages sent", "# of new messages", tz
         )
         file = discord.File(buf, filename="plot.png")
         embed = await self.generate_base_embed(data, n_msgs)
