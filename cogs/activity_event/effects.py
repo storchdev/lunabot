@@ -36,7 +36,8 @@ class Multiplier(Powerup):
         player.powerups.remove(self)
 
     async def apply(self, player: "Player"):
-        player.powerups.append(self)
+        if self not in player.powerups:
+            player.powerups.append(self)
         player.multi *= self.n
         await self._after_apply(player)
         # player.bot.loop.create_task(self._after_apply(player))
@@ -55,7 +56,8 @@ class CooldownReducer(Powerup):
         player.powerups.remove(self)
 
     async def apply(self, player: "Player"):
-        player.powerups.append(self)
+        if self not in player.powerups:
+            player.powerups.append(self)
         player.cds.append(self.n)
         await self._after_apply(player)
         # player.bot.loop.create_task(self._after_apply(player))

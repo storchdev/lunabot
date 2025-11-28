@@ -86,7 +86,6 @@ class Player:
         self.bot.powerup_tasks.append(t)
 
     def apply_powerups(self):
-        self.bot.powerup_tasks = []
         for powerup in self.powerups:
             t = self.bot.loop.create_task(powerup.apply(self))
             self.bot.powerup_tasks.append(t)

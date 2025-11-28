@@ -50,6 +50,7 @@ class ActivityEvent(commands.Cog):
         #     1158931468664446986,
         #     GENERAL_ID,
         # }
+        self.bot.powerup_tasks = []
 
         if TEST:
             self.msgs_needed = 3
@@ -344,7 +345,7 @@ class ActivityEvent(commands.Cog):
     async def cog_unload(self):
         for t in self.bot.powerup_tasks:
             t.cancel()
-        self.bot.log("Cancelled powerup tasks", "ae")
+        self.bot.log(f"Cancelled {len(self.bot.powerup_tasks)} powerup tasks", "ae")
         self.sync_player_data.cancel()
         self.award_pension.cancel()
 

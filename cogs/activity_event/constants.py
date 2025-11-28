@@ -2,7 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 
-LOAD = False
+LOAD = True
 TEST = True
 
 if TEST:
@@ -13,21 +13,21 @@ if TEST:
 
     START_TIME = datetime(2024, 11, 19).astimezone(ZoneInfo("America/Chicago"))
 
-    OPTION3_TIME = 30
-    OPTION4_TIME = 30
-    OPTION5_TIME = 30
+    OPTION3_TIME = 60
+    OPTION4_TIME = 60
+    OPTION5_TIME = 60
     OPTION5_CD = 10
     LOW_PERIOD = 5
     HIGH_PERIOD = 10
     INDIV_REDUCED_CD = 1
     TEAM_REDUCED_CD = 1
     BASE_CD = 3
-    INDIV_DOUBLE_TIME = 30
-    TEAM_DOUBLE_TIME = 30
-    INDIV_TRIPLE_TIME = 15
-    TEAM_TRIPLE_TIME = 15
-    INDIV_REDUCED_CD_TIME = 30
-    TEAM_REDUCED_CD_TIME = 30
+    INDIV_DOUBLE_TIME = 60
+    TEAM_DOUBLE_TIME = 60
+    INDIV_TRIPLE_TIME = 60
+    TEAM_TRIPLE_TIME = 60
+    INDIV_REDUCED_CD_TIME = 60
+    TEAM_REDUCED_CD_TIME = 60
     WELC_CD = 30
 
     DAILY_GOAL_MESSAGES = 2
