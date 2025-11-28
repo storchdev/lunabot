@@ -29,14 +29,28 @@ class Misc(commands.Cog):
     async def topic(self, ctx):
         """Get a random topic to talk about"""
         with open("cogs/static/topics.json") as f:
-            topics = json.load(f)
-            topics.append(topics.pop(0))
-            topic = topics[0]
-        with open("cogs/static/topics.json", "w") as f:
-            json.dump(topics, f, indent=4)
+            topics: list[str] = json.load(f)
+
+        if len(topics) == 0:
+            return await ctx.send("Uh oh, no more topics to be found!")
+
+        topic = random.choice(topics)
 
         layout = self.bot.get_layout("topic")
         await layout.send(ctx, repls={"question": topic})
+
+        if self.bot.vars.get("remove-topic-after-use") == 1:
+            topics.remove(topic)
+            with open("cogs/static/topics.json", "w") as f:
+                json.dump(topics, f, indent=4)
+
+            priv = self.bot.get_var_channel("private")
+            assert isinstance(priv, discord.TextChannel)
+
+            if len(topics) < 10:
+                await priv.send(
+                    f"<@{self.bot.owner_id}> - {len(topics)} topics remaining"
+                )
 
     @commands.hybrid_command()
     async def polyjuice(self, ctx, member: discord.Member, *, sentence: str):
