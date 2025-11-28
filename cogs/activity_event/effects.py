@@ -19,7 +19,7 @@ class Powerup:
     def __eq__(self, other):
         return self.id == other.id
 
-    def apply(self, _: "Player"):
+    async def apply(self, _: "Player"):
         raise NotImplementedError()
 
 
@@ -35,10 +35,11 @@ class Multiplier(Powerup):
         player.multi //= self.n
         player.powerups.remove(self)
 
-    def apply(self, player: "Player"):
+    async def apply(self, player: "Player"):
         player.powerups.append(self)
-        self.multi *= self.n
-        player.bot.loop.create_task(self._after_apply(player))
+        player.multi *= self.n
+        await self._after_apply(player)
+        # player.bot.loop.create_task(self._after_apply(player))
 
 
 class CooldownReducer(Powerup):
@@ -53,7 +54,8 @@ class CooldownReducer(Powerup):
         player.cds.remove(self.n)
         player.powerups.remove(self)
 
-    def apply(self, player: "Player"):
+    async def apply(self, player: "Player"):
         player.powerups.append(self)
         player.cds.append(self.n)
-        player.bot.loop.create_task(self._after_apply(player))
+        await self._after_apply(player)
+        # player.bot.loop.create_task(self._after_apply(player))

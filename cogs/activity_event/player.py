@@ -79,14 +79,17 @@ class Player:
             powerup.end,
         )
         powerup.id = id
-        powerup.apply(self)
         if log:
             await self.log_powerup(powerup.log_name)
 
+        t = self.bot.loop.create_task(powerup.apply(self))
+        self.bot.powerup_tasks.append(t)
+
     def apply_powerups(self):
+        self.bot.powerup_tasks = []
         for powerup in self.powerups:
-            powerup.apply(self)
-            # self.bot.loop.create_task(self.task(powerup))
+            t = self.bot.loop.create_task(powerup.apply(self))
+            self.bot.powerup_tasks.append(t)
 
     async def on_msg(self):
         self.last_message_time = time.time()
@@ -94,7 +97,13 @@ class Player:
         if time.time() < self.next_msg:
             return
         self.next_msg = time.time() + self.cd
-        await self.add_points(1, "msg")
+
+        if is_santas_sleigh():
+            a, b = 1, 10
+        else:
+            a, b = 1, 5
+
+        await self.add_points(random.randint(a, b), "msg")
 
     async def on_welc(self, channel):
         if time.time() < self.next_welc:

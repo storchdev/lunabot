@@ -86,25 +86,19 @@ class ActivityEvent(commands.Cog):
         ]
 
         self.team_members = {
-            "mistletoe": [
-                718475543061987329,
-                1011106833412403230,
-                1061535351031746581,
-                1089275337633972306,
-                902448599542157322,
-                965552455993683978,
-                1119583389893279844,
-                949757993631748119,
-            ],
             "poinsettia": [
                 496225545529327616,
                 675058943596298340,
-                396740993115881492,
-                1081628938394148884,
-                989623504867565588,
-                628091002997047298,
-                248224130221080577,
-                1063408231323549696,
+                653067767137697905,
+                1360304699063931104,
+                717981316599119882,
+            ],
+            "mistletoe": [
+                718475543061987329,
+                713118404017651773,
+                775100386196717589,
+                1430154024505835592,
+                1056609396257472584,
             ],
         }
         self.team_channels = {
@@ -120,22 +114,16 @@ class ActivityEvent(commands.Cog):
             "poinsettia": "<:ML_Team_Poinsettia:1302156805639503892>",
         }
         self.nick_dict = {
-            1011106833412403230: "Val",
-            1061535351031746581: "Mizuki",
-            1089275337633972306: "Tea",
-            902448599542157322: "Kyoka",
-            718475543061987329: "Storch",
-            965552455993683978: "Sid",
-            396740993115881492: "Onyx",
-            675058943596298340: "Molly",
             496225545529327616: "Luna",
-            1081628938394148884: "Nester",
-            989623504867565588: "Seabass",
-            628091002997047298: "Yuriiko",
-            248224130221080577: "Wolfy",
-            1063408231323549696: "Ema",
-            949757993631748119: "Wacky",
-            1119583389893279844: "Koda",
+            675058943596298340: "Molly",
+            653067767137697905: "Sora",
+            1360304699063931104: "Fae",
+            717981316599119882: "Coco",
+            718475543061987329: "Storch",
+            713118404017651773: "Lux",
+            775100386196717589: "Kaiz",
+            1430154024505835592: "Mika",
+            1056609396257472584: "Bipper",
         }
 
         self.powerup_emoji = "<a:ML_present_gift:1302182895020150804>"
@@ -354,6 +342,9 @@ class ActivityEvent(commands.Cog):
         self.award_pension.start()
 
     async def cog_unload(self):
+        for t in self.bot.powerup_tasks:
+            t.cancel()
+        self.bot.log("Cancelled powerup tasks", "ae")
         self.sync_player_data.cancel()
         self.award_pension.cancel()
 
@@ -1259,10 +1250,34 @@ class ActivityEvent(commands.Cog):
             await team.channel.send(message)
         await ctx.send("Done!")
 
+    @commands.command()
+    @commands.is_owner()
+    async def aedropall(self, ctx):
+        tmp = await ctx.send(
+            "Are you SURE you want to drop all database tables for ae stuff?"
+        )
+        try:
+            await self.bot.wait_for(
+                "message",
+                check=lambda m: m.author == ctx.author
+                and m.content.lower() in ["y", "yes"],
+                timeout=30,
+            )
+        except asyncio.TimeoutError:
+            await tmp.edit(content="Cancelled.")
+            return
+
+        query = """DROP TABLE num_redeems;
+                   DROP TABLE saved_powerups;
+                   DROP TABLE event_stats;
+                   DROP TABLE event_log;
+                   DROP TABLE powerups;
+                   DROP TABLE event_dailies;
+                """
+        await self.bot.db.execute(query)
+        await ctx.send("Dropped all ae tables. You should reload the cog now.")
+
 
 async def setup(bot):
     if LOAD:
-        if TEST:
-            await bot.add_cog(ActivityEvent(bot))
-        else:
-            await bot.add_cog(ActivityEvent(bot))
+        await bot.add_cog(ActivityEvent(bot))
