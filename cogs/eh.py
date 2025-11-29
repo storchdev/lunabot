@@ -1,8 +1,10 @@
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from discord.ext import commands
+from discord.utils import format_dt, utcnow
 
-from .utils.errors import GuildOnly
+from .utils.errors import GeneralOnly, GuildOnly, SilentCheckFailure
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -18,41 +20,54 @@ class EH(commands.Cog):
             return
         if isinstance(error, GuildOnly):
             return
+        if isinstance(error, SilentCheckFailure):
+            return
+        if isinstance(error, GeneralOnly):
+            gen_id = self.bot.vars.get("general-channel-id")
+            await ctx.send(f"This command can only be used in <#{gen_id}>!")
+            return
+        if isinstance(error, commands.CommandOnCooldown):
+            dt = utcnow() + timedelta(seconds=error.retry_after)
+            await ctx.send(
+                f"This command is on cooldown. Try again in {format_dt(dt, 'R')}!"
+            )
+            return
         if (
             isinstance(error, commands.CheckFailure)
             or isinstance(error, commands.MissingPermissions)
             or isinstance(error, commands.MissingAnyRole)
         ):
             await ctx.send("This command isn't for you!", ephemeral=True)
-        elif isinstance(error, commands.BadArgument) or isinstance(
+        if isinstance(error, commands.BadArgument) or isinstance(
             error, commands.MissingRequiredArgument
         ):
             await ctx.send(
                 f"Wrong usage, try `!help {ctx.command.qualified_name}`", ephemeral=True
             )
-        else:
-            await self.bot.errors.add_error(error=error, ctx=ctx)
-            # etype = type(error)
-            # trace = error.__traceback__
-            # lines = traceback.format_exception(etype, error, trace)
-            # traceback_text = "".join(lines)
-            # if len(traceback_text) > 4080:
-            #     traceback_text = traceback_text[:4080]
-            #     traceback_text += "..."
-            # description = f"```py\n{traceback_text}```"
+            return
 
-            # embed = (
-            #     discord.Embed(
-            #         title=f"Error in !{ctx.command.qualified_name}",
-            #         url=ctx.message.jump_url,
-            #         description=description,
-            #         color=ctx.author.color,
-            #     )
-            #     .add_field(name="Channel", value=ctx.channel.mention)
-            #     .add_field(name="User", value=ctx.author.mention)
-            # )
-            # storch = self.bot.get_user(self.bot.owner_ids[0])
-            # await storch.send(embed=embed)
+        await self.bot.errors.add_error(error=error, ctx=ctx)
+        # etype = type(error)
+        # trace = error.__traceback__
+        # lines = traceback.format_exception(etype, error, trace)
+        # traceback_text = "".join(lines)
+        # if len(traceback_text) > 4080:
+        #     traceback_text = traceback_text[:4080]
+        #     traceback_text += "..."
+        # description = f"```py\n{traceback_text}```"
+
+        # embed = (
+        #     discord.Embed(
+        #         title=f"Error in !{ctx.command.qualified_name}",
+        #         url=ctx.message.jump_url,
+        #         description=description,
+        #         color=ctx.author.color,
+        #     )
+        #     .add_field(name="Channel", value=ctx.channel.mention)
+        #     .add_field(name="User", value=ctx.author.mention)
+        # )
+        # storch = self.bot.get_user(self.bot.owner_ids[0])
+        # await storch.send(embed=embed)
 
 
 async def setup(bot):

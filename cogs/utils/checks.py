@@ -1,7 +1,7 @@
+import discord
 from discord.ext import commands
-from discord.utils import format_dt
 
-from .errors import GuildOnly
+from .errors import GeneralOnly, GuildOnly
 
 
 def guild_only(ctx):
@@ -33,6 +33,15 @@ def admin_only():
     return commands.check(is_admin)
 
 
+def general_only():
+    async def pred(ctx):
+        if ctx.channel.id == ctx.bot.vars.get("general-channel-id"):
+            return True
+        raise GeneralOnly()
+
+    return commands.check(pred)
+
+
 def user_cd_except_staff(per: float, rate: int = 1):
     async def predicate(ctx):
         if is_staff(ctx):
@@ -42,10 +51,12 @@ def user_cd_except_staff(per: float, rate: int = 1):
             ctx.command.name, per, obj=ctx.author, rate=rate
         )
         if end_time is not None:
-            await ctx.send(
-                f"You are on cooldown. Try again {format_dt(end_time, 'R')}.",
-                ephemeral=True,
+            raise commands.CommandOnCooldown(
+                commands.Cooldown(rate, per),
+                (end_time - discord.utils.utcnow()).total_seconds(),
+                commands.BucketType.user,
             )
-            return False
+
+        return True
 
     return commands.check(predicate)

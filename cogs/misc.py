@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
+from cogs.utils import staff_only, general_only
+
 if TYPE_CHECKING:
     from bot import LunaBot
 
@@ -26,6 +28,9 @@ class Misc(commands.Cog):
     #     self.urmom.stop()
 
     @commands.hybrid_command()
+    @staff_only()
+    @general_only()
+    @commands.cooldown(1, 3600, commands.BucketType.guild)
     async def topic(self, ctx):
         """Get a random topic to talk about"""
         with open("cogs/static/topics.json") as f:

@@ -305,14 +305,57 @@ class Tools(commands.Cog, description="storchs tools"):
         await ctx.message.delete()
 
     @commands.command()
-    async def setroleicon(self, ctx, role: discord.Role, url: str):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    return await ctx.send("Failed to fetch image.")
-                data = await resp.read()
+    async def setrolecolor(
+        self, ctx, role: discord.Role, hex1: str, hex2: str | None = None
+    ):
+        v1 = None
+        v2 = None
+        try:
+            v1 = int(hex1.lstrip("#"), base=16)
+            if hex2 is not None:
+                v2 = int(hex2.lstrip("#"), base=16)
+        except ValueError:
+            return await ctx.send("Invalid hex code.")
 
-        await role.edit(display_icon=data)
+        if not 0 <= v1 <= 0xFFFFFF:
+            return await ctx.send("Invalid hex code.")
+
+        if v2 is not None and not 0 <= v2 <= 0xFFFFFF:
+            return await ctx.send("Invalid hex code.")
+
+        if v2 is None:
+            await role.edit(colour=discord.Colour(v1))
+        else:
+            await role.edit(
+                colour=discord.Colour(v1), secondary_colour=discord.Colour(v2)
+            )
+
+        embed = discord.Embed(
+            description=f"Successfully set the color for {role.mention}",
+            color=self.bot.DEFAULT_EMBED_COLOR,
+        )
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def setroleicon(self, ctx, role: discord.Role, url_or_emoji: str):
+        kind = None
+        try:
+            ec = commands.EmojiConverter()
+            em = await ec.convert(ctx, url_or_emoji)
+            kind = "emoji"
+        except commands.BadArgument:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url_or_emoji) as resp:
+                    if resp.status != 200:
+                        return await ctx.send("Not a valid URL or emoji.")
+                    data = await resp.read()
+                    kind = "url"
+
+        if kind == "emoji":
+            await role.edit(display_icon=str(em))
+        else:
+            await role.edit(display_icon=data)
+
         await ctx.send("Role icon set.")
 
     @commands.command()

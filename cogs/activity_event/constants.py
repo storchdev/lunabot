@@ -2,7 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 
-LOAD = True
+LOAD = False
 TEST = True
 
 if TEST:
