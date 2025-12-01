@@ -1,33 +1,29 @@
-from itertools import cycle
-from datetime import datetime, timedelta
-from textwrap import dedent
-import time
-import random
 import asyncio
-
-import discord
-from discord.ext import commands, tasks
-import dateparser
-
-from .graphs import plot_data
-from .trivia import parse_raw
-from .constants import *
-from .player import Player
-from .team import Team
-from .effects import (
-    Powerup,
-    Multiplier,
-    CooldownReducer,
-)
-from .views import RedeemView, TeamLBView, DailyTasksView
-from cogs.utils import Layout, LayoutContext, View
-
-from typing import List, Dict, Set, TYPE_CHECKING
 import logging
-
-from cogs.utils import next_day
+import random
+import time
+from datetime import datetime
+from itertools import cycle
+from typing import TYPE_CHECKING, Dict, List, Set
 from zoneinfo import ZoneInfo
 
+import dateparser
+import discord
+from discord.ext import commands, tasks
+
+from cogs.utils import Layout, next_day
+from cogs.utils.time_stuff import localnow
+
+from .constants import *
+from .effects import (
+    CooldownReducer,
+    Multiplier,
+)
+from .graphs import plot_data
+from .player import Player
+from .team import Team
+from .trivia import parse_raw
+from .views import DailyTasksView, RedeemView, TeamLBView
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -38,6 +34,17 @@ class TeamStatsFlags(commands.FlagConverter):
     stat: str
     start: str = None
     end: str = "now"
+
+
+def is_break():
+    return localnow().weekday() in (5, 6)
+
+
+def is_on_break(ctx):
+    if is_break():
+        raise ActivityEventBreak()
+
+    return True
 
 
 class ActivityEvent(commands.Cog):
@@ -665,6 +672,9 @@ class ActivityEvent(commands.Cog):
         if msg.channel.id != GENERAL_ID:
             return
 
+        if is_break() and not TEST:
+            return
+
         if (
             msg.author not in self.daily_message_task_cds
             or self.daily_message_task_cds[msg.author] < time.time()
@@ -808,6 +818,7 @@ class ActivityEvent(commands.Cog):
             await layout.send(msg.channel, repls=repls, special=False)
 
     @commands.command()
+    @commands.check(is_on_break)
     async def redeem(self, ctx):
         for team in self.teams.values():
             if ctx.author == team.captain.member:
@@ -838,6 +849,7 @@ class ActivityEvent(commands.Cog):
         )
 
     @commands.command()
+    @commands.check(is_on_break)
     async def usepowerup(self, ctx):
         for team in self.teams.values():
             if ctx.author == team.captain.member:
@@ -923,6 +935,7 @@ class ActivityEvent(commands.Cog):
         await view.update()
 
     @commands.command(aliases=["effects"])
+    @commands.check(is_on_break)
     async def powerups(self, ctx, *, member: discord.Member = None):
         if member is None:
             member = ctx.author
@@ -976,6 +989,7 @@ class ActivityEvent(commands.Cog):
         )
 
     @commands.command(aliases=["dailys"])
+    @commands.check(is_on_break)
     async def dailies(self, ctx):
         if ctx.author.id not in self.players:
             return

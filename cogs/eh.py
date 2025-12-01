@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from discord.ext import commands
 from discord.utils import format_dt, utcnow
 
-from .utils.errors import GeneralOnly, GuildOnly, SilentCheckFailure
+from .utils.errors import GeneralOnly, GuildOnly, SilentCheckFailure, ActivityEventBreak
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -30,6 +30,11 @@ class EH(commands.Cog):
             dt = utcnow() + timedelta(seconds=error.retry_after)
             await ctx.send(
                 f"This command is on cooldown. Try again in {format_dt(dt, 'R')}!"
+            )
+            return
+        if isinstance(error, ActivityEventBreak):
+            await ctx.send(
+                "The activity event is on break! Please wait until it resumes until you can use this."
             )
             return
         if (

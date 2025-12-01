@@ -15,6 +15,7 @@ from cogs.db import init_db
 from cogs.future_tasks import FutureTask
 from cogs.utils import InvalidURL, Layout, View
 from cogs.utils.checks import guild_only
+from cogs.activity_event.constants import START_TIME
 from config import ERROR_WEBHOOK_URL, LOG_FILE
 
 if TYPE_CHECKING:
@@ -52,6 +53,25 @@ class LunaBot(commands.Bot):
         self.tickets: dict[discord.Thread, Ticket] = {}
         self.views: set[View] = set()
 
+    async def load_activity_event(self):
+        from cogs.activity_event import (
+            TEAM_MISTLETOE_CHANNEL_ID,
+            TEAM_POINSETTIA_CHANNEL_ID,
+        )
+
+        ch = self.get_var_channel("private")
+        await ch.send("Sleeping until activity event starts")
+        await discord.utils.sleep_until(START_TIME)
+        await self.load_extension("cogs.activity_event")
+        await ch.send("Loaded activity event")
+
+        ch1 = self.get_channel(TEAM_POINSETTIA_CHANNEL_ID)
+        ch2 = self.get_channel(TEAM_MISTLETOE_CHANNEL_ID)
+        layout = self.get_layout("ae/live")
+
+        await layout.send(ch1)
+        await layout.send(ch2)
+
     async def start_task(self):
         await self.wait_until_ready()
         self.loop.create_task(self._start_task())
@@ -68,7 +88,7 @@ class LunaBot(commands.Bot):
 
         await self.load_extension("jishaku")
         priority = ["cogs.vars", "cogs.tools"]
-        not_cogs = ["cogs.utils", "cogs.db"]
+        not_cogs = ["cogs.utils", "cogs.db", "cogs.activity_event"]
 
         for cog in priority:
             await self.load_extension(cog)
@@ -86,6 +106,8 @@ class LunaBot(commands.Bot):
         assert isinstance(log_flags, str)
         if log_flags is not None:
             self.log_flags = json.loads(log_flags)
+
+        self.loop.create_task(self.load_activity_event())
 
         logging.info("LunaBot is ready")
 
