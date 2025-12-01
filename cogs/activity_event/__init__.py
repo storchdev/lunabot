@@ -1265,33 +1265,6 @@ class ActivityEvent(commands.Cog):
             await team.channel.send(message)
         await ctx.send("Done!")
 
-    @commands.command()
-    @commands.is_owner()
-    async def aedropall(self, ctx):
-        tmp = await ctx.send(
-            "Are you SURE you want to drop all database tables for ae stuff?"
-        )
-        try:
-            await self.bot.wait_for(
-                "message",
-                check=lambda m: m.author == ctx.author
-                and m.content.lower() in ["y", "yes"],
-                timeout=30,
-            )
-        except asyncio.TimeoutError:
-            await tmp.edit(content="Cancelled.")
-            return
-
-        query = """DROP TABLE num_redeems;
-                   DROP TABLE saved_powerups;
-                   DROP TABLE event_stats;
-                   DROP TABLE event_log;
-                   DROP TABLE powerups;
-                   DROP TABLE event_dailies;
-                """
-        await self.bot.db.execute(query)
-        await ctx.send("Dropped all ae tables. You should reload the cog now.")
-
 
 async def setup(bot):
     if LOAD:
