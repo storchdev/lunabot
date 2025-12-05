@@ -99,8 +99,7 @@ class ActivityEvent(commands.Cog):
                 675058943596298340,
                 653067767137697905,
                 1360304699063931104,
-                # 717981316599119882,
-                1299380154438778880,
+                717981316599119882,
             ],
             "mistletoe": [
                 718475543061987329,
@@ -115,8 +114,8 @@ class ActivityEvent(commands.Cog):
             "poinsettia": TEAM_POINSETTIA_CHANNEL_ID,
         }
         self.team_roles = {
-            "mistletoe": 1216572143492403320,
-            "poinsettia": 1216572111615692991,
+            "mistletoe": 1442249692946890853,
+            "poinsettia": 1442249666392752279,
         }
         self.team_emojis = {
             "mistletoe": "<:ML_Team_Mistletoe:1302156859909607496>",
@@ -127,13 +126,12 @@ class ActivityEvent(commands.Cog):
             675058943596298340: "Molly",
             653067767137697905: "Sora",
             1360304699063931104: "Fae",
-            # 717981316599119882: "Coco",
+            717981316599119882: "Coco",
             718475543061987329: "Storch",
             713118404017651773: "Lux",
             775100386196717589: "Kaiz",
             1430154024505835592: "Mika",
             1056609396257472584: "Bipper",
-            1299380154438778880: "Unknown",
         }
 
         self.powerup_emoji = "<a:ML_present_gift:1302182895020150804>"
@@ -1219,7 +1217,11 @@ class ActivityEvent(commands.Cog):
     def _get_stat_repls(self, title, start, end, player_key, team_key):
         total = 0
         repls = {}
-        for i, t in enumerate(self.teams.values()):
+
+        # for i, t in enumerate(self.teams.values()):
+        # ORDER IS IMPORTANT TO MATCH LAYOUT!
+        for i, tname in enumerate(["mistletoe", "poinsettia"]):
+            t = self.teams[tname]
             duration = end.timestamp() - start.timestamp()
             repls[f"mvp{i + 1}"] = max(t.players, key=player_key).nick
             repls[f"total{i + 1}"] = team_key(t)
@@ -1266,6 +1268,21 @@ class ActivityEvent(commands.Cog):
             message = f"{team.captain.member.mention}\n\n{message}\n\n-storch\n-# this message is sent to both team channels and will only ping the captain"
             await team.channel.send(message)
         await ctx.send("Done!")
+
+    @commands.command()
+    async def teamping(self, ctx):
+        for team, ids in self.team_members.items():
+            if ctx.author.id in ids:
+                break
+        else:
+            return
+
+        role_id = self.team_roles[team]
+        role = ctx.guild.get_role(role_id)
+        if role is None:
+            return await ctx.send("Role not found.")
+
+        await ctx.send(role.mention)
 
 
 async def setup(bot):
