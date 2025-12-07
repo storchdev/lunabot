@@ -5,7 +5,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from cogs.utils import SimplePages
+from cogs.utils import SimplePages, ConfirmView
+from ..utils.errors import InvalidURL
 
 from .editor import EmbedEditor
 
@@ -94,6 +95,65 @@ class Embeds(commands.Cog, description="Create, save, and edit your own embeds."
         await self.bot.db.execute(query, ctx.author.id, name, data)
         self.bot.embeds[name] = embed
         await ctx.send(f"Added your embed {name}!")
+
+    @embed.command()
+    async def fromluna(self, ctx, name, msg_link):
+        name = name.lower()
+        if name in self.bot.embeds:
+            await ctx.send("There is already an embed with that name!", ephemeral=True)
+
+        try:
+            msg = await self.bot.fetch_message_from_url(msg_link)
+        except InvalidURL:
+            return await ctx.send("Bad message URL.")
+
+        # AI GENERATED!
+
+        pattern = re.compile(
+            r"^(?P<title>.+?)\n+"  # title
+            r"(?P<description>.*?)"  # description (anything until final divider-block)
+            # r"(?P<divider>(^\s*(?:\u2027[\s\u2027\u2574]*)+\u2574.*\n+)+)"  # final divider-block
+            r"\n{2,}"  # required blank lines
+            r"(?:(?P<image>https?://\S+)\n+)?"  # optional image link
+            r"(?P<footer>.*)?$",  # optional footer
+            re.MULTILINE | re.DOTALL,
+        )
+
+        m = pattern.search(msg.content)
+        if not m:
+            return await ctx.send("Hmm... regex didn't match.")
+
+        embed = discord.Embed(
+            title=m["title"],
+            color=self.bot.DEFAULT_EMBED_COLOR,
+            description=m["description"],
+        )
+
+        if m["image"]:
+            embed.set_image(url=m["image"])
+
+        if m["footer"]:
+            embed.set_footer(text=m["footer"])
+
+        v = ConfirmView(ctx)
+        await ctx.send("Does this look right?", embed=embed, view=v)
+        await v.wait()
+
+        if not v.final_interaction:
+            return await ctx.send("Cancelled.")
+
+        if v.choice:
+            data = json.dumps(embed.to_dict(), indent=4)
+            query = """INSERT INTO
+                        embeds (creator_id, name, embed)
+                    VALUES
+                        ($1, $2, $3)
+                    """
+            await self.bot.db.execute(query, ctx.author.id, name, data)
+            self.bot.embeds[name] = embed
+            await v.final_interaction.response.send_message(f"Added your embed {name}!")
+        else:
+            await v.final_interaction.response.send_message("Cancelled.")
 
     @embed.command(aliases=["dupe", "dup", "duplicate", "cpy", "cp"])
     @app_commands.default_permissions()

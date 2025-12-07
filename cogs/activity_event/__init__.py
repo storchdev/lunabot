@@ -12,6 +12,7 @@ import discord
 from discord.ext import commands, tasks
 
 from cogs.utils import Layout, next_day
+from cogs.utils.errors import ActivityEventBreak
 from cogs.utils.time_stuff import localnow
 
 from .constants import *
@@ -70,8 +71,8 @@ class ActivityEvent(commands.Cog):
         self.has_welcomed: Set[int] = set()
 
         self.powerups_1k = {
-            "topup": "Receive 15-20 points",
-            "steal": "Steal 10-15 points from the other team",
+            "topup": f"Receive {REDEEM_TOPUP_LOW}-{REDEEM_TOPUP_HIGH} points",
+            "steal": f"Steal {REDEEM_STEAL_LOW}-{REDEEM_STEAL_HIGH} points from the other team",
             "double": "Double all incoming points for 30 minutes",
             "triple": "Triple all incoming points for 20 minutes",
             "reduce_cd": "Reduce the cooldown for messages to 1 minute for 25 minutes",
@@ -99,14 +100,14 @@ class ActivityEvent(commands.Cog):
                 675058943596298340,
                 653067767137697905,
                 1360304699063931104,
-                717981316599119882,
+                1136006166909026505,
             ],
             "mistletoe": [
                 718475543061987329,
                 713118404017651773,
                 775100386196717589,
                 1430154024505835592,
-                1056609396257472584,
+                835932200368209941,
             ],
         }
         self.team_channels = {
@@ -126,12 +127,13 @@ class ActivityEvent(commands.Cog):
             675058943596298340: "Molly",
             653067767137697905: "Sora",
             1360304699063931104: "Fae",
-            717981316599119882: "Coco",
+            1136006166909026505: "Alessia",
             718475543061987329: "Storch",
             713118404017651773: "Lux",
             775100386196717589: "Kaiz",
             1430154024505835592: "Mika",
-            1056609396257472584: "Bipper",
+            835932200368209941: "Nala",
+            # 1056609396257472584: "Bipper",
         }
 
         self.powerup_emoji = "<a:ML_present_gift:1302182895020150804>"
@@ -1265,8 +1267,8 @@ class ActivityEvent(commands.Cog):
     @commands.is_owner()
     async def announce(self, ctx, *, message):
         for team in self.teams.values():
-            message = f"{team.captain.member.mention}\n\n{message}\n\n-storch\n-# this message is sent to both team channels and will only ping the captain"
-            await team.channel.send(message)
+            this_message = f"{team.captain.member.mention}\n\n{message}\n\n-storch\n-# this message is sent to both team channels and will only ping the captain"
+            await team.channel.send(this_message)
         await ctx.send("Done!")
 
     @commands.command()
