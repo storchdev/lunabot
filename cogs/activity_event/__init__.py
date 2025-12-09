@@ -285,7 +285,7 @@ class ActivityEvent(commands.Cog):
                     elif row["name"] == "cd_powerup":
                         powerups.append(
                             CooldownReducer(
-                                row["id"],
+                                # row["id"],
                                 row["value"],
                                 row["start_time"],
                                 row["end_time"],
@@ -541,7 +541,9 @@ class ActivityEvent(commands.Cog):
         if TEST:
             return mistletoe >= 1 and mistletoe == poinsettia
         else:
-            return mistletoe >= 2 and mistletoe == poinsettia
+            m = min(mistletoe, poinsettia)
+            d = abs(mistletoe - poinsettia)
+            return m > 0 and (d == 0 or (d == 1 and m >= 2))
 
     async def snowball_fight(self, channel: discord.TextChannel):
         # whichever team spams the most snowballs in 15 seconds wins
@@ -1036,22 +1038,19 @@ class ActivityEvent(commands.Cog):
         #     return await ctx.send('That is not a valid team!')
         team = "both"
 
-        query = "SELECT timezone FROM timezones WHERE user_id = $1"
-        timezone = await self.bot.db.fetchval(query, ctx.author.id)
-        if timezone is None:
-            timezone = "America/Chicago"
+        tz = await ctx.fetch_timezone()
 
         start = (
             START_TIME
             if flags.start is None
             else dateparser.parse(
                 flags.start,
-                settings={"TIMEZONE": timezone, "RETURN_AS_TIMEZONE_AWARE": True},
+                settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
             )
         )
 
         end = dateparser.parse(
-            flags.end, settings={"TIMEZONE": timezone, "RETURN_AS_TIMEZONE_AWARE": True}
+            flags.end, settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True}
         )
 
         if flags.stat in {"msg", "messages", "message", "msgs"}:

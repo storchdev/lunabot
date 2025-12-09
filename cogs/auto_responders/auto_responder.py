@@ -19,6 +19,8 @@ class AutoResponderAction:
         self.kwargs = kwargs
 
     async def send_message(self, msg: discord.Message):
+        temp_kwargs = {}
+
         if self.kwargs["is_dm"]:
             value = self.kwargs.get("user")
             if value is None:
@@ -49,9 +51,9 @@ class AutoResponderAction:
         layout = self.bot.get_layout_from_json(self.kwargs["layout"])
         ctx = LayoutContext(message=msg)
 
-        self.kwargs["allowed_mentions"] = allowed_mentions
+        temp_kwargs["allowed_mentions"] = allowed_mentions
 
-        await layout.send(msgble, ctx=ctx, **self.kwargs)
+        await layout.send(msgble, ctx=ctx, **self.kwargs, **temp_kwargs)
 
     async def add_roles(self, msg: discord.Message):
         role_ids = self.kwargs["roles"]
