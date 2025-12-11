@@ -1,3 +1,10 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Modified version of the meta/views/embed/__init__.py file, from Duck Hideout Manager Bot, source/credits:
+# https://github.com/DuckBot-Discord/duck-hideout-manager-bot/tree/main/cogs/meta/views/embed/__init__.py
+
 from __future__ import annotations
 
 from copy import deepcopy

@@ -502,14 +502,30 @@ class RR(commands.Cog, name="Reaction Roles"):
                 return await self.remove_reaction(payload)
 
         if row["max_sel"] != -1:
-            query = "SELECT COUNT(*) FROM rr_selections WHERE user_id = $1 AND channel_id = $2 AND message_id = $3"
+            query = """SELECT
+                         COUNT(*)
+                       FROM
+                         rr_selections
+                       WHERE
+                         user_id = $1
+                         AND channel_id = $2
+                         AND message_id = $3
+                    """
             count = await self.bot.db.fetchval(
                 query, payload.user_id, payload.channel_id, payload.message_id
             )
             if count >= row["max_sel"]:
                 return await self.remove_reaction(payload)
 
-        query = "SELECT role_id FROM rr_selections WHERE user_id = $1 AND channel_id = $2 AND message_id = $3"
+        query = """SELECT
+                     role_id
+                   FROM
+                     rr_selections
+                   WHERE
+                     user_id = $1
+                     AND channel_id = $2
+                     AND message_id = $3
+                """
         rows = await self.bot.db.fetch(
             query, payload.user_id, payload.channel_id, payload.message_id
         )
@@ -548,7 +564,13 @@ class RR(commands.Cog, name="Reaction Roles"):
 
         role = member.guild.get_role(map[str(payload.emoji)])
         await member.remove_roles(role)
-        query = "DELETE FROM rr_selections WHERE user_id = $1 AND channel_id = $2 AND message_id = $3 AND role_id = $4"
+        query = """DELETE FROM rr_selections
+                   WHERE
+                     user_id = $1
+                     AND channel_id = $2
+                     AND message_id = $3
+                     AND role_id = $4
+                """
         await self.bot.db.execute(
             query, payload.user_id, payload.channel_id, payload.message_id, role.id
         )

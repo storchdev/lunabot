@@ -10,3 +10,4 @@ start.sh
 .venv/
 guild_data.json
 *.log
+.ruff_cache/

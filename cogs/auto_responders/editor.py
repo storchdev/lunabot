@@ -123,6 +123,11 @@ class AutoResponderEditor(View):
             action_dict = {}
             action_dict["type"] = a.type
             action_dict["kwargs"] = a.kwargs
+
+            # bandaid fix for smth for existing messed up entries
+            if "allowed_mentions" in action_dict["kwargs"]:
+                action_dict["kwargs"].pop("allowed_mentions")
+
             actions_list.append(action_dict)
 
         return json.dumps(actions_list, indent=4)

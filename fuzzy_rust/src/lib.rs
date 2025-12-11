@@ -13,15 +13,6 @@ fn extract_bests<'a>(
     limit: usize,
 ) -> PyResult<Vec<(String, i64)>> {
     let matcher = SkimMatcherV2::default();
-    // let mut results = Vec::new();
-
-    // for term_obj in search_terms.iter() {
-    //     let term = term_obj.extract::<&str>()?;
-    //     if let Some(score) = matcher.fuzzy_match(term, query) {
-    //         results.push((term.to_string(), score));
-    //     }
-    // }
-
     let term_list: Vec<String> = search_terms
         .iter()
         .map(|py_s| py_s.extract::<&str>().map(|s| s.to_string()).unwrap())

@@ -115,11 +115,11 @@ class LunaBot(commands.Bot):
         logging.info("LunaBot is ready")
 
     async def close(self):
-        for view in self.views:
+        for view in list(self.views):
             try:
                 await view.on_timeout()
             except Exception as e:
-                print(f"Couldnt stop view: {e}")
+                logging.info(f"Couldnt stop view: {e}")
         await self.session.close()
         await super().close()
 

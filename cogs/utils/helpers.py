@@ -11,6 +11,13 @@ if TYPE_CHECKING:
 
 
 class View(discord.ui.View):
+    # This Source Code Form is subject to the terms of the Mozilla Public
+    # License, v. 2.0. If a copy of the MPL was not distributed with this
+    # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+    #
+    # Modified version of the View class, from DuckBot, source/credits:
+    # https://github.com/DuckBot-Discord/DuckBot/blob/rewrite/utils/helpers.py
+
     def __new__(cls, *args: Any, **kwargs: Any):
         self = super().__new__(cls)
         self.on_timeout = cls._wrap_timeout(self)

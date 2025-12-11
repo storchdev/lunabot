@@ -1,3 +1,10 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Modified version of the paginators.py file, from RoboDanny, source/credits:
+# https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/utils/paginator.py
+
 from typing import Any, Callable, Dict, Generic, Optional, TypeVar
 
 import discord
