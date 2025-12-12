@@ -1,16 +1,15 @@
 import asyncio
 import random
-from datetime import timedelta
+from datetime import datetime, timedelta
 from io import BytesIO
 from typing import TYPE_CHECKING
 
 import discord
 import matplotlib.dates as mdates
+import numpy as np
 from dateparser import parse
 from discord.ext import commands
-from datetime import datetime
 from matplotlib import pyplot as plt
-import numpy as np
 from pytz import timezone
 
 from .utils.checks import staff_only
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
     from bot import LunaBot
 
 
-def grad_data(data: tuple[datetime, float]) -> tuple[datetime, float]:
+def grad_data(data: list[tuple[datetime, float]]) -> list[tuple[datetime, float]]:
     times_list = [t for t, _ in data]
     times_dt = np.array(times_list, dtype="datetime64[ns]")
     values = np.array([v for _, v in data], dtype=float)

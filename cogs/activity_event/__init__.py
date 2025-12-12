@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 import time
+from collections.abc import Callable
 from datetime import datetime
 from itertools import cycle
 from typing import TYPE_CHECKING, Dict, List, Set
@@ -20,20 +21,22 @@ from .effects import (
     CooldownReducer,
     Multiplier,
 )
-from .graphs import plot_data
+from .graphs import DataPoint, PlotData, plot_data
 from .player import Player
 from .team import Team
 from .trivia import parse_raw
 from .views import DailyTasksView, RedeemView, TeamLBView
 
 if TYPE_CHECKING:
+    from asyncpg import Record
+
     from bot import LunaBot
 
 
 class TeamStatsFlags(commands.FlagConverter):
     # team: str = None
-    stat: str
-    start: str = None
+    # stat: str
+    start: str | None = None
     end: str = "now"
 
 
@@ -912,7 +915,7 @@ class ActivityEvent(commands.Cog):
         layout = self.bot.get_layout(f"ae/usepowerup/{powerup}")
         await layout.send(ctx, repls={"points": points})
 
-    @commands.command()
+    @commands.command(aliases=["tpts", "tpoints", "teampts"])
     async def teampoints(self, ctx):
         embed = discord.Embed(title="Points for each team", color=0xCAB7FF)
         for team in self.teams:
@@ -938,7 +941,7 @@ class ActivityEvent(commands.Cog):
         view = TeamLBView(ctx, team)
         await view.update()
 
-    @commands.command(aliases=["effects"])
+    @commands.command(aliases=["effects", "pwups", "pwu", "pw"])
     @commands.check(is_on_break)
     async def powerups(self, ctx, *, member: discord.Member = None):
         if member is None:
@@ -1001,43 +1004,41 @@ class ActivityEvent(commands.Cog):
         view = DailyTasksView(ctx, self.players[ctx.author.id])
         await view.send()
 
-    @commands.command()
+    @commands.command(aliases=["tstats"])
     async def teamstats(self, ctx, *, flags: TeamStatsFlags):
-        VALID_STATS = {
-            "msgs",
-            "msg",
-            "message",
-            "messages",
-            "points",
-            "pts",
-            "powerup",
-            "powerups",
-            "bonuses",
-            "bonus",
-            "trivia",
-            "stolen",
-            "stole",
-            "steals",
-            "welc",
-            "welcs",
-            "snowball",
-            "snowballfight",
-            "snowballs",
-            "snowballfights",
-            "snow",
-            "daily",
-            "dailies",
-            "advent",
-        }
+        # VALID_STATS = {
+        #     "msgs",
+        #     "msg",
+        #     "message",
+        #     "messages",
+        #     "points",
+        #     "pts",
+        #     "powerup",
+        #     "powerups",
+        #     "bonuses",
+        #     "bonus",
+        #     "trivia",
+        #     "stolen",
+        #     "stole",
+        #     "steals",
+        #     "welc",
+        #     "welcs",
+        #     "snowball",
+        #     "snowballfight",
+        #     "snowballs",
+        #     "snowballfights",
+        #     "snow",
+        #     "daily",
+        #     "dailies",
+        #     "advent",
+        # }
 
-        if flags.stat.lower() not in VALID_STATS:
-            return await ctx.send("That is not a valid option!")
+        # if flags.stat.lower() not in VALID_STATS:
+        #     return await ctx.send("That is not a valid option!")
 
         # team = self._get_team(ctx, flags)
         # if team is None:
         #     return await ctx.send('That is not a valid team!')
-        team = "both"
-
         tz = await ctx.fetch_timezone()
 
         start = (
@@ -1049,69 +1050,82 @@ class ActivityEvent(commands.Cog):
             )
         )
 
+        if start is None:
+            return await ctx.send("Invalid start time!")
+
         end = dateparser.parse(
             flags.end, settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True}
         )
 
-        if flags.stat in {"msg", "messages", "message", "msgs"}:
-            await self._process_stat(
-                ctx,
-                team,
-                start,
-                end,
-                "messages sent",
-                "all_msg",
-                lambda x: x.msg_count,
-                lambda t: t.msg_count,
-            )
-        elif flags.stat in {"points", "pts"}:
-            await self._process_stat(
-                ctx,
-                team,
-                start,
-                end,
-                "points earned",
-                None,
-                lambda x: x.points,
-                lambda t: t.total_points,
-                exclude_types=self.non_point_types,
-            )
-        elif flags.stat in {"powerup", "powerups"}:
-            await self._process_powerup(ctx, team, start, end, "powerups obtained")
-        elif flags.stat in {"bonus", "bonuses"}:
-            await self._process_bonus(
-                ctx,
-                team,
-                start,
-                end,
-                "bonus points earned",
-                ["welc_bonus", "500_bonus", "topup_bonus", "steal_bonus"],
-            )
-        elif flags.stat == "trivia":
-            await self._process_bonus(
-                ctx, team, start, end, "trivia points earned", ["trivia"]
-            )
-        elif flags.stat in {"stolen", "stole", "steals"}:
-            await self._process_bonus(
-                ctx, team, start, end, "points stolen", ["stolen", "steal_trivia"]
-            )
-        elif flags.stat in {"snowball", "snowballfight"}:
-            await self._process_bonus(
-                ctx, team, start, end, "points from snowball fights", ["snowball_fight"]
-            )
-        elif flags.stat in {"welc", "welcs"}:
-            await self._process_bonus(
-                ctx, team, start, end, "points from welcoming", ["welc_bonus"]
-            )
-        elif flags.stat in {"daily", "dailies", "advent"}:
-            await self._process_bonus(
-                ctx, team, start, end, "points from dailies", ["dailies_bonus"]
-            )
+        if end is None:
+            return await ctx.send("Invalid end time!")
 
-    def _data_from_rows(self, rows_list, start, end):
+        # if flags.stat in {"msg", "messages", "message", "msgs"}:
+        await self._process_stat(
+            ctx,
+            tz,
+            start,
+            end,
+            "points earned",
+            None,
+            lambda x: x.points,
+            lambda t: t.total_points,
+            exclude_types=self.non_point_types,
+        )
+        # elif flags.stat in {"points", "pts"}:
+        #     await self._process_stat(
+        #         ctx,
+        #         team,
+        #         start,
+        #         end,
+        #         "points earned",
+        #         None,
+        #         lambda x: x.points,
+        #         lambda t: t.total_points,
+        #         exclude_types=self.non_point_types,
+        #     )
+        # elif flags.stat in {"powerup", "powerups"}:
+        #     await self._process_powerup(ctx, team, start, end, "powerups obtained")
+        # elif flags.stat in {"bonus", "bonuses"}:
+        #     await self._process_bonus(
+        #         ctx,
+        #         team,
+        #         start,
+        #         end,
+        #         "bonus points earned",
+        #         ["welc_bonus", "500_bonus", "topup_bonus", "steal_bonus"],
+        #     )
+        # elif flags.stat == "trivia":
+        #     await self._process_bonus(
+        #         ctx, team, start, end, "trivia points earned", ["trivia"]
+        #     )
+        # elif flags.stat in {"stolen", "stole", "steals"}:
+        #     await self._process_bonus(
+        #         ctx, team, start, end, "points stolen", ["stolen", "steal_trivia"]
+        #     )
+        # elif flags.stat in {"snowball", "snowballfight"}:
+        #     await self._process_bonus(
+        #         ctx, team, start, end, "points from snowball fights", ["snowball_fight"]
+        #     )
+        # elif flags.stat in {"welc", "welcs"}:
+        #     await self._process_bonus(
+        #         ctx, team, start, end, "points from welcoming", ["welc_bonus"]
+        #     )
+        # elif flags.stat in {"daily", "dailies", "advent"}:
+        #     await self._process_bonus(
+        #         ctx, team, start, end, "points from dailies", ["dailies_bonus"]
+        #     )
+
+    def _data_from_rows(
+        self,
+        rows_list: list[tuple[str, "Record"]],
+        tz: str,
+        start: datetime,
+        end: datetime,
+    ) -> PlotData:
         ret = []
-        for team, rows in rows_list:
-            data = []
+        for tname, rows in rows_list:
+            data: list[DataPoint] = []
             cumulative_sum = 0  # Accumulate values even before the start time
 
             # Add all rows before the start time to the cumulative sum
@@ -1122,77 +1136,87 @@ class ActivityEvent(commands.Cog):
                     break
 
             # Ensure a data point at the start time
-            data.append((int(start.timestamp()), cumulative_sum))
+            data.append((start, cumulative_sum))
 
             # Add rows from the start time onward
             for row in rows:
                 if row["time"] > int(start.timestamp()):
                     cumulative_sum += row["gain"]
-                    data.append((row["time"], cumulative_sum))
+                    data.append(
+                        (
+                            datetime.fromtimestamp(row["time"], tz=ZoneInfo(tz)),
+                            cumulative_sum,
+                        )
+                    )
 
             # Ensure a data point at the end time
-            if not data or data[-1][0] < int(end.timestamp()):
-                data.append((int(end.timestamp()), cumulative_sum))
+            if not data or data[-1][0] < end:
+                data.append((end, cumulative_sum))
 
-            ret.append((team, data))
+            ret.append((tname, data))
         return ret
 
-    def _get_team(self, ctx, flags):
-        if flags.team is None:
-            return self.players[ctx.author.id].team
-        elif flags.team.lower() == "both":
-            return "both"
-        elif flags.team not in self.teams:
-            return None
-        else:
-            return self.teams[flags.team]
+    # def _get_team(self, ctx, flags: TeamStatsFlags):
+    #     if flags.team is None:
+    #         return self.players[ctx.author.id].team
+    #     elif flags.team.lower() == "both":
+    #         return "both"
+    #     elif flags.team not in self.teams:
+    #         return None
+    #     else:
+    #         return self.teams[flags.team]
 
     async def _process_stat(
         self,
         ctx,
-        team,
-        start,
-        end,
-        title,
-        stat_type,
-        player_key,
-        team_key,
+        tz: str,
+        # team: str,
+        start: datetime,
+        end: datetime,
+        title: str,
+        stat_type: str | None,
+        player_key: Callable[[Player], int],
+        team_key: Callable[[Team], int],
         exclude_types=None,
     ):
         rows_list = []
-        for t in self.teams.values() if team == "both" else [team]:
-            rows = await self._fetch_rows(t.name, stat_type, start, end, exclude_types)
-            rows_list.append((t, rows))
+        # for t in self.teams.values() if team == "both" else [team]:
+        for tname in self.teams.keys():
+            rows = await self._fetch_rows(tname, stat_type, end, exclude_types)
+            rows_list.append((tname, rows))
 
-        data = self._data_from_rows(rows_list, start, end)
-        file = await plot_data(ctx, data)
+        data = self._data_from_rows(rows_list, tz, start, end)
+        file = await plot_data(ctx, tz, data)
         embed = self.bot.get_embed("ae/teamstats")
         repls = self._get_stat_repls(title, start, end, player_key, team_key)
         embed = await Layout.fill_embed(embed, repls, special=False)
         embed.set_image(url="attachment://plot.png")
         await ctx.send(embed=embed, file=file)
 
-    async def _process_bonus(self, ctx, team, start, end, title, types):
-        rows_list, stats, player_stats = [], {}, {}
-        for t in self.teams.values():
-            rows, stats, player_stats = await self._process_rows(
-                t, types, end, stats, player_stats
-            )
-            rows_list.append((t, rows))
+    # async def _process_bonus(self, ctx, team, start, end, title, types):
+    #     rows_list, stats, player_stats = [], {}, {}
+    #     for t in self.teams.values():
+    #         rows, stats, player_stats = await self._process_rows(
+    #             t, types, end, stats, player_stats
+    #         )
+    #         rows_list.append((t, rows))
 
-        data = self._data_from_rows(rows_list, start, end)
-        file = await plot_data(ctx, data)
-        embed = self.bot.get_embed("ae/teamstats")
-        repls = self._get_bonus_repls(title, team, stats, player_stats, start, end)
-        embed = await Layout.fill_embed(embed, repls, special=False)
-        embed.set_image(url="attachment://plot.png")
-        await ctx.send(embed=embed, file=file)
+    #     data = self._data_from_rows(rows_list, start, end)
+    #     file = await plot_data(ctx, data)
+    #     embed = self.bot.get_embed("ae/teamstats")
+    #     repls = self._get_bonus_repls(title, team, stats, player_stats, start, end)
+    #     embed = await Layout.fill_embed(embed, repls, special=False)
+    #     embed.set_image(url="attachment://plot.png")
+    #     await ctx.send(embed=embed, file=file)
 
-    async def _fetch_rows(self, team, stat_type, start, end, exclude_types):
+    async def _fetch_rows(
+        self, team: str, stat_type: str | None, end: datetime, exclude_types
+    ):
         if stat_type:
             query = """SELECT time, gain FROM event_log WHERE team = $1 AND type = $2 AND time < $3 ORDER BY time ASC"""
             return await self.bot.db.fetch(query, team, stat_type, int(end.timestamp()))
         else:
+            # stat_type = None: points
             query = """SELECT gain, time FROM event_log WHERE team = $1 AND type != ALL($2) AND time < $3 ORDER BY time ASC"""
             return await self.bot.db.fetch(
                 query, team, exclude_types, int(end.timestamp())
@@ -1215,7 +1239,14 @@ class ActivityEvent(commands.Cog):
         stats[team.name]["total"] = total
         return rows, stats, player_stats
 
-    def _get_stat_repls(self, title, start, end, player_key, team_key):
+    def _get_stat_repls(
+        self,
+        title: str,
+        start: datetime,
+        end: datetime,
+        player_key: Callable[[Player], int],
+        team_key: Callable[[Team], int],
+    ) -> dict[str, str]:
         total = 0
         repls = {}
 
@@ -1225,7 +1256,7 @@ class ActivityEvent(commands.Cog):
             t = self.teams[tname]
             duration = end.timestamp() - start.timestamp()
             repls[f"mvp{i + 1}"] = max(t.players, key=player_key).nick
-            repls[f"total{i + 1}"] = team_key(t)
+            repls[f"total{i + 1}"] = str(team_key(t))
             repls[f"houravg{i + 1}"] = "{:.2f}".format(team_key(t) / (duration / 3600))
             repls[f"dayavg{i + 1}"] = "{:.2f}".format(team_key(t) / (duration / 86400))
             repls[f"playeravg{i + 1}"] = "{:.2f}".format(team_key(t) / len(t.players))
@@ -1233,34 +1264,34 @@ class ActivityEvent(commands.Cog):
 
         repls["stattitle"] = title.title()
         repls["stat"] = title
-        repls["total"] = total
+        repls["total"] = str(total)
 
         return repls
 
-    def _get_bonus_repls(self, title, team, stats, player_stats, start, end):
-        total = 0
-        repls = {}
-        for i, t in enumerate(self.teams.values()):
-            mvp = max(t.players, key=lambda x: player_stats.get(x.member.id, 0))
-            # count = player_stats.get(mvp.member.id, 0)
-            this_total = stats[t.name]["total"]
-            repls[f"mvp{i + 1}"] = mvp.nick
-            repls[f"total{i + 1}"] = this_total
-            repls[f"playeravg{i + 1}"] = "{:.2f}".format(total / len(t.players))
-            repls[f"houravg{i + 1}"] = "{:.2f}".format(
-                total / (end.timestamp() - start.timestamp()) * 3600
-            )
-            repls[f"dayavg{i + 1}"] = "{:.2f}".format(
-                total / (end.timestamp() - start.timestamp()) * 86400
-            )
+    # def _get_bonus_repls(self, title, team, stats, player_stats, start, end):
+    #     total = 0
+    #     repls = {}
+    #     for i, t in enumerate(self.teams.values()):
+    #         mvp = max(t.players, key=lambda x: player_stats.get(x.member.id, 0))
+    #         # count = player_stats.get(mvp.member.id, 0)
+    #         this_total = stats[t.name]["total"]
+    #         repls[f"mvp{i + 1}"] = mvp.nick
+    #         repls[f"total{i + 1}"] = this_total
+    #         repls[f"playeravg{i + 1}"] = "{:.2f}".format(total / len(t.players))
+    #         repls[f"houravg{i + 1}"] = "{:.2f}".format(
+    #             total / (end.timestamp() - start.timestamp()) * 3600
+    #         )
+    #         repls[f"dayavg{i + 1}"] = "{:.2f}".format(
+    #             total / (end.timestamp() - start.timestamp()) * 86400
+    #         )
 
-            total += this_total
+    #         total += this_total
 
-        repls["title"] = title.title()
-        repls["stat"] = title
-        repls["total"] = total
+    #     repls["title"] = title.title()
+    #     repls["stat"] = title
+    #     repls["total"] = total
 
-        return repls
+    #     return repls
 
     @commands.command()
     @commands.is_owner()
