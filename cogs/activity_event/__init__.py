@@ -391,15 +391,14 @@ class ActivityEvent(commands.Cog):
         try:
             for player_id, player in self.players.items():
                 # Fetch points
-                points_query = """
-                SELECT
-                    COALESCE(SUM(gain), 0)
-                FROM
-                    event_log
-                WHERE
-                    user_id = $1
-                    AND type != ALL($2)
-                """
+                points_query = """SELECT
+                                    COALESCE(SUM(gain), 0)
+                                  FROM
+                                    event_log
+                                  WHERE
+                                    user_id = $1
+                                    AND type != ALL ($2)
+                               """
                 points = await self.bot.db.fetchval(
                     points_query, player_id, self.non_point_types
                 )
@@ -407,15 +406,14 @@ class ActivityEvent(commands.Cog):
                     points = 0
 
                 # Fetch message count
-                msgs_query = """
-                SELECT
-                    COALESCE(SUM(gain), 0)
-                FROM
-                    event_log
-                WHERE
-                    user_id = $1
-                    AND type = $2
-                """
+                msgs_query = """SELECT
+                                  COALESCE(SUM(gain), 0)
+                                FROM
+                                  event_log
+                                WHERE
+                                  user_id = $1
+                                  AND type = $2
+                             """
                 msgs = await self.bot.db.fetchval(msgs_query, player_id, "all_msg")
                 if msgs is None:
                     msgs = 0
@@ -424,10 +422,10 @@ class ActivityEvent(commands.Cog):
                 player.points = points
                 player.msg_count = msgs
 
-                logging.info(
-                    f"Updated Player {player.nick} (ID: {player_id}): "
-                    f"Points: {player.points}, Msg Count: {player.msg_count}"
-                )
+                # logging.info(
+                #     f"Updated Player {player.nick} (ID: {player_id}): "
+                #     f"Points: {player.points}, Msg Count: {player.msg_count}"
+                # )
 
         except Exception as e:
             self.bot.log(f"Error during player data synchronization: {e}", "ae")
