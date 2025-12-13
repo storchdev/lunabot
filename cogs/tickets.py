@@ -201,12 +201,21 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
     async def remind_inactive(self):
         rows = await self.bot.db.fetch("SELECT * FROM active_tickets")
         for row in rows:
-            channel: discord.Thread = self.bot.get_channel(row["channel_id"])
+            channel = self.bot.get_channel(row["channel_id"])
+
             if channel is None:
                 query = "DELETE FROM active_tickets WHERE channel_id = $1"
                 await self.bot.db.execute(query, row["channel_id"])
                 continue
-            last_msg = await channel.fetch_message(channel.last_message_id)
+
+            assert isinstance(channel, discord.Thread)
+
+            hist = [msg async for msg in channel.history(limit=1, oldest_first=False)]
+            if len(hist) == 0:
+                self.bot.log(f"message history for {channel.jump_url} empty", "ticket")
+                continue
+
+            last_msg = hist[0]
             if (discord.utils.utcnow() - last_msg.created_at).total_seconds() < 86400:
                 continue
             if (
@@ -284,6 +293,8 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
             await ctx.send("This command can only be used in an open ticket thread!")
             return
 
+        assert isinstance(ctx.channel, discord.Thread)
+
         query = "DELETE FROM active_tickets WHERE channel_id = $1"
         await self.bot.db.execute(query, ctx.channel.id)
 
@@ -298,6 +309,10 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
             "reason": reason,
         }
         archive = self.bot.get_var_channel("archive")
+
+        if not isinstance(archive, discord.TextChannel):
+            return await ctx.send("Archive channel not found.")
+
         layout = self.bot.get_layout("ticket/closed")
         await layout.send(archive, repls=repls)
 
@@ -318,6 +333,8 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
                 "TIMEZONE": await ctx.fetch_timezone(),
             },
         )
+        if dt is None:
+            return await ctx.send("You did not enter a valid time!")
         if dt < discord.utils.utcnow():
             return await ctx.send("You can only enter a *future* time!")
 
