@@ -60,6 +60,9 @@ class LunaBot(commands.Bot):
         )
 
         ch = self.get_var_channel("private")
+
+        assert isinstance(ch, discord.TextChannel)
+
         await ch.send("Sleeping until activity event starts")
         await discord.utils.sleep_until(START_TIME)
         await self.load_extension("cogs.activity_event")
