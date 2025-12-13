@@ -1,6 +1,7 @@
 # from .utils import InvalidURL
 import json
 
+import discord
 from discord import app_commands
 from discord.ext import commands
 from rapidfuzz import process
@@ -137,7 +138,11 @@ class Layouts(commands.Cog):
             )
             return
         layout = self.bot.layouts[name]
-        await ctx.send(layout.content, embeds=layout.embeds)
+        await ctx.send(
+            layout.content,
+            embeds=layout.embeds,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
 
     @layout.command(name="list")
     @app_commands.default_permissions()
