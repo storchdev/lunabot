@@ -399,6 +399,7 @@ class SendMessageEditor(View):
         self.add_item(self.layout_status)
 
         self.add_item(self.submit_btn)
+        self.add_item(self.cancel_btn)
 
     def update(self):
         ok = True
@@ -574,6 +575,10 @@ class AddReactionView(View):
             content=None, view=self.original_view, embed=self.original_view.embed
         )
 
+    @ui.button(label="Cancel", style=ButtonStyle.red)
+    async def cancel(self, interaction, button):
+        await interaction.response.edit_message(view=self.parent_view)
+
 
 class RestrictionsView(View):
     def __init__(self, parent_view: AutoResponderEditor, *, timeout: float = 600):
@@ -592,6 +597,9 @@ class RestrictionsView(View):
                 self.add_item(RoleSelect())
             elif self.setting.endswith("users"):
                 self.add_item(UserSelect())
+
+        if self.setting:
+            self.add_item(self.clear)
 
         self.add_item(self.cancel)
 
@@ -615,6 +623,13 @@ class RestrictionsView(View):
         self.clear_items()
         self.add_items()
         await interaction.response.edit_message(view=self)
+
+    @ui.button(label="Clear selection")
+    async def clear(self, interaction, button):
+        self.parent_view.restrictions[self.setting] = []
+        await interaction.response.edit_message(
+            view=self.original_view, embed=self.original_view.embed
+        )
 
     @ui.button(label="Cancel", style=ButtonStyle.red)
     async def cancel(self, interaction, button):
