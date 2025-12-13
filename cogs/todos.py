@@ -8,7 +8,7 @@ from .utils import View
 from .utils.paginators import ViewMenuPages
 
 if TYPE_CHECKING:
-    pass
+    from discord.ext.commands import Context
 
 
 class Todo:
@@ -69,9 +69,10 @@ class EditNameModal(discord.ui.Modal):
 
 
 class TodoPageSource(menus.ListPageSource):
-    def __init__(self, bot, todos, show_completed=False, sort_by="priority"):
+    def __init__(self, bot, todo_records, show_completed=False, sort_by="priority"):
         self.bot = bot
-        self.todos = [Todo.from_record(todo) for todo in todos]
+        self.todo_records = todo_records
+        self.todos = [Todo.from_record(tr) for tr in todo_records]
         self.show_completed = show_completed
         self.sort_by = sort_by
         super().__init__(self.get_filtered_sorted_todos(), per_page=10)
@@ -106,7 +107,9 @@ class TodoPageSource(menus.ListPageSource):
 
 
 class TodoListView(ViewMenuPages):
-    def __init__(self, source, *, ctx):
+    def __init__(self, source: TodoPageSource, *, ctx):
+        self.source: TodoPageSource
+        self.ctx: "Context"
         super().__init__(source, ctx=ctx)
         self.sort_by_select.add_option(label="Priority", value="priority")
         self.sort_by_select.add_option(label="Time Created", value="time_created")
@@ -129,8 +132,18 @@ class TodoListView(ViewMenuPages):
         self.add_item(self.sort_by_select)
 
     async def handle_toggle_show_completed(self, interaction: discord.Interaction):
-        self.source.show_completed = not self.source.show_completed
-        self.source.entries = self.source.get_filtered_sorted_todos()
+        # self.source.show_completed = not self.source.show_completed
+        # self.source.entries = self.source.get_filtered_sorted_todos()
+        # self.source.todos = self.source.get_filtered_sorted_todos()
+        # self.source.entries = self.source.todos
+        self.source = TodoPageSource(
+            self.ctx.bot,
+            self.source.todo_records,
+            not self.source.show_completed,
+            self.source.sort_by,
+        )
+        self.current_page = 0
+
         self.my_fill_items()
         await self.show_page(interaction, self.current_page)
 
