@@ -97,22 +97,6 @@ class ActivityEvent(commands.Cog):
             "topup_powerup",
         ]
 
-        self.team_members = {
-            "poinsettia": [
-                496225545529327616,
-                675058943596298340,
-                653067767137697905,
-                1360304699063931104,
-                1136006166909026505,
-            ],
-            "mistletoe": [
-                718475543061987329,
-                713118404017651773,
-                775100386196717589,
-                1430154024505835592,
-                835932200368209941,
-            ],
-        }
         self.team_channels = {
             "mistletoe": TEAM_MISTLETOE_CHANNEL_ID,
             "poinsettia": TEAM_POINSETTIA_CHANNEL_ID,
@@ -131,13 +115,26 @@ class ActivityEvent(commands.Cog):
             653067767137697905: "Sora",
             1360304699063931104: "Fae",
             1136006166909026505: "Alessia",
+            1248963448235098154: "Illy",
             718475543061987329: "Storch",
             713118404017651773: "Lux",
             775100386196717589: "Kaiz",
             1430154024505835592: "Mika",
             835932200368209941: "Nala",
-            # 1056609396257472584: "Bipper",
+            1341628639703334964: "Delulu",
         }
+        team_members_readable = {
+            "poinsettia": ["Luna", "Molly", "Sora", "Fae", "Alessia", "Illy"],
+            "mistletoe": ["Storch", "Lux", "Kaiz", "Mika", "Nala", "Delulu"],
+        }
+        self.team_members = {tname: [] for tname in team_members_readable.keys()}
+        nick_dict_rev = {v: k for k, v in self.nick_dict.items()}
+        for tname, pnames in team_members_readable.items():
+            for pname in pnames:
+                self.team_members[tname].append(nick_dict_rev.pop(pname))
+
+        for k in nick_dict_rev.keys():
+            logging.warning(f"Did not add player {k} to team members!")
 
         self.powerup_emoji = "<a:ML_present_gift:1302182895020150804>"
 
@@ -1004,39 +1001,6 @@ class ActivityEvent(commands.Cog):
 
     @commands.command(aliases=["tstats"])
     async def teamstats(self, ctx, *, flags: TeamStatsFlags):
-        # VALID_STATS = {
-        #     "msgs",
-        #     "msg",
-        #     "message",
-        #     "messages",
-        #     "points",
-        #     "pts",
-        #     "powerup",
-        #     "powerups",
-        #     "bonuses",
-        #     "bonus",
-        #     "trivia",
-        #     "stolen",
-        #     "stole",
-        #     "steals",
-        #     "welc",
-        #     "welcs",
-        #     "snowball",
-        #     "snowballfight",
-        #     "snowballs",
-        #     "snowballfights",
-        #     "snow",
-        #     "daily",
-        #     "dailies",
-        #     "advent",
-        # }
-
-        # if flags.stat.lower() not in VALID_STATS:
-        #     return await ctx.send("That is not a valid option!")
-
-        # team = self._get_team(ctx, flags)
-        # if team is None:
-        #     return await ctx.send('That is not a valid team!')
         tz = await ctx.fetch_timezone()
 
         start = (
@@ -1070,49 +1034,6 @@ class ActivityEvent(commands.Cog):
             lambda t: t.total_points,
             exclude_types=self.non_point_types,
         )
-        # elif flags.stat in {"points", "pts"}:
-        #     await self._process_stat(
-        #         ctx,
-        #         team,
-        #         start,
-        #         end,
-        #         "points earned",
-        #         None,
-        #         lambda x: x.points,
-        #         lambda t: t.total_points,
-        #         exclude_types=self.non_point_types,
-        #     )
-        # elif flags.stat in {"powerup", "powerups"}:
-        #     await self._process_powerup(ctx, team, start, end, "powerups obtained")
-        # elif flags.stat in {"bonus", "bonuses"}:
-        #     await self._process_bonus(
-        #         ctx,
-        #         team,
-        #         start,
-        #         end,
-        #         "bonus points earned",
-        #         ["welc_bonus", "500_bonus", "topup_bonus", "steal_bonus"],
-        #     )
-        # elif flags.stat == "trivia":
-        #     await self._process_bonus(
-        #         ctx, team, start, end, "trivia points earned", ["trivia"]
-        #     )
-        # elif flags.stat in {"stolen", "stole", "steals"}:
-        #     await self._process_bonus(
-        #         ctx, team, start, end, "points stolen", ["stolen", "steal_trivia"]
-        #     )
-        # elif flags.stat in {"snowball", "snowballfight"}:
-        #     await self._process_bonus(
-        #         ctx, team, start, end, "points from snowball fights", ["snowball_fight"]
-        #     )
-        # elif flags.stat in {"welc", "welcs"}:
-        #     await self._process_bonus(
-        #         ctx, team, start, end, "points from welcoming", ["welc_bonus"]
-        #     )
-        # elif flags.stat in {"daily", "dailies", "advent"}:
-        #     await self._process_bonus(
-        #         ctx, team, start, end, "points from dailies", ["dailies_bonus"]
-        #     )
 
     def _data_from_rows(
         self,
@@ -1154,16 +1075,6 @@ class ActivityEvent(commands.Cog):
             ret.append((tname, data))
         return ret
 
-    # def _get_team(self, ctx, flags: TeamStatsFlags):
-    #     if flags.team is None:
-    #         return self.players[ctx.author.id].team
-    #     elif flags.team.lower() == "both":
-    #         return "both"
-    #     elif flags.team not in self.teams:
-    #         return None
-    #     else:
-    #         return self.teams[flags.team]
-
     async def _process_stat(
         self,
         ctx,
@@ -1190,22 +1101,6 @@ class ActivityEvent(commands.Cog):
         embed = await Layout.fill_embed(embed, repls, special=False)
         embed.set_image(url="attachment://plot.png")
         await ctx.send(embed=embed, file=file)
-
-    # async def _process_bonus(self, ctx, team, start, end, title, types):
-    #     rows_list, stats, player_stats = [], {}, {}
-    #     for t in self.teams.values():
-    #         rows, stats, player_stats = await self._process_rows(
-    #             t, types, end, stats, player_stats
-    #         )
-    #         rows_list.append((t, rows))
-
-    #     data = self._data_from_rows(rows_list, start, end)
-    #     file = await plot_data(ctx, data)
-    #     embed = self.bot.get_embed("ae/teamstats")
-    #     repls = self._get_bonus_repls(title, team, stats, player_stats, start, end)
-    #     embed = await Layout.fill_embed(embed, repls, special=False)
-    #     embed.set_image(url="attachment://plot.png")
-    #     await ctx.send(embed=embed, file=file)
 
     async def _fetch_rows(
         self, team: str, stat_type: str | None, end: datetime, exclude_types
@@ -1265,31 +1160,6 @@ class ActivityEvent(commands.Cog):
         repls["total"] = str(total)
 
         return repls
-
-    # def _get_bonus_repls(self, title, team, stats, player_stats, start, end):
-    #     total = 0
-    #     repls = {}
-    #     for i, t in enumerate(self.teams.values()):
-    #         mvp = max(t.players, key=lambda x: player_stats.get(x.member.id, 0))
-    #         # count = player_stats.get(mvp.member.id, 0)
-    #         this_total = stats[t.name]["total"]
-    #         repls[f"mvp{i + 1}"] = mvp.nick
-    #         repls[f"total{i + 1}"] = this_total
-    #         repls[f"playeravg{i + 1}"] = "{:.2f}".format(total / len(t.players))
-    #         repls[f"houravg{i + 1}"] = "{:.2f}".format(
-    #             total / (end.timestamp() - start.timestamp()) * 3600
-    #         )
-    #         repls[f"dayavg{i + 1}"] = "{:.2f}".format(
-    #             total / (end.timestamp() - start.timestamp()) * 86400
-    #         )
-
-    #         total += this_total
-
-    #     repls["title"] = title.title()
-    #     repls["stat"] = title
-    #     repls["total"] = total
-
-    #     return repls
 
     @commands.command()
     @commands.is_owner()
