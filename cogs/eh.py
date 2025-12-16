@@ -28,9 +28,8 @@ class EH(commands.Cog):
             return
         if isinstance(error, commands.CommandOnCooldown):
             dt = utcnow() + timedelta(seconds=error.retry_after)
-            await ctx.send(
-                f"This command is on cooldown. Try again in {format_dt(dt, 'R')}!"
-            )
+            layout = self.bot.get_layout("eh/cooldown")
+            await layout.send(ctx, repls={"timethingy": format_dt(dt, "R")})
             return
         if isinstance(error, ActivityEventBreak):
             await ctx.send(
