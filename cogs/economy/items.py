@@ -1,33 +1,23 @@
-from typing import List, Literal
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
 
 from cogs.tickets import create_ticket
 
-# if TYPE_CHECKING:
-#     from . import (
-#         BuyRequirement,
-#         SellRequirement,
-#         TradeRequirement,
-#     )
-
-__all__ = (
-    "BaseItem",
-    "CherryPop",
-    "JuicyCitrus",
-)
+if TYPE_CHECKING:
+    from bot import LunaCtx
 
 
 class ItemCategory:
-    def __init__(self, name, display_name, description):
+    def __init__(self, name: str, display_name: str, description: str):
         self.name = name
         self.display_name = display_name
         self.description = description
 
 
 class ItemReq:
-    def __init__(self, type, description, name):
+    def __init__(self, type: str, description: str, name: str):
         self.type = type
         self.description = description
         self.name = name
@@ -53,7 +43,7 @@ class BaseItem:
         activatable: bool,
         category: ItemCategory,
         description: str,
-        reqs: List[ItemReq],
+        reqs: list[ItemReq],
         # buy_reqs: List['BuyRequirement'],
         # sell_reqs: List['SellRequirement'],
         # trade_reqs: List['TradeRequirement'],
@@ -81,19 +71,19 @@ class BaseItem:
                 self.reqs.pop(i)
                 break
 
-    def as_list(self) -> List[str]:
+    def as_list(self) -> list[str]:
         return [str(self.number_id), self.name_id, self.display_name]
 
-    def is_sellable_at_all(self):
+    def is_sellable_at_all(self) -> bool:
         return self.sell_price != -1
 
-    def is_tradable_at_all(self):
+    def is_tradable_at_all(self) -> bool:
         return self.tradable
 
-    async def is_buyable(self, member: discord.Member):
+    async def is_buyable(self, member: discord.Member) -> bool:
         return True
 
-    async def is_sellable(self, member: discord.Member):
+    async def is_sellable(self, member: discord.Member) -> bool:
         return self.is_sellable_at_all()
 
     async def is_tradable(
@@ -101,10 +91,10 @@ class BaseItem:
         other_item: "BaseItem",
         member: discord.Member,
         other_member: discord.Member,
-    ):
+    ) -> bool:
         return self.is_tradable_at_all()
 
-    async def use(self, ctx, **kwargs):
+    async def use(self, ctx: "LunaCtx", **kwargs):
         await self.update_item_use_time(ctx)
 
         # handled in command
@@ -119,7 +109,7 @@ class BaseItem:
         layout = ctx.bot.get_layout(lyname)
         await layout.send(ctx, repls=lyrepls)
 
-    async def update_item_use_time(self, ctx):
+    async def update_item_use_time(self, ctx: "LunaCtx"):
         query = """INSERT INTO
                        item_use_times (user_id, item_name_id)
                    VALUES
@@ -131,7 +121,7 @@ class BaseItem:
                 """
         await ctx.bot.db.execute(query, ctx.author.id, self.name_id)
 
-    async def activate(self, ctx, **kwargs):
+    async def activate(self, ctx: "LunaCtx", **kwargs):
         query = """UPDATE user_items
                    SET
                      state = $1
@@ -148,7 +138,7 @@ class BaseItem:
         layout = ctx.bot.get_layout(lyname)
         await layout.send(ctx, repls=lyrepls)
 
-    async def deactivate(self, ctx, **kwargs):
+    async def deactivate(self, ctx: "LunaCtx", **kwargs):
         query = (
             "UPDATE user_items SET state = $1 WHERE user_id = $2 AND item_name_id = $3"
         )

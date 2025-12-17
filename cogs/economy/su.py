@@ -1,5 +1,4 @@
-import json
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from discord.ext import commands
 
