@@ -1,4 +1,5 @@
 import asyncio
+import json
 import math
 import random
 import time
@@ -21,6 +22,22 @@ if TYPE_CHECKING:
     from bot import LunaBot
 
     from .items import BaseItem
+
+
+class AddItemFlags(commands.FlagConverter):
+    number_id: int
+    name_id: str
+    display_name: str
+    description: str
+    price: int
+    sell_price: Optional[int] = None
+    stock: int = -1
+    usable: bool
+    activatable: bool
+    category: str
+    buy_reqs: str = "[]"
+    sell_reqs: str = "[]"
+    trade_reqs: str = "[]"
 
 
 class Economy(commands.Cog):
@@ -116,6 +133,7 @@ class Economy(commands.Cog):
             if isinstance(item_cls, type)
         ]
 
+        fellback = []
         for row in rows:
             if row["category"] not in self.categories:
                 raise Exception(f"item {row['name_id']} has invalid category")
@@ -124,6 +142,7 @@ class Economy(commands.Cog):
                 if item_cls.__name__.lower() == row["name_id"]:
                     break
             else:
+                fellback.append(row["name_id"])
                 item_cls = items.BaseItem
 
             reqs = []
@@ -151,6 +170,12 @@ class Economy(commands.Cog):
             )
 
             self.items.append(item)
+
+        if fellback:
+            priv = self.bot.get_var_channel("private")
+            await priv.send(
+                f"Warning! items `{','.join(fellback)}` are not attached to a subclass"
+            )
 
     def get_item_from_str(self, item_str: str) -> "BaseItem":
         for item in self.items:
@@ -226,18 +251,6 @@ class Economy(commands.Cog):
             bal = 0
 
         return bal
-
-    async def update_item_use_time(self, user_id, item_name_id):
-        query = """INSERT INTO
-                       item_use_times (user_id, item_name_id)
-                   VALUES
-                       ($1, $2)
-                   ON CONFLICT (user_id, item_name_id) DO
-                   UPDATE
-                   SET
-                       time_used = CURRENT_TIMESTAMP
-                """
-        await self.bot.db.execute(query, user_id, item_name_id)
 
     # User commands / slash commands
 
@@ -390,12 +403,8 @@ class Economy(commands.Cog):
             await layout.send(ctx)
             return
 
+        await shop_item.use(ctx)
         await self.remove_item(ctx.author.id, shop_item)
-        status = await shop_item.use(ctx)
-        if status:
-            await self.update_item_use_time(ctx.author.id, shop_item.name_id)
-            layout = self.bot.get_layout("itemused")
-            await layout.send(ctx)
 
     @commands.hybrid_command(aliases=["act"])
     @app_commands.describe(item="The item you want to activate")
@@ -416,11 +425,7 @@ class Economy(commands.Cog):
             await layout.send(ctx)
             return
 
-        status = await shop_item.activate(ctx)
-        if status:
-            await self.update_item_use_time(ctx.author.id, shop_item.name_id)
-            layout = self.bot.get_layout("itemactivated")
-            await layout.send(ctx)
+        await shop_item.activate(ctx)
 
     @commands.hybrid_command(aliases=["deact"])
     @app_commands.describe(item="The item you want to deactivate")
@@ -431,7 +436,7 @@ class Economy(commands.Cog):
             return
 
         if not shop_item.activatable:
-            await ctx.send("item not activatable")
+            await ctx.send("item not deactivatable")
             return
 
         query = "SELECT id FROM user_items WHERE user_id = $1 AND item_name_id = $2"
@@ -441,15 +446,11 @@ class Economy(commands.Cog):
             await layout.send(ctx)
             return
 
-        status = await shop_item.deactivate(ctx)
-        if status:
-            await self.update_item_use_time(ctx.author.id, shop_item.name_id)
-            layout = self.bot.get_layout("itemdeactivated")
-            await layout.send(ctx)
+        await shop_item.deactivate(ctx)
 
     @commands.hybrid_command(aliases=["balance"])
     @app_commands.describe(member="The member you want to check the balance of")
-    async def bal(self, ctx, member: discord.Member = None):
+    async def bal(self, ctx, member: discord.Member | None = None):
         """Check your balance"""
         if member is None:
             member = ctx.author
@@ -805,6 +806,94 @@ class Economy(commands.Cog):
 
         layout = self.bot.get_layout("hwn/candylb")
         await layout.send(ctx, repls=repls)
+
+    @commands.command()
+    @commands.is_owner()
+    async def addcategory(self, ctx, name: str, display_name: str, description: str):
+        query = """INSERT INTO
+                       item_categories (name, display_name, description)
+                   VALUES
+                       ($1, $2, $3)
+                """
+        await self.bot.db.execute(query, name, display_name, description)
+        self.categories[name] = description
+        await ctx.send("Category added.")
+
+    @commands.command()
+    @commands.is_owner()
+    async def additem(self, ctx, *, flags: AddItemFlags):
+        if flags.category not in self.categories:
+            await ctx.send("Invalid category provided.")
+            return
+
+        try:
+            buy_reqs = json.loads(flags.buy_reqs)
+            sell_reqs = json.loads(flags.sell_reqs)
+            trade_reqs = json.loads(flags.trade_reqs)
+        except json.JSONDecodeError:
+            await ctx.send("Invalid JSON provided.")
+            return
+
+        query = """INSERT INTO
+                       shop_items (
+                           number_id,
+                           name_id,
+                           display_name,
+                           price,
+                           sell_price,
+                           stock,
+                           usable,
+                           activatable,
+                           category,
+                           description
+                       )
+                   VALUES
+                       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                """
+        await self.bot.db.execute(
+            query,
+            flags.number_id,
+            flags.name_id,
+            flags.display_name,
+            flags.price,
+            flags.sell_price,
+            flags.stock,
+            flags.usable,
+            flags.activatable,
+            flags.category,
+            flags.description,
+        )
+
+        query = "INSERT INTO item_reqs (item_name_id, type, name, description, kwargs) VALUES ($1, $2, $3, $4, $5)"
+        for req in buy_reqs:
+            await self.bot.db.execute(
+                query,
+                flags.name_id,
+                "buy",
+                req["name"],
+                req["description"],
+                json.dumps(req["kwargs"]),
+            )
+        for req in sell_reqs:
+            await self.bot.db.execute(
+                query,
+                flags.name_id,
+                "sell",
+                req["name"],
+                req["description"],
+                json.dumps(req["kwargs"]),
+            )
+        for req in trade_reqs:
+            await self.bot.db.execute(
+                query,
+                flags.name_id,
+                "trade",
+                req["name"],
+                req["description"],
+                json.dumps(req["kwargs"]),
+            )
+
+        await ctx.send("Item added. Please reload the cog to see changes.")
 
 
 async def setup(bot):

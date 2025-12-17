@@ -29,6 +29,100 @@ class Ticket:
         self.thread: Optional[discord.Thread] = thread
 
 
+async def create_ticket(
+    bot: "LunaBot",
+    creator: discord.Member,
+    reason: str,
+    *,
+    opening_layout_name: str = "ticketinfo",
+) -> Ticket:
+    bot.log(f"create_ticket called by {creator} ({creator.id})", "ticket")
+
+    ticket = Ticket(creator, discord.utils.utcnow())
+
+    query = "UPDATE ticket_counter SET num = num + 1 RETURNING num"
+    ticket_id = await bot.db.fetchval(query)
+
+    ticket.id = ticket_id
+
+    helpdesk = bot.get_var_channel("helpdesk")
+    ticket.thread = await helpdesk.create_thread(
+        name=f"Ticket {ticket_id}",
+        type=discord.ChannelType.private_thread,
+        invitable=False,
+    )
+
+    bot.log(f"thread created with id {ticket_id}", "ticket")
+
+    await bot.get_layout(opening_layout_name).send(ticket.thread)
+
+    try:
+        await ticket.thread.add_user(creator)
+        bot.log(f"added {creator} ({creator.id}) to Ticket {ticket_id}", "ticket")
+    except Exception as e:
+        await ticket.thread.send(
+            f"I failed to add {creator.mention} to this ticket normally. "
+            "Maybe pinging fixed it, or Storch will need to investigate."
+        )
+        logging.error(
+            f"failed to add {creator} ({creator.id}) to Ticket {ticket_id}. Error: {e}"
+        )
+
+    query = """INSERT INTO
+                    active_tickets (ticket_id, channel_id, opener_id, timestamp)
+                VALUES
+                    ($1, $2, $3, $4)
+            """
+    await bot.db.execute(
+        query,
+        ticket.id,
+        ticket.thread.id,
+        ticket.opener.id,
+        ticket.timestamp.timestamp(),
+    )
+    # view = CloseView(bot, ticket.id, ticket.channel, ticket.opener.id, ticket.timestamp)
+
+    luna_id = bot.vars.get("luna-id")
+    pm_id = bot.vars.get("pm-role-id")
+    staff_id = bot.vars.get("staff-role-id")
+    molly_id = 675058943596298340
+
+    if reason == "VIP Artist":
+        pings = f"<@{luna_id}> <@{molly_id}>"
+    elif reason == "Trusted Seller":
+        pings = f"<@{luna_id}> <@{molly_id}>"
+    elif reason == "Partnership Request":
+        pings = f"<@&{pm_id}>"
+    elif reason == "PM Request":
+        pings = f"<@{luna_id}>"
+    elif reason == "Booster Perks":
+        pings = f"<@{luna_id}>"
+    elif reason == "User Report":
+        pings = f"<@&{staff_id}>"
+    elif reason == "General Inquiry":
+        pings = f"<@&{staff_id}>"
+    elif reason == "Other":
+        pings = f"<@&{staff_id}>"
+    elif "Shoutout" in reason:
+        pings = f"<@{luna_id}>"
+    else:
+        pings = f"<@{bot.owner_id}>"
+
+    log_channel = bot.get_channel(bot.vars.get("archive-channel-id"))
+
+    layout = bot.get_layout("ticket/opened")
+    repls = {
+        "user": creator.mention,
+        "ID": ticket.id,
+        "reason": reason,
+        "thread": ticket.thread.mention,
+        "mention": pings,
+    }
+
+    await layout.send(log_channel, repls=repls, special=False)
+    return ticket
+
+
 class TicketView(ui.View):
     def __init__(self, bot, *, button: Optional[ui.Button] = None):
         super().__init__(timeout=None)
@@ -84,7 +178,7 @@ class TicketTypeMenu(View):
         await interaction.response.edit_message(
             content="Please wait a moment...", view=None
         )
-        ticket = await self.create_ticket()
+        ticket = await create_ticket(self.bot, self.owner, select.values[0])
         embed = discord.Embed(
             title="New Ticket",
             color=self.bot.DEFAULT_EMBED_COLOR,
@@ -92,95 +186,6 @@ class TicketTypeMenu(View):
         )
         msg = await interaction.original_response()
         await msg.edit(content=None, embed=embed)
-
-    async def create_ticket(self):
-        self.bot.log(
-            f"create_ticket called by {self.owner} ({self.owner.id})", "ticket"
-        )
-
-        ticket = Ticket(self.owner, discord.utils.utcnow())
-
-        query = "UPDATE ticket_counter SET num = num + 1 RETURNING num"
-        ticket_id = await self.bot.db.fetchval(query)
-
-        ticket.id = ticket_id
-
-        helpdesk = self.bot.get_var_channel("helpdesk")
-        ticket.thread = await helpdesk.create_thread(
-            name=f"Ticket {ticket_id}",
-            type=discord.ChannelType.private_thread,
-            invitable=False,
-        )
-
-        self.bot.log(f"thread created with id {ticket_id}", "ticket")
-
-        await ticket.thread.send(embed=self.bot.get_embed("ticketinfo"))
-
-        try:
-            await ticket.thread.add_user(self.owner)
-            self.bot.log(
-                f"added {self.owner} ({self.owner.id}) to Ticket {ticket_id}", "ticket"
-            )
-        except Exception as e:
-            await ticket.thread.send(
-                f"I failed to add {self.owner.mention} to this ticket normally. "
-                "Maybe pinging fixed it, or Storch will need to investigate."
-            )
-            logging.error(
-                f"failed to add {self.owner} ({self.owner.id}) to Ticket {ticket_id}. Error: {e}"
-            )
-
-        query = """INSERT INTO
-                       active_tickets (ticket_id, channel_id, opener_id, timestamp)
-                   VALUES
-                       ($1, $2, $3, $4)
-                """
-        await self.bot.db.execute(
-            query,
-            ticket.id,
-            ticket.thread.id,
-            ticket.opener.id,
-            ticket.timestamp.timestamp(),
-        )
-        # view = CloseView(self.bot, ticket.id, ticket.channel, ticket.opener.id, ticket.timestamp)
-
-        choice = self.ticket_type.values[0]
-        luna_id = self.bot.vars.get("luna-id")
-        pm_id = self.bot.vars.get("pm-role-id")
-        staff_id = self.bot.vars.get("staff-role-id")
-        molly_id = 675058943596298340
-
-        if choice == "VIP Artist":
-            pings = f"<@{luna_id}> <@{molly_id}>"
-        elif choice == "Trusted Seller":
-            pings = f"<@{luna_id}> <@{molly_id}>"
-        elif choice == "Partnership Request":
-            pings = f"<@&{pm_id}>"
-        elif choice == "PM Request":
-            pings = f"<@{luna_id}>"
-        elif choice == "Booster Perks":
-            pings = f"<@{luna_id}>"
-        elif choice == "User Report":
-            pings = f"<@&{staff_id}>"
-        elif choice == "General Inquiry":
-            pings = f"<@&{staff_id}>"
-        elif choice == "Other":
-            pings = f"<@&{staff_id}>"
-        else:
-            pings = f"<@{self.bot.owner_id}>"
-
-        log_channel = self.bot.get_channel(self.bot.vars.get("archive-channel-id"))
-
-        layout = self.bot.get_layout("ticket/opened")
-        repls = {
-            "user": self.owner.mention,
-            "ID": ticket.id,
-            "reason": choice,
-            "thread": ticket.thread.mention,
-            "mention": pings,
-        }
-        await layout.send(log_channel, repls=repls, special=False)
-        return ticket
 
 
 REMIND_GAP = 86400 * 7

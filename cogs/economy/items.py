@@ -1,6 +1,9 @@
-from typing import List
+from typing import List, Literal
 
 import discord
+from discord.ext import commands
+
+from cogs.tickets import create_ticket
 
 # if TYPE_CHECKING:
 #     from . import (
@@ -102,46 +105,119 @@ class BaseItem:
         return self.is_tradable_at_all()
 
     async def use(self, ctx, **kwargs):
-        await ctx.send(f"{ctx.author.mention} - item used")
-        return True
+        await self.update_item_use_time(ctx)
+
+        # handled in command
+        # query = "UPDATE user_items SET item_count = item_count - 1 WHERE user_id = $1 AND item_name_id = $2 RETURNING item_count"
+        # count = await ctx.bot.db.execute(query, ctx.author.id, self.name_id)
+        # if count == 0:
+        #     query = "DELETE FROM user_items WHERE user_id = $1 AND item_name_id = $2"
+        #     await ctx.bot.db.execute(query, ctx.author.id, self.name_id)
+
+        lyname = kwargs.get("layout_name") or "itemused"
+        lyrepls = kwargs.get("repls") or {}
+        layout = ctx.bot.get_layout(lyname)
+        await layout.send(ctx, repls=lyrepls)
+
+    async def update_item_use_time(self, ctx):
+        query = """INSERT INTO
+                       item_use_times (user_id, item_name_id)
+                   VALUES
+                       ($1, $2)
+                   ON CONFLICT (user_id, item_name_id) DO
+                   UPDATE
+                   SET
+                       time_used = CURRENT_TIMESTAMP
+                """
+        await ctx.bot.db.execute(query, ctx.author.id, self.name_id)
 
     async def activate(self, ctx, **kwargs):
-        query = (
-            "UPDATE user_items SET state = $1 WHERE user_id = $2 AND item_name_id = $3"
-        )
+        query = """UPDATE user_items
+                   SET
+                     state = $1
+                   WHERE
+                     user_id = $2
+                     AND item_name_id = $3
+                """
         await ctx.bot.db.execute(query, "active", ctx.author.id, self.name_id)
-        return True
+
+        await self.update_item_use_time(ctx)
+
+        lyname = kwargs.get("layout_name") or "itemactivated"
+        lyrepls = kwargs.get("repls") or {}
+        layout = ctx.bot.get_layout(lyname)
+        await layout.send(ctx, repls=lyrepls)
 
     async def deactivate(self, ctx, **kwargs):
         query = (
             "UPDATE user_items SET state = $1 WHERE user_id = $2 AND item_name_id = $3"
         )
         await ctx.bot.db.execute(query, "inactive", ctx.author.id, self.name_id)
-        return True
+
+        lyname = kwargs.get("layout_name") or "itemdeactivated"
+        lyrepls = kwargs.get("repls") or {}
+        layout = ctx.bot.get_layout(lyname)
+        await layout.send(ctx, repls=lyrepls)
+
+
+# Class names MUST match the item_name_id in the database! (not case sensitive)
+
+
+class ShoutoutItem(BaseItem):
+    KIND = None
+
+    async def use(self, ctx, **kwargs):
+        end = await ctx.bot.get_cooldown_end("useshoutout", 30 * 86400, obj=ctx.author)
+        if end is not None and ctx.author.id != ctx.bot.owner_id:
+            raise commands.CommandOnCooldown(
+                commands.Cooldown(1, 30 * 86400),
+                (end - discord.utils.utcnow()).total_seconds(),
+                commands.BucketType.user,
+            )
+
+        async with ctx.typing():
+            ticket = await create_ticket(
+                ctx.bot,
+                ctx.author,
+                f"Shoutout (`@{self.KIND}`)",
+                opening_layout_name="shoutoutticket",
+            )
+
+        await super().use(
+            ctx,
+            layout_name="itemactivated/shoutout",
+            repls={"link": ticket.thread.jump_url},
+        )
+
+
+class EveryoneShoutout(ShoutoutItem):
+    KIND = "everyone"
+
+
+class HereShoutout(ShoutoutItem):
+    KIND = "here"
 
 
 class ColorRoleItem(BaseItem):
     async def activate(self, ctx, **kwargs):
-        await super().activate(ctx, **kwargs)
-
         name = kwargs.get("name")
         role = ctx.guild.get_role(ctx.bot.vars.get(f"{name}-role-id"))
         if role in ctx.author.roles:
             await ctx.send("role already activated layout")
-            return False
+            return
+
+        await super().activate(ctx, **kwargs)
         await ctx.author.add_roles(role)
-        return True
 
     async def deactivate(self, ctx, **kwargs):
-        await super().deactivate(ctx, **kwargs)
-
         name = kwargs.get("name")
         role = ctx.guild.get_role(ctx.bot.vars.get(f"{name}-role-id"))
         if role not in ctx.author.roles:
             await ctx.send("role already deactivated layout")
-            return False
+            return
+
+        await super().deactivate(ctx, **kwargs)
         await ctx.author.remove_roles(role)
-        return True
 
 
 class CherryPop(ColorRoleItem):

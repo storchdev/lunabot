@@ -7,118 +7,12 @@ if TYPE_CHECKING:
     from bot import LunaBot
 
 
-class AddItemFlags(commands.FlagConverter):
-    number_id: int
-    name_id: str
-    display_name: str
-    description: str
-    price: int
-    sell_price: Optional[int] = None
-    stock: int = -1
-    usable: bool
-    activatable: bool
-    category: str
-    buy_reqs: str = "[]"
-    sell_reqs: str = "[]"
-    trade_reqs: str = "[]"
-
-
 class EconomySu(commands.Cog):
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 
     async def cog_check(self, ctx):
         return ctx.author.id in self.bot.owner_ids
-
-    @commands.command()
-    async def addcategory(self, ctx, name: str, display_name: str, description: str):
-        query = """INSERT INTO
-                       item_categories (name, display_name, description)
-                   VALUES
-                       ($1, $2, $3)
-                """
-        await self.bot.db.execute(query, name, display_name, description)
-        self.categories[name] = description
-        await ctx.send("Category added.")
-
-    @commands.command()
-    async def additem(self, ctx, *, flags: AddItemFlags):
-        if flags.category not in self.categories:
-            await ctx.send("Invalid category provided.")
-            return
-
-        try:
-            buy_reqs = json.loads(flags.buy_reqs)
-            sell_reqs = json.loads(flags.sell_reqs)
-            trade_reqs = json.loads(flags.trade_reqs)
-        except json.JSONDecodeError:
-            await ctx.send("Invalid JSON provided.")
-            return
-
-        query = """INSERT INTO
-                       shop_items (
-                           number_id,
-                           name_id,
-                           display_name,
-                           price,
-                           sell_price,
-                           stock,
-                           usable,
-                           activatable,
-                           category,
-                           description
-                       )
-                   VALUES
-                       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                """
-        await self.bot.db.execute(
-            query,
-            flags.number_id,
-            flags.name_id,
-            flags.display_name,
-            flags.price,
-            flags.sell_price,
-            flags.stock,
-            flags.usable,
-            flags.activatable,
-            flags.category,
-            flags.description,
-        )
-
-        query = "INSERT INTO item_reqs (item_name_id, type, name, description, kwargs) VALUES ($1, $2, $3, $4, $5)"
-        for req in buy_reqs:
-            await self.bot.db.execute(
-                query,
-                flags.name_id,
-                "buy",
-                req["name"],
-                req["description"],
-                json.dumps(req["kwargs"]),
-            )
-        for req in sell_reqs:
-            await self.bot.db.execute(
-                query,
-                flags.name_id,
-                "sell",
-                req["name"],
-                req["description"],
-                json.dumps(req["kwargs"]),
-            )
-        for req in trade_reqs:
-            await self.bot.db.execute(
-                query,
-                flags.name_id,
-                "trade",
-                req["name"],
-                req["description"],
-                json.dumps(req["kwargs"]),
-            )
-
-        await ctx.send("Item added. Please reload the cog to see changes.")
-
-    @additem.error
-    async def additem_error(self, ctx, error):
-        raise error
 
     @commands.command()
     async def droptables(self, ctx, *tables):

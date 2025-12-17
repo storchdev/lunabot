@@ -188,7 +188,7 @@ class LunaBot(commands.Bot):
         *,
         rate: int = 1,
         obj: Member | TextChannel | None = None,
-        update=True,
+        update: bool = True,
     ) -> datetime | None:
         if isinstance(obj, Member):
             bucket = "user"
