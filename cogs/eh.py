@@ -42,6 +42,7 @@ class EH(commands.Cog):
             or isinstance(error, commands.MissingAnyRole)
         ):
             await ctx.send("This command isn't for you!", ephemeral=True)
+            return
         if isinstance(error, commands.BadArgument) or isinstance(
             error, commands.MissingRequiredArgument
         ):
