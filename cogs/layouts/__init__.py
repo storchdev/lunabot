@@ -26,6 +26,9 @@ class Layouts(commands.Cog):
                 json.loads(row["embeds"]),
             )
 
+    async def cog_unload(self):
+        self.bot.layouts = {}
+
     @commands.group(invoke_without_command=True)
     async def layout(self, ctx):
         """No purpose, just shows help."""

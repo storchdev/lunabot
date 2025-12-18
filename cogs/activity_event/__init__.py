@@ -116,16 +116,18 @@ class ActivityEvent(commands.Cog):
             1360304699063931104: "Fae",
             1136006166909026505: "Alessia",
             1248963448235098154: "Illy",
+            571437143965302814: "Nex",
             718475543061987329: "Storch",
             713118404017651773: "Lux",
             775100386196717589: "Kaiz",
             1430154024505835592: "Mika",
             835932200368209941: "Nala",
             1341628639703334964: "Delulu",
+            278722648668766209: "Jace",
         }
         team_members_readable = {
-            "poinsettia": ["Luna", "Molly", "Sora", "Fae", "Alessia", "Illy"],
-            "mistletoe": ["Storch", "Lux", "Kaiz", "Mika", "Nala", "Delulu"],
+            "poinsettia": ["Luna", "Molly", "Sora", "Fae", "Alessia", "Illy", "Nex"],
+            "mistletoe": ["Storch", "Lux", "Kaiz", "Mika", "Nala", "Delulu", "Jace"],
         }
         self.team_members = {tname: [] for tname in team_members_readable.keys()}
         nick_dict_rev = {v: k for k, v in self.nick_dict.items()}
