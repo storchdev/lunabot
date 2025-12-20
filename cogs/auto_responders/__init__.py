@@ -103,15 +103,13 @@ class AutoResponderCog(
                         msg.channel, ctx, repls={"timestamp": int(end_time.timestamp())}
                     )
                 return
-        # try:
+
         for action in ar.actions:
             try:
                 await action.execute(msg)
-            except discord.HTTPException:
-                await self.bot.dm_owner(f"ar error\n{ar}\n{msg.jump_url}")
-        # except:
-        #     print(ar)
-        #     print(msg.jump_url)
+            except Exception as e:
+                await self.bot.get_var_channel("private").send("ar error detected")
+                raise e
 
     @commands.hybrid_group(name="autoresponder", aliases=["ar"])
     @app_commands.default_permissions()

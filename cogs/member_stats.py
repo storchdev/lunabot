@@ -302,6 +302,11 @@ class MemberStats(commands.Cog):
             settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
         )
 
+        if start is None:
+            return await ctx.send("Invalid start time!")
+        if end is None:
+            return await ctx.send("Invalid end time!")
+
         if end <= start:
             await ctx.send("End time must be after start time.")
             return
@@ -338,6 +343,11 @@ class MemberStats(commands.Cog):
             settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
         )
 
+        if start is None:
+            return await ctx.send("Invalid start time!")
+        if end is None:
+            return await ctx.send("Invalid end time!")
+
         if end <= start:
             await ctx.send("End time must be after start time.")
             return
@@ -356,7 +366,7 @@ class MemberStats(commands.Cog):
         await ctx.send(file=file, embed=embed)
 
     @commands.command(name="fakedata")
-    @staff_only()
+    @commands.is_owner()
     async def insert_fake_data(self, ctx):
         """
         Inserts fake join and leave data into the database.
