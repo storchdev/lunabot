@@ -12,8 +12,6 @@ import string
 from datetime import datetime
 from typing import List
 
-import dateparser
-
 
 class PruneHappening(Exception): ...
 
@@ -146,15 +144,8 @@ class Prune(commands.Cog):
 
     @prune.command()
     async def before(self, ctx, *, datestr: str):
-        try:
-            latest_dt = dateparser.parse(
-                datestr,
-                settings={
-                    "TIMEZONE": await ctx.fetch_timezone(),
-                    "RETURN_AS_TIMEZONE_AWARE": True,
-                },
-            )
-        except ValueError:
+        latest_dt = await ctx.parse_dt(datestr)
+        if latest_dt is None:
             return await ctx.send("bad date")
 
         to_prune = self.to_prune_from_cutoff(ctx.guild, latest_dt)

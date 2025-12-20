@@ -8,7 +8,6 @@ from itertools import cycle
 from typing import TYPE_CHECKING, Dict, List, Set
 from zoneinfo import ZoneInfo
 
-import dateparser
 import discord
 from discord.ext import commands, tasks
 
@@ -1005,21 +1004,12 @@ class ActivityEvent(commands.Cog):
     async def teamstats(self, ctx, *, flags: TeamStatsFlags):
         tz = await ctx.fetch_timezone()
 
-        start = (
-            START_TIME
-            if flags.start is None
-            else dateparser.parse(
-                flags.start,
-                settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
-            )
-        )
+        start = START_TIME if flags.start is None else await ctx.parse_dt(flags.start)
 
         if start is None:
             return await ctx.send("Invalid start time!")
 
-        end = dateparser.parse(
-            flags.end, settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True}
-        )
+        end = await ctx.parse_dt(flags.end)
 
         if end is None:
             return await ctx.send("Invalid end time!")

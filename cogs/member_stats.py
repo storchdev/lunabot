@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 import discord
 import matplotlib.dates as mdates
 import numpy as np
-from dateparser import parse
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from pytz import timezone
@@ -291,16 +290,9 @@ class MemberStats(commands.Cog):
 
     @commands.command()
     async def altstats(self, ctx, *, flags: StatsFlags):
-        tz = await ctx.fetch_timezone()
         stat = flags.stat
-        start = parse(
-            flags.start,
-            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
-        )
-        end = parse(
-            flags.end,
-            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
-        )
+        start = await ctx.parse_dt(flags.start)
+        end = await ctx.parse_dt(flags.end)
 
         if start is None:
             return await ctx.send("Invalid start time!")
@@ -325,7 +317,9 @@ class MemberStats(commands.Cog):
         #  GENERATE DATA POINTS FOR THE PLOT BY QUERYING THE DATABASE
         tick = timedelta(seconds=tick)
         data = await self.generate_rate_data(stat, start, end, tick, ctx.guild.id)
-        buf = await asyncio.to_thread(plot_data_sync, data, tz, stat)
+        buf = await asyncio.to_thread(
+            plot_data_sync, data, await ctx.fetch_timezone(), stat
+        )
         file = discord.File(buf, filename="plot.png")
         embed = await self.generate_base_embed(start, end, ctx.guild.id)
 

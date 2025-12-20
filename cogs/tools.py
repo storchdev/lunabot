@@ -7,7 +7,6 @@ from pkgutil import iter_modules
 from typing import TYPE_CHECKING, List, Literal, Optional, Union
 
 import aiohttp
-import dateparser
 import discord
 from discord import ui
 from discord.ext import commands
@@ -417,21 +416,15 @@ class Tools(commands.Cog, description="storchs tools"):
         await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
 
     @commands.command()
-    async def timethingy(self, ctx, *, date_str=None):
-        if date_str is None:
+    async def timethingy(self, ctx, *, datestr=None):
+        if datestr is None:
             dt = discord.utils.utcnow()
         else:
-            dt = await asyncio.to_thread(
-                dateparser.parse,
-                date_str,
-                settings={
-                    "TIMEZONE": await ctx.fetch_timezone(),
-                    "RETURN_AS_TIMEZONE_AWARE": True,
-                },
-            )
+            dt = await ctx.parse_dt(datestr)
             if dt is None:
                 await ctx.send("Invalid date string.")
                 return
+
         styles = "tTdDfFR"
         mds = [discord.utils.format_dt(dt, s) for s in styles]
         content = "\n".join(f"**{i}** - {md}" for i, md in enumerate(mds, 1))

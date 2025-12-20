@@ -3,7 +3,6 @@ from datetime import timedelta
 from typing import Literal, TYPE_CHECKING
 
 import discord
-from dateparser import parse
 from discord.ext import commands
 
 from .utils.checks import staff_only
@@ -120,18 +119,13 @@ class BumpRemind(commands.Cog):
         name="bumpreset", aliases=["resetbump", "bump-reset", "reset-bump"]
     )
     @staff_only()
-    async def reset_bump(self, ctx: "LunaCtx", *, time: str = None):
+    async def reset_bump(self, ctx: "LunaCtx", *, time: str | None = None):
         channel = self.bot.get_var_channel("bump-status")
+
         if time is None:
             await self.edit(channel, "green")
         else:
-            parsed_time = parse(
-                time,
-                settings={
-                    "TIMEZONE": await ctx.fetch_timezone(),
-                    "RETURN_AS_TIMEZONE_AWARE": True,
-                },
-            )
+            parsed_time = await ctx.parse_dt(time)
             if parsed_time is None:
                 await ctx.send("Invalid time format.")
                 return

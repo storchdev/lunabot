@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import discord
 import matplotlib.dates as mdates
-from dateparser import parse
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from pytz import timezone
@@ -197,15 +196,8 @@ class MessageStats(commands.Cog):
 
     @commands.command()
     async def msgstats(self, ctx, *, flags: MsgStatsFlags):
-        tz = await ctx.fetch_timezone()
-        start = parse(
-            flags.start,
-            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
-        )
-        end = parse(
-            flags.end,
-            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
-        )
+        start = await ctx.parse_dt(flags.start)
+        end = await ctx.parse_dt(flags.end)
 
         if end <= start:
             await ctx.send("End time must be after start time.")
@@ -222,6 +214,7 @@ class MessageStats(commands.Cog):
         data, n_msgs = await self.generate_data(
             start, end, delta, not flags.all_channels
         )
+        tz = await ctx.fetch_timezone()
         buf = await asyncio.to_thread(
             plot_data_sync, data, "messages sent", "# of new messages", tz
         )

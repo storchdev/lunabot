@@ -4,7 +4,6 @@ from datetime import datetime
 from io import StringIO
 from typing import TYPE_CHECKING, Optional
 
-import dateparser
 import discord
 from discord import ui
 from discord.ext import commands, tasks
@@ -330,14 +329,7 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
             await ctx.send("This command can only be used in an open ticket thread!")
             return
 
-        dt = dateparser.parse(
-            time,
-            settings={
-                "PREFER_DATES_FROM": "future",
-                "RETURN_AS_TIMEZONE_AWARE": True,
-                "TIMEZONE": await ctx.fetch_timezone(),
-            },
-        )
+        dt = await ctx.parse_dt(time)
         if dt is None:
             return await ctx.send("You did not enter a valid time!")
         if dt < discord.utils.utcnow():

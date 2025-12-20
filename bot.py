@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timedelta
 from pkgutil import iter_modules
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 import aiohttp
 import discord
@@ -10,13 +11,14 @@ from discord import Member, TextChannel, Thread
 from discord.abc import GuildChannel, PrivateChannel
 from discord.ext import commands
 from discord.ext.duck.errors import ErrorManager
+from parsedatetime import Calendar
 
+from cogs.activity_event.constants import START_TIME
 from cogs.db import init_db
 from cogs.future_tasks import FutureTask
 from cogs.utils import InvalidURL, Layout, View
 from cogs.utils.checks import guild_only
-from cogs.activity_event.constants import START_TIME
-from config import ERROR_WEBHOOK_URL, LOG_FILE
+from config import DEFAULT_TIMEZONE, ERROR_WEBHOOK_URL, LOG_FILE
 
 if TYPE_CHECKING:
     from cogs.tickets import Ticket
@@ -38,20 +40,24 @@ class LunaBot(commands.Bot):
         self.owner_id = self.STORCH_ID
         self.owner_ids = [self.STORCH_ID]
 
-        self.vars: dict[str, str | int] = {}
+        self.log_flags: list[str] = []
+        self.views: set[View] = set()
+        self.session = aiohttp.ClientSession()
+        self.pdt = Calendar()
+
         self.embeds: dict[str, discord.Embed] = {}
         self.future_tasks: dict[int, FutureTask] = {}
         self.layouts: dict[str, Layout] = {}
-        self.log_flags: list[str] = []
-        self.session = aiohttp.ClientSession()
+        self.tickets: dict[discord.Thread, Ticket] = {}
+        self.tz_cache: dict[discord.User, str] = {}
+        self.vars: dict[str, str | int] = {}
+
         self.errors = ErrorManager(
             self,
             webhook_url=ERROR_WEBHOOK_URL,
             session=self.session,
             hijack_bot_on_error=True,
         )
-        self.tickets: dict[discord.Thread, Ticket] = {}
-        self.views: set[View] = set()
 
     async def load_activity_event(self):
         from cogs.activity_event import (
@@ -301,11 +307,24 @@ class LunaCtx(commands.Context):
     #     super().__init__(*args, **kwargs)
 
     async def fetch_timezone(self) -> str:
+        if self.author in self.bot.tz_cache:
+            return self.bot.tz_cache[self.author]
+
         query = "SELECT timezone FROM timezones WHERE user_id = $1"
         tz = await self.bot.db.fetchval(query, self.author.id)
         if tz is None:
-            return "America/Chicago"
+            return DEFAULT_TIMEZONE
         return tz
+
+    async def parse_dt(self, dt_str: str) -> datetime | None:
+        tz = ZoneInfo(await self.fetch_timezone())
+        dt, status = self.bot.pdt.parseDT(
+            dt_str, sourceTime=datetime.now(tz), tzinfo=tz
+        )
+        if status == 0:
+            return None
+
+        return dt
 
 
 class AdminCog(commands.Cog):
