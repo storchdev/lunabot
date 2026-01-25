@@ -1,8 +1,8 @@
-import re
+import asyncio
 from typing import TYPE_CHECKING
 
 import discord
-from discord import Member, app_commands
+from discord import app_commands
 from discord.ext import commands
 
 from cogs.utils import LayoutContext, SimplePages
@@ -12,7 +12,7 @@ from .auto_responder import AutoResponder
 from .editor import AutoResponderEditor
 
 if TYPE_CHECKING:
-    from bot import LunaBot, LunaCtx
+    from bot import LunaBot
 
 
 class AutoResponderCog(
@@ -31,51 +31,62 @@ class AutoResponderCog(
             self.auto_responders.append(auto_responder)
             self.name_lookup[auto_responder.name] = auto_responder
 
-    async def ar_check(self, msg: discord.Message) -> AutoResponder | None:
+    def _ar_check(self, msg: discord.Message) -> AutoResponder | None:
+        content_lower = msg.content.lower()
+        content_words = set(content_lower.split())  # Pre-split for word checks
+        author_id = msg.author.id
+        channel_id = msg.channel.id
+
+        # it's cheaper to do it once here than risk doing it multiple times inside logic.
+        role_ids = {r.id for r in msg.author.roles}  # Use a Set for O(1) lookups
+
         for ar in self.auto_responders:
-            if ar.wl_users and msg.author.id not in ar.wl_users:
-                continue
-            if ar.bl_users and msg.author.id in ar.bl_users:
-                continue
+            # 2. CHECK TEXT FIRST (The strongest filter)
+            matched = False
 
-            roleids = [r.id for r in msg.author.roles]
-            if ar.wl_roles and all(role not in roleids for role in ar.wl_roles):
-                continue
-            if ar.bl_roles and any(role in roleids for role in ar.bl_roles):
-                continue
-            if ar.wl_channels and msg.channel.id not in ar.wl_channels:
-                continue
-            if ar.bl_channels and msg.channel.id in ar.bl_channels:
-                continue
-
-            # if ar.cooldown:
-            #     bucket = ar.cooldown.get_bucket(msg)
-            #     retry_after = bucket.get_retry_after()
-            #     if retry_after:
-            #         continue
-
-            content = msg.content.lower()
-
-            if ar.detection == "starts":
-                if not content.startswith(ar.trigger):
-                    continue
+            # Optimize checks based on type
+            if ar.detection == "matches":
+                if ar.trigger == content_lower:
+                    matched = True
+            elif ar.detection == "starts":
+                if content_lower.startswith(ar.trigger):
+                    matched = True
             elif ar.detection == "contains":
-                if ar.trigger not in content:
-                    continue
-            elif ar.detection == "matches":
-                if ar.trigger != content:
-                    continue
+                if ar.trigger in content_lower:
+                    matched = True
             elif ar.detection == "contains_word":
-                if ar.trigger not in content.split():
-                    continue
+                if ar.trigger in content_words:
+                    matched = True
             elif ar.detection == "regex":
-                match = re.search(ar.trigger, msg.content, re.IGNORECASE)
-                if not match:
-                    continue
+                if ar.regex_pattern.search(msg.content):
+                    matched = True
 
-            return ar
+            if not matched:
+                continue
+
+            # 3. CHECK PERMISSIONS (Only runs if text matched)
+            # Fast integer comparisons
+            if ar.wl_users and author_id not in ar.wl_users:
+                continue
+            if ar.bl_users and author_id in ar.bl_users:
+                continue
+            if ar.wl_channels and channel_id not in ar.wl_channels:
+                continue
+            if ar.bl_channels and channel_id in ar.bl_channels:
+                continue
+
+            # Role checks (set lookups are O(1))
+            if ar.wl_roles and not ar.wl_roles_set.intersection(role_ids):
+                continue
+            if ar.bl_roles and ar.bl_roles_set.intersection(role_ids):
+                continue
+
+            return ar  # Found it
 
         return None
+
+    async def ar_check(self, msg: discord.Message) -> AutoResponder | None:
+        return await asyncio.to_thread(self._ar_check, msg)
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):

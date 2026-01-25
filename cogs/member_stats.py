@@ -327,15 +327,8 @@ class MemberStats(commands.Cog):
 
     @commands.command(aliases=["absstats"])
     async def stats(self, ctx, *, flags: StatsFlags):
-        tz = await ctx.fetch_timezone()
-        start = parse(
-            flags.start,
-            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
-        )
-        end = parse(
-            flags.end,
-            settings={"TIMEZONE": tz, "RETURN_AS_TIMEZONE_AWARE": True},
-        )
+        start = await ctx.parse_dt(flags.start)
+        end = await ctx.parse_dt(flags.end)
 
         if start is None:
             return await ctx.send("Invalid start time!")
@@ -353,6 +346,7 @@ class MemberStats(commands.Cog):
         if flags.grad:
             absolute_data = grad_data(absolute_data)
 
+        tz = await ctx.fetch_timezone()
         buf = await asyncio.to_thread(plot_data_sync, absolute_data, tz)
         file = discord.File(buf, filename="plot.png")
         embed = await self.generate_base_embed(start, end, ctx.guild.id)

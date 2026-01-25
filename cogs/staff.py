@@ -8,6 +8,7 @@ import discord
 from discord.ext import commands
 
 from cogs.utils import InvalidURL, LayoutContext
+from cogs.utils.checks import is_admin
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -209,6 +210,68 @@ class Staff(commands.Cog):
                     await self.bot.get_var_channel("mod").send(
                         f"Removed `{role.name}` from {after.mention} ({after.id}) because it was not added using `!mod` or `!admin`."
                     )
+
+    @commands.command()
+    async def purge(self, ctx, arg1, *, arg2=None):
+        if arg2 is None:
+            # normal purge
+            if not arg1.isdigit():
+                return await ctx.send("Not a valid number!")
+
+            if not is_admin(ctx):
+                dt = await self.bot.get_cooldown_end(
+                    "purge", 3600, rate=5, obj=ctx.author
+                )
+                if dt is not None:
+                    return await ctx.send("purging on cooldown to prevent abuse")
+
+            x = int(arg1)
+            if x > 99:
+                x = 99
+
+            await ctx.channel.purge(limit=x + 1)
+        else:
+            # user purge
+            mc = commands.MemberConverter()
+
+            for argm, argx in ((arg1, arg2), (arg2, arg1)):
+                try:
+                    member = await mc.convert(ctx, argm)
+                    break
+                except commands.MemberNotFound:
+                    member = None
+
+            if member is None:
+                return await ctx.send("Not a valid member!")
+            if not argx.isdigit():
+                return await ctx.send("Not a valid number!")
+
+            if not is_admin(ctx):
+                dt = await self.bot.get_cooldown_end(
+                    "purge", 3600, rate=5, obj=ctx.author
+                )
+                if dt is not None:
+                    return await ctx.send("purging on cooldown to prevent abuse")
+
+            x = int(argx)
+            if x > 99:
+                x = 99
+
+            plist = []
+            now = discord.utils.utcnow()
+
+            async for msg in ctx.channel.history(limit=500):
+                if msg == ctx.message:
+                    continue
+                if len(plist) >= x:
+                    break
+                if (now - msg.created_at).total_seconds() > 86400 * 14:
+                    break
+                if msg.author == member:
+                    plist.append(msg)
+
+            plist.append(ctx.message)
+            await ctx.channel.delete_messages(plist)
 
     @commands.command()
     async def savechat(self, ctx, message1: str, message2: str):

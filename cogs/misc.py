@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 from typing import TYPE_CHECKING
@@ -9,6 +10,21 @@ from cogs.utils import staff_only, general_only
 
 if TYPE_CHECKING:
     from bot import LunaBot
+
+
+def check_dad(msg: discord.Message):
+    if " " not in msg.content:
+        return False, ""
+
+    content1 = msg.content.lower()
+    content2 = msg.content.lower().split(" ", 1)[1]
+
+    for content in (content1, content2):
+        for prefix in ("im", "i'm", "i am", "i\u2019m"):
+            if content.startswith(prefix + " "):
+                return True, content.removeprefix(prefix + " ").title()
+
+    return False, ""
 
 
 class Misc(commands.Cog):
@@ -26,6 +42,19 @@ class Misc(commands.Cog):
 
     # async def cog_unload(self):
     #     self.urmom.stop()
+
+    @commands.Cog.listener()
+    async def on_message(self, msg: discord.Message):
+        if not msg.guild or msg.author.bot:
+            return
+
+        b, title = check_dad(msg)
+        if not b or msg.author.id not in json.loads(self.bot.vars.get("dad-joke-ids")):
+            return
+
+        async with msg.channel.typing():
+            await asyncio.sleep(random.uniform(2, 3))
+        await msg.channel.send(f"Hi, {title}!")
 
     @commands.hybrid_command()
     @staff_only()

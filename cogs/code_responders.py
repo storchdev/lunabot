@@ -2,11 +2,15 @@ import asyncio
 import json
 import re
 import traceback
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
 
-from .utils import Cooldown, Layout
+from .utils import Cooldown, Layout, SimplePages
+
+if TYPE_CHECKING:
+    from bot import LunaBot, LunaCtx
 
 
 def format_err(err):
@@ -26,13 +30,19 @@ class AddCrFlags(commands.FlagConverter):
     trigger: str
     detection: str
     ignoreErrors: bool = False
-    cdBucket: str = None
-    cd: int = None
+    cdBucket: str | None = None
+    cd: int | None = None
 
 
 class CodeResponderItem:
     def __init__(
-        self, name, trigger, detection, code, ignore_errors=False, cooldown=None
+        self,
+        name: str,
+        trigger: str,
+        detection: str,
+        code: str,
+        ignore_errors: bool = False,
+        cooldown: Cooldown | None = None,
     ):
         self.name = name
         self.trigger = trigger
@@ -103,7 +113,7 @@ def split_text(text, separator):
 
 
 class CodeResponderAPI:
-    def __init__(self, bot: commands.Bot, ctx):
+    def __init__(self, bot: "LunaBot", ctx: "LunaCtx"):
         self.bot = bot
         self.ctx = ctx
         self.message = ctx.message
@@ -280,6 +290,9 @@ class CodeResponderAPI:
         except discord.NotFound:
             raise CodeResponderError(f"emoji {emoji.name} not found")
 
+    async def sleep(self, duration):
+        await asyncio.sleep(duration)
+
 
 class CodeResponders(commands.Cog):
     def __init__(self, bot):
@@ -291,7 +304,7 @@ class CodeResponders(commands.Cog):
     async def cog_check(self, ctx):
         return (
             ctx.author.id == self.bot.STORCH_ID
-            or ctx.author.guild_permissions.administrator
+            or ctx.author.id == self.bot.vars.get("luna-id")
         )
 
     async def cog_load(self):
@@ -510,61 +523,75 @@ class CodeResponders(commands.Cog):
 
         await ctx.send(f"Coderesponder `{name}` has been deleted.")
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
+    @cr.command(name="list")
+    async def _list(self, ctx):
+        """Lists all code-responders."""
+        entries = list(c.name for c in self.code_responders)
+        if len(entries) == 0:
+            await ctx.send("No coderesponders found.", ephemeral=True)
             return
 
-        respond = False
+        entries.sort()
+        view = SimplePages(entries, ctx=ctx)
+        await view.start()
+
+    def _cr_check(self, message: discord.Message) -> CodeResponderItem | None:
         lower = message.content.lower()
 
         for item in self.code_responders:
             if item.detection == "matches":
                 if lower == item.name:
-                    respond = True
-                    break
+                    return item
             elif item.detection == "contains_word":
                 if item.name in lower.split():
-                    respond = True
-                    break
+                    return item
             elif item.detection == "contains":
                 if item.name in lower:
-                    respond = True
-                    break
+                    return item
             elif item.detection == "starts":
                 if lower.startswith(item.name):
-                    respond = True
-                    break
+                    return item
             elif item.detection == "ends":
                 if lower.endswith(item.name):
-                    respond = True
-                    break
+                    return item
             elif item.detection == "regex":
-                if re.search(item.regex, message.content):
-                    respond = True
-                    break
+                if re.search(item.trigger, message.content):
+                    return item
 
-        if respond:
-            resp = await self.run_code(await self.bot.get_context(message), item.code)
-            if resp["status"] == "ok":
-                return
+        return None
 
-            if resp["status"] == "runtime_error":
-                tb = format_err(resp["error"])
-                short_err = str(resp["error"])
-                if not item.ignore_errors:
-                    await message.channel.send(
-                        f"Code encountered a runtime error!\n`{short_err}`"
-                    )
-                storch = self.bot.get_user(self.bot.STORCH_ID)
-                await storch.send(
-                    f"Coderesponder encountered an error!\n```py\n{tb}```{message.jump_url}"
+    async def cr_check(self, message: discord.Message) -> CodeResponderItem | None:
+        return await asyncio.to_thread(self._cr_check, message)
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author.bot:
+            return
+
+        item = await self.cr_check(message)
+        if item is None:
+            return
+
+        resp = await self.run_code(await self.bot.get_context(message), item.code)
+        if resp["status"] == "ok":
+            return
+
+        if resp["status"] == "runtime_error":
+            tb = format_err(resp["error"])
+            short_err = str(resp["error"])
+            if not item.ignore_errors:
+                await message.channel.send(
+                    f"Code encountered a runtime error!\n`{short_err}`"
                 )
-            elif resp["status"] == "timeout":
-                if not item.ignore_errors:
-                    await message.channel.send("Code timed out!")
-                storch = self.bot.get_user(self.bot.STORCH_ID)
-                await storch.send(f"Code timed out! {message.jump_url}")
+            storch = self.bot.get_user(self.bot.STORCH_ID)
+            await storch.send(
+                f"Coderesponder encountered an error!\n```py\n{tb}```{message.jump_url}"
+            )
+        elif resp["status"] == "timeout":
+            if not item.ignore_errors:
+                await message.channel.send("Code timed out!")
+            storch = self.bot.get_user(self.bot.STORCH_ID)
+            await storch.send(f"Code timed out! {message.jump_url}")
 
 
 async def setup(bot):

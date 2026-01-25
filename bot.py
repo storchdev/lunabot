@@ -116,10 +116,10 @@ class LunaBot(commands.Bot):
         if log_flags is not None:
             self.log_flags = json.loads(log_flags)
 
-        if discord.utils.utcnow() < START_TIME:
-            self.loop.create_task(self.load_activity_event())
-        else:
-            await self.load_extension("cogs.activity_event")
+        # if discord.utils.utcnow() < START_TIME:
+        #     self.loop.create_task(self.load_activity_event())
+        # else:
+        #     await self.load_extension("cogs.activity_event")
 
         logging.info("LunaBot is ready")
 
@@ -313,7 +313,9 @@ class LunaCtx(commands.Context):
         query = "SELECT timezone FROM timezones WHERE user_id = $1"
         tz = await self.bot.db.fetchval(query, self.author.id)
         if tz is None:
-            return DEFAULT_TIMEZONE
+            tz = DEFAULT_TIMEZONE
+
+        self.bot.tz_cache[self.author] = tz
         return tz
 
     async def parse_dt(self, dt_str: str) -> datetime | None:

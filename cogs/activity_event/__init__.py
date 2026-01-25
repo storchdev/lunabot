@@ -1176,6 +1176,34 @@ class ActivityEvent(commands.Cog):
 
         await ctx.send(role.mention)
 
+    @commands.command()
+    @commands.is_owner()
+    async def startcountdown(self, ctx, dryrun: bool):
+        if not dryrun:
+            await ctx.send("waiting...")
+            dt = next_day()
+            await discord.utils.sleep_until(dt)
+
+        for team in self.teams.values():
+            if dryrun and team.name != "mistletoe":
+                continue
+
+            newctx = None
+            async for msg in team.channel.history():
+                if msg.author == team.captain.member:
+                    newctx = await self.bot.get_context(msg)
+                    continue
+
+            if newctx is None:
+                await ctx.send("No context found")
+                continue
+
+            await newctx.send("The activity event is over! Here are the totals:")
+            await newctx.invoke(self.teampoints)
+
+        if not dryrun:
+            await self.bot.unload_extension("cogs.activity_event")
+
 
 async def setup(bot):
     if LOAD:

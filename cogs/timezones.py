@@ -1,12 +1,23 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Modified timezone-related code, from RoboDanny, source/credits:
+# https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/reminder.py
+
 import zoneinfo
 from datetime import datetime
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from rapidfuzz import process
 from lxml import etree
+from rapidfuzz import process
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 class TimezoneCog(commands.Cog):
@@ -35,7 +46,7 @@ class TimezoneCog(commands.Cog):
         "cnsha",
     )
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: "LunaBot"):
         self.bot = bot
         self.valid_timezones = set(zoneinfo.available_timezones())
         self._timezone_aliases = {
@@ -121,6 +132,7 @@ class TimezoneCog(commands.Cog):
                        timezone = $2
                 """
         await self.bot.db.execute(query, ctx.author.id, selected_timezone)
+        self.bot.tz_cache[ctx.author] = selected_timezone
 
         await ctx.send(
             f"Timezone successfully set to `{match}` (**{selected_timezone}**)!"
@@ -130,7 +142,7 @@ class TimezoneCog(commands.Cog):
         name="get-timezone", aliases=["gettimezone", "gettz", "get-tz"]
     )
     @app_commands.describe(member="the member to get the timezone of")
-    async def get_timezone(self, ctx, *, member: discord.Member = None):
+    async def get_timezone(self, ctx, *, member: discord.Member | None = None):
         """Retrieves the user's timezone."""
         if member is None:
             member = ctx.author
@@ -138,11 +150,7 @@ class TimezoneCog(commands.Cog):
         else:
             other = True
 
-        query = """SELECT timezone
-                   FROM timezones
-                   WHERE user_id = $1
-                """
-        tz = await self.bot.db.fetchval(query, member.id)
+        tz = await ctx.fetch_timezone()
         if tz is None:
             if other:
                 await ctx.send(f"{member.display_name} has not set their timezone.")

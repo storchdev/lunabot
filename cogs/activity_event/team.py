@@ -65,13 +65,13 @@ class Team:
     async def apply_team_powerup(self, option: str) -> int | None:
         if option == "topup":
             points = random.randint(REDEEM_TOPUP_LOW, REDEEM_TOPUP_HIGH)
-            points = await self.captain.add_points(points, "topup_bonus", multi=False)
+            points = await self.captain.add_points(points, "topup_bonus", multi=True)
             await self.captain.log_powerup("topup_powerup")
             return points
         elif option == "steal":
             points = random.randint(REDEEM_STEAL_LOW, REDEEM_STEAL_HIGH)
             await self.opp.captain.remove_points(points, "stolen")
-            points = await self.captain.add_points(points, "steal_bonus", multi=False)
+            points = await self.captain.add_points(points, "steal_bonus", multi=True)
             await self.captain.log_powerup("steal_powerup")
             return points
         elif option == "double":

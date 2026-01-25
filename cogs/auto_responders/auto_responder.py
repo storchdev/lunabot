@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import re
 from typing import TYPE_CHECKING
 
 import discord
@@ -147,6 +148,11 @@ class AutoResponder:
         self.detection = detection
         self.actions = actions
 
+        if self.detection == "regex":
+            self.regex_pattern = re.compile(self.trigger)
+        else:
+            self.regex_pattern = None
+
         self.restrictions = restrictions
         self.wl_users = restrictions.get("whitelisted_users", [])
         self.bl_users = restrictions.get("blacklisted_users", [])
@@ -154,6 +160,9 @@ class AutoResponder:
         self.bl_roles = restrictions.get("blacklisted_roles", [])
         self.wl_channels = restrictions.get("whitelisted_channels", [])
         self.bl_channels = restrictions.get("blacklisted_channels", [])
+
+        self.wl_roles_set = set(self.wl_roles)
+        self.bl_roles_set = set(self.bl_roles)
 
         # TODO: use db for cooldown once an api is available
         # if cooldown:
