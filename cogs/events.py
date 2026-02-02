@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from discord.ext import commands
@@ -17,6 +18,8 @@ class Events(
 
         with open("guild_data.json") as f:
             self.guild_data = json.load(f)
+
+        self.cmd_log = []
 
     async def cog_check(self, ctx):
         return (
@@ -90,6 +93,22 @@ class Events(
             channel = self.bot.get_channel(channel_id)
             ctx = LayoutContext(author=member)
             await layout.send(channel, ctx)
+
+    @commands.Cog.listener()
+    async def on_command_completion(self, ctx):
+        self.cmd_log.append(
+            f"[{datetime.now().isoformat()}] {ctx.author.name} ({ctx.author.id}) used [{ctx.command.qualified_name.upper()}]({ctx.message.jump_url})"
+        )
+
+        if len(self.cmd_log) >= 10:
+            with open("commands.log", "a") as f:
+                f.write("\n".join(self.cmd_log) + "\n")
+            self.cmd_log = []
+
+    async def cog_unload(self):
+        if len(self.cmd_log) > 0:
+            with open("commands.log", "a") as f:
+                f.write("\n".join(self.cmd_log) + "\n")
 
 
 async def setup(bot):

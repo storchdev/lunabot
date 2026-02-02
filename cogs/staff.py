@@ -230,6 +230,10 @@ class Staff(commands.Cog):
                 x = 99
 
             await ctx.channel.purge(limit=x + 1)
+            embed = discord.Embed(
+                description=f"{ctx.author.mention} purged {x} in {ctx.channel.mention}"
+            )
+            await self.bot.get_var_channel("private").send(embed=embed)
         else:
             # user purge
             mc = commands.MemberConverter()
@@ -272,6 +276,10 @@ class Staff(commands.Cog):
 
             plist.append(ctx.message)
             await ctx.channel.delete_messages(plist)
+            embed = discord.Embed(
+                description=f"{ctx.author.mention} purged {len(plist)} in {ctx.channel.mention}"
+            )
+            await self.bot.get_var_channel("private").send(embed=embed)
 
     @commands.command()
     async def savechat(self, ctx, message1: str, message2: str):
