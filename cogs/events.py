@@ -37,7 +37,10 @@ class Events(
     @commands.Cog.listener()
     async def on_member_join(self, member):
         # this handles all server welcs
-        if str(member.guild.id) in self.guild_data:
+        if (
+            self.bot.vars.get("do-welcs") == 1
+            and str(member.guild.id) in self.guild_data
+        ):
             channel = self.bot.get_channel(
                 self.guild_data[str(member.guild.id)]["welc-channel-id"]
             )
