@@ -350,9 +350,11 @@ class Staff(commands.Cog):
         try:
             await self.bot.wait_for(
                 "message",
-                check=lambda m: m.channel == ctx.channel
-                and m.author == ctx.author
-                and m.content.lower() == "purge",
+                check=lambda m: (
+                    m.channel == ctx.channel
+                    and m.author == ctx.author
+                    and m.content.lower() == "purge"
+                ),
                 timeout=60,
             )
         except asyncio.TimeoutError:
@@ -394,6 +396,51 @@ class Staff(commands.Cog):
         layout = self.bot.get_layout(".seller")
         await layout.send(ctx, LayoutContext(author=member))
         await ctx.message.delete()
+
+    @commands.command()
+    async def dni(
+        self,
+        ctx,
+        role: Optional[discord.Role],
+        name: str,
+        hex1: str,
+        hex2: str | None = None,
+    ):
+        v1 = None
+        v2 = None
+        try:
+            v1 = int(hex1.lstrip("#"), base=16)
+            if hex2 is not None:
+                v2 = int(hex2.lstrip("#"), base=16)
+        except ValueError:
+            return await ctx.send("Invalid hex code.")
+
+        if not 0 <= v1 <= 0xFFFFFF:
+            return await ctx.send("Invalid hex code.")
+
+        if v2 is not None and not 0 <= v2 <= 0xFFFFFF:
+            return await ctx.send("Invalid hex code.")
+
+        if role is None:
+            role = ctx.guild.get_role(1434398478003605514)
+
+        if role is None:
+            return await ctx.send("no role")
+
+        if v2 is None:
+            await role.edit(name=name, colour=discord.Colour(v1))
+        else:
+            await role.edit(
+                name=name,
+                colour=discord.Colour(v1),
+                secondary_colour=discord.Colour(v2),
+            )
+
+        embed = discord.Embed(
+            description=f"dni {role.mention}",
+            color=self.bot.DEFAULT_EMBED_COLOR,
+        )
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):
