@@ -36,9 +36,10 @@ class LunaBot(commands.Bot):
         self.DEFAULT_EMBED_COLOR = 0xCAB7FF
         self.GUILD_ID = 899108709450543115
         self.STORCH_ID = 718475543061987329
+        self.NAOMI_ID = 785037540155195424
 
         self.owner_id = self.STORCH_ID
-        self.owner_ids = [self.STORCH_ID]
+        self.owner_ids = [self.STORCH_ID, self.NAOMI_ID]
 
         self.log_flags: list[str] = []
         self.views: set[View] = set()
