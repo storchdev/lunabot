@@ -38,7 +38,7 @@ class LunaBot(commands.Bot):
         self.STORCH_ID = 718475543061987329
         self.NAOMI_ID = 785037540155195424
 
-        self.owner_id = self.STORCH_ID
+        self.owner_id = None
         self.owner_ids = [self.STORCH_ID, self.NAOMI_ID]
 
         self.log_flags: list[str] = []
