@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS layouts (
     creator_id BIGINT
 );
 
+CREATE TABLE IF NOT EXISTS info_sections (
+    name TEXT UNIQUE,
+    config JSONB,
+    creator_id BIGINT,
+    updated_at TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS auto_responders (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE,
