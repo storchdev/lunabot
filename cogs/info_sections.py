@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import discord
 from discord.ext import commands
 
-from cogs.utils import View
+from cogs.utils import View, SimplePages
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -507,7 +507,8 @@ class InfoSections(commands.Cog):
             await ctx.send("No info sections found.")
             return
 
-        await ctx.send("\n".join(f"- `{name}`" for name in names))
+        view = SimplePages(names, ctx=ctx)
+        await view.start()
 
     @info_group.command(name="show")
     async def info_show(self, ctx, name: str):
