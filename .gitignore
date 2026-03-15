@@ -1,5 +1,6 @@
 webhooks.json
 settings.json
+topics.json
 main.sqlite 
 *.sql
 !schema.sql
