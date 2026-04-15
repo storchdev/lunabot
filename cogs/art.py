@@ -54,10 +54,13 @@ class Art(commands.Cog):
             return
 
         if msg.channel.id in self.art_channel_ids:
-            await msg.add_reaction(self.bot.vars.get("art-hof-emote"))
-            await msg.add_reaction("<a:ML_sparkles:899826759313293432>")
-            await msg.add_reaction("<a:ML_lilac_heart_NF2U_DNS:1046191564055138365>")
-            await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
+            try:
+                await msg.add_reaction(self.bot.vars.get("art-hof-emote"))
+                await msg.add_reaction("<a:ML_sparkles:899826759313293432>")
+                await msg.add_reaction("<a:ML_lilac_heart_NF2U_DNS:1046191564055138365>")
+                await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
+            except discord.NotFound:
+                print(f"Message {msg.jump_url} not found")
 
         elif msg.channel.id == self.bot.vars.get("fanart-channel-id"):
             emotes = [
@@ -65,9 +68,12 @@ class Art(commands.Cog):
                 "<a:ML_sparkles:899826759313293432>",
                 "<a:ML_kiss:923327145164546108>",
             ]
-            for emote in emotes:
-                await msg.add_reaction(emote)
-            await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
+            try:
+                for emote in emotes:
+                    await msg.add_reaction(emote)
+                await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
+            except discord.NotFound:
+                print(f"Message {msg.jump_url} not found")
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):

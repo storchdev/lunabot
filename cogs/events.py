@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from typing import TYPE_CHECKING
+import discord
 
 from discord.ext import commands
 
@@ -32,18 +33,21 @@ class Events(
         if message.channel.id == self.bot.vars.get("free-offers-channel-id"):
             await message.add_reaction("<a:LCM_mail:1151561338317983966>")
         if message.channel.id == self.bot.vars.get("void-channel-id"):
-            await message.delete()
+            try:
+                await message.delete()
+            except discord.NotFound:
+                print(f"Void channel message not found: {message.jump_url}")
 
     # @commands.Cog.listener()
     # async def on_member_join(self, member):
 
-        # this handles all server welcs
+    # this handles all server welcs
 
-        # if member.guild.id == self.bot.GUILD_ID:
-        #     layout = self.bot.get_layout('welc')
-        #     ctx = LayoutContext(author=member)
-        #     channel = self.bot.get_var_channel('welc')
-        #     await layout.send(channel, ctx)
+    # if member.guild.id == self.bot.GUILD_ID:
+    #     layout = self.bot.get_layout('welc')
+    #     ctx = LayoutContext(author=member)
+    #     channel = self.bot.get_var_channel('welc')
+    #     await layout.send(channel, ctx)
 
     @commands.command()
     async def boosttest(self, ctx):
@@ -60,7 +64,11 @@ class Events(
             return
 
         booster_role = before.guild.get_role(self.bot.vars.get("booster-role-id"))
-        if booster_role and booster_role not in before.roles and booster_role in after.roles:
+        if (
+            booster_role
+            and booster_role not in before.roles
+            and booster_role in after.roles
+        ):
             member = after
             layout = self.bot.get_layout("boost")
             channel_id = self.bot.vars.get("boost-channel-id")
@@ -69,8 +77,12 @@ class Events(
             await layout.send(channel, ctx)
             return
 
-        shopper_role = before.guild.get_role(self.bot.vars.get("shopper-role-id"))        
-        if shopper_role and shopper_role not in before.roles and shopper_role in after.roles:
+        shopper_role = before.guild.get_role(self.bot.vars.get("shopper-role-id"))
+        if (
+            shopper_role
+            and shopper_role not in before.roles
+            and shopper_role in after.roles
+        ):
             member = after
             if (
                 self.bot.vars.get("do-welcs") == 1
@@ -89,7 +101,9 @@ class Events(
                 layout = self.bot.get_layout("welc")
                 ctx = LayoutContext(author=member)
                 # channel = self.bot.get_var_channel('guild-welc')
-                bot_msg = await layout.send(channel, ctx, repls={"newwelcrole": role_text})
+                bot_msg = await layout.send(
+                    channel, ctx, repls={"newwelcrole": role_text}
+                )
 
                 if member.guild.id == self.bot.vars.get("main-server-id"):
                     query = """INSERT INTO
