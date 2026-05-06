@@ -18,6 +18,14 @@ def is_staff(ctx):
     luna_id = ctx.bot.vars.get("luna-id")
     return staff_role in ctx.author.roles or ctx.author.id == luna_id
 
+def is_staff_msg(bot, msg: discord.Message):
+    if msg.author.id in bot.owner_ids:
+        return True
+
+    staff_role = msg.guild.get_role(bot.vars.get("staff-role-id"))
+    luna_id = bot.vars.get("luna-id")
+    return staff_role in msg.author.roles or msg.author.id == luna_id
+
 
 def is_admin(ctx):
     return (

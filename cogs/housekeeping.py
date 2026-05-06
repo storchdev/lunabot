@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands, tasks
 
-from .utils.checks import admin_only
+from .utils.checks import admin_only, is_staff_msg
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -100,6 +100,13 @@ class Housekeeping(commands.Cog):
             await self.bot.db.execute(query, msg.id, bot_message_id, msg.channel.id)
 
             # print(f"--- added welc message by {msg.author.name} ---")
+
+        if (msg.channel.id == self.bot.vars.get("auto-softban-channel-id") and not is_staff_msg(msg)):
+            await msg.guild.ban(msg.author, reason="auto softbanned due to sending message in channel")
+            await msg.guild.unban(msg.author)
+            
+            self.bot.log(f"softbanned user {msg.author} (ID {msg.author.id})")
+            await self.bot.get_var_channel("private").send(f"softbanned {msg.author.mention}, account created {discord.utils.format_dt(msg.author.created_at, "R")}")
 
         # TODO: delete intros when someone leaves
         # elif msg.channel.id == self.bot.vars.get("intros-channel-id") and "my intro" in msg.content.lower():
