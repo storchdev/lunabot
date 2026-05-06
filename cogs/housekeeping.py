@@ -101,7 +101,7 @@ class Housekeeping(commands.Cog):
 
             # print(f"--- added welc message by {msg.author.name} ---")
 
-        if (msg.channel.id == self.bot.vars.get("auto-softban-channel-id") and not is_staff_msg(msg)):
+        if (msg.guild and msg.channel.id == self.bot.vars.get("auto-softban-channel-id") and not is_staff_msg(self.bot, msg)):
             await msg.guild.ban(msg.author, reason="auto softbanned due to sending message in channel")
             await msg.guild.unban(msg.author)
             
