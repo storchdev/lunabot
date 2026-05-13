@@ -19,16 +19,10 @@ from typing import Optional
 # Custom rust module
 from fuzzy_rust import extract_bests
 
-MOLLY_ID = 675058943596298340
 
-
-def is_luna_or_molly():
+def is_art_manager():
     async def predicate(ctx: commands.Context):
-        if ctx.author.id not in [
-            ctx.bot.vars.get("luna-id"),
-            MOLLY_ID,
-            ctx.bot.owner_id,
-        ]:
+        if ctx.author.id not in json.loads(ctx.bot.vars.get("art-manager-ids")):
             # layout = ctx.bot.get_layout("lunaonly")
             # await layout.send(ctx)
             return False
@@ -371,7 +365,7 @@ class Staff(commands.Cog):
         await ctx.send("Finished purging!")
 
     @commands.command()
-    @is_luna_or_molly()
+    @is_art_manager()
     async def vip(self, ctx, *, member: discord.Member):
         VIP_ROLE_ID = 1192676146911916092
         await member.add_roles(discord.Object(VIP_ROLE_ID))
@@ -380,7 +374,7 @@ class Staff(commands.Cog):
         await ctx.message.delete()
 
     @commands.command()
-    @is_luna_or_molly()
+    @is_art_manager()
     async def buyer(self, ctx, *, member: discord.Member):
         BUYER_ROLE_ID = 1197373980416430090
         await member.add_roles(discord.Object(BUYER_ROLE_ID))
@@ -389,7 +383,7 @@ class Staff(commands.Cog):
         await ctx.message.delete()
 
     @commands.command()
-    @is_luna_or_molly()
+    @is_art_manager()
     async def seller(self, ctx, *, member: discord.Member):
         SELLER_ROLE_ID = 1197374014025371808
         await member.add_roles(discord.Object(SELLER_ROLE_ID))

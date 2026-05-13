@@ -87,7 +87,7 @@ async def create_ticket(
     molly_id = bot.vars.get("molly-id")
 
     if reason == "VIP Artist":
-        var = str(bot.vars.get("vip-artist-ping-ids"))
+        var = str(bot.vars.get("art-manager-ids"))
         ping_ids = json.loads(var)
         pings = " ".join(f"<@{x}>" for x in ping_ids)
     elif reason == "Trusted Seller":
