@@ -13,7 +13,7 @@ from discord.ext import commands
 from discord.ext.duck.errors import ErrorManager
 from parsedatetime import Calendar
 
-from cogs.activity_event.constants import START_TIME
+from cogs.summer_event.constants import START_TIME
 from cogs.db import init_db
 from cogs.future_tasks import FutureTask
 from cogs.utils import InvalidURL, Layout, View
@@ -98,7 +98,7 @@ class LunaBot(commands.Bot):
 
         await self.load_extension("jishaku")
         priority = ["cogs.vars", "cogs.tools"]
-        not_cogs = ["cogs.utils", "cogs.db", "cogs.activity_event"]
+        not_cogs = ["cogs.utils", "cogs.db", "cogs.activity_event", "cogs.summer_event"]
 
         for cog in priority:
             await self.load_extension(cog)
@@ -117,10 +117,10 @@ class LunaBot(commands.Bot):
         if log_flags is not None:
             self.log_flags = json.loads(log_flags)
 
-        # if discord.utils.utcnow() < START_TIME:
-        #     self.loop.create_task(self.load_activity_event())
-        # else:
-        #     await self.load_extension("cogs.activity_event")
+        if discord.utils.utcnow() < START_TIME:
+            self.loop.create_task(self.load_activity_event())
+        else:
+            await self.load_extension("cogs.activity_event")
 
         logging.info("LunaBot is ready")
 
