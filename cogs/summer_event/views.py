@@ -105,10 +105,10 @@ class TeamLBView(View):
     async def update(self, interaction=None):
         self.switch_teams.emoji = self.other_team.emoji
 
-        if self.current_team.name == "starfish":
-            self.switch_teams.style = discord.ButtonStyle.green
-        else:
-            self.switch_teams.style = discord.ButtonStyle.red
+        # if self.current_team.name == "starfish":
+        #     self.switch_teams.style = discord.ButtonStyle.green
+        # else:
+        #     self.switch_teams.style = discord.ButtonStyle.red
 
         embed = self.ctx.bot.get_embed("se/teamlb")
         dlines = []

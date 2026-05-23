@@ -82,6 +82,28 @@ class LunaBot(commands.Bot):
         await layout.send(ch1)
         await layout.send(ch2)
 
+    async def load_summer_event(self):
+        from cogs.summer_event import (
+            TEAM_JELLYFISH_CHANNEL_ID,
+            TEAM_STARFISH_CHANNEL_ID,
+        )
+
+        ch = self.get_var_channel("private")
+
+        assert isinstance(ch, discord.TextChannel)
+
+        await ch.send("Sleeping until summer event starts")
+        await discord.utils.sleep_until(START_TIME)
+        await self.load_extension("cogs.summer_event")
+        await ch.send("Loaded summer activity event")
+
+        ch1 = self.get_channel(TEAM_JELLYFISH_CHANNEL_ID)
+        ch2 = self.get_channel(TEAM_STARFISH_CHANNEL_ID)
+        layout = self.get_layout("se/live")
+
+        await layout.send(ch1)
+        await layout.send(ch2)
+
     async def start_task(self):
         await self.wait_until_ready()
         self.loop.create_task(self._start_task())
@@ -118,9 +140,9 @@ class LunaBot(commands.Bot):
             self.log_flags = json.loads(log_flags)
 
         if discord.utils.utcnow() < START_TIME:
-            self.loop.create_task(self.load_activity_event())
+            self.loop.create_task(self.load_summer_event())
         else:
-            await self.load_extension("cogs.activity_event")
+            await self.load_extension("cogs.summer_event")
 
         logging.info("LunaBot is ready")
 
