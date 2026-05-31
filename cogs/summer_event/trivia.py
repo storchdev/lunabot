@@ -8,6 +8,8 @@ class TriviaQuestion:
         self.question = question 
         self.choices = choices
         self.answer = answer
+
+        assert len(self.choices) == 4
     
     def shuffle_choices(self):
         random.shuffle(self.choices)
@@ -39,7 +41,7 @@ class TriviaQuestion:
         }
 
 
-def parse_raw(filename: str = "cogs/activity_event/raw_trivia.txt") -> List[TriviaQuestion]:
+def parse_raw(filename: str = "cogs/summer_event/raw_trivia.txt") -> List[TriviaQuestion]:
 
     with open(filename) as f:
         text = f.read().strip()
@@ -48,7 +50,7 @@ def parse_raw(filename: str = "cogs/activity_event/raw_trivia.txt") -> List[Triv
     blocks = text.split("\n\n")
     for block in blocks:
         lines = block.split("\n")
-        question = lines[0][3:]
+        question = lines[0]
         choices = lines[1:5]
         answer = choices[int(lines[5]) - 1]
         questions.append(TriviaQuestion(question, choices, answer))

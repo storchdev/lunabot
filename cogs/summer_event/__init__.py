@@ -42,7 +42,7 @@ class TeamStatsFlags(commands.FlagConverter):
 
 
 def is_break():
-    return localnow().weekday() in (5, 6)
+    return not TEST and localnow().weekday() in (5, 6)
 
 
 def is_on_break(ctx):
@@ -460,14 +460,14 @@ class ActivityEvent(commands.Cog):
         bot_msg = await layout.send(channel, repls=args, special=False)
         assert bot_msg is not None
 
-        for emoji in TRIVIA_EMOJIS:
+        for emoji in LIST_EMOJIS:
             await bot_msg.add_reaction(emoji)
 
         def check(r, u):
             return (
                 r.message == bot_msg
                 and u.id == player.member.id
-                and str(r.emoji) in TRIVIA_EMOJIS
+                and str(r.emoji) in LIST_EMOJIS
             )
 
         try:
@@ -479,7 +479,7 @@ class ActivityEvent(commands.Cog):
             await layout.send(bot_msg, reply=True)
             return
 
-        if question.choices[TRIVIA_EMOJIS.index(str(reaction.emoji))] == question.answer:
+        if question.choices[LIST_EMOJIS.index(str(reaction.emoji))] == question.answer:
             await player.increment_daily_task("trivia")
 
             repls = {"answer": question.answer, "user": player.nick, "points": -1}

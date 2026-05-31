@@ -40,7 +40,7 @@ class TeamStatsFlags(commands.FlagConverter):
 
 
 def is_break():
-    return localnow().weekday() in (5, 6)
+    return not TEST and localnow().weekday() in (5, 6)
 
 
 def is_on_break(ctx):

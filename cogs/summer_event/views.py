@@ -9,6 +9,7 @@ from num2words import num2words
 from cogs.utils import Layout, View
 
 from .constants import *
+from .emojis import LIST_EMOJIS, CLAIM_ALL_EMOJI, CLAIM_BONUS_EMOJI
 from .helpers import get_unique_day_string
 from .team import Team
 
@@ -31,11 +32,7 @@ class RedeemView(View):
 
         super().__init__(bot=ctx.bot, owner=ctx.author)
 
-        emojis = [
-            "<a:ML_red_flower:1308674651450511381>",
-            "<a:ML_green_flower:1308674666897997857>",
-            "<a:ML_white_flower:1308674682135773206>",
-        ]
+        emojis = LIST_EMOJIS[:3]
 
         for i, name in enumerate(choices):
             self.add_item(RedeemButton(self, powerups, name, emojis[i], i))
@@ -247,19 +244,19 @@ class DailyTasksView(View):
 
         dlines = []
         dlines.append(
-            f"> ⁺ <a:ML_red_flower:1308674651450511381>﹒{stylize('Welcome __5__ members﹒⁺', 'welc')}"
+            f"> ⁺ {LIST_EMOJIS[0]}﹒{stylize('Welcome __5__ members﹒⁺', 'welc')}"
         )
         dlines.append(progress_bar("welc"))
         dlines.append(
-            f"> ⁺ <a:ML_green_flower:1308674666897997857>﹒{stylize('Send __100__ messages', 'messages')}﹒⁺"
+            f"> ⁺ {LIST_EMOJIS[1]}﹒{stylize('Send __100__ messages', 'messages')}﹒⁺"
         )
         dlines.append(progress_bar("messages"))
         dlines.append(
-            f"> ⁺ <a:ML_white_flower:1308674682135773206>﹒{stylize('Gain __50__ points', 'points')}﹒⁺"
+            f"> ⁺ {LIST_EMOJIS[2]}﹒{stylize('Gain __50__ points', 'points')}﹒⁺"
         )
         dlines.append(progress_bar("points"))
         dlines.append(
-            f"> ⁺ <a:ML_gold_flower:1308674704072245318>﹒{stylize('Get __3__ trivia correct', 'trivia')}﹒⁺"
+            f"> ⁺ {LIST_EMOJIS[3]}﹒{stylize('Get __3__ trivia correct', 'trivia')}﹒⁺"
         )
         dlines.append(progress_bar("trivia", last=True))
         dlines.append(f"             ‧  ╴‧  ╴‧  ╴‧")
@@ -272,7 +269,7 @@ class DailyTasksView(View):
 
     @ui.button(
         label="⁺﹒Claim All﹗𖹭﹒⁺",
-        emoji="<a:ML_ornament:1303613720349642773>",
+        emoji=CLAIM_ALL_EMOJI,
         style=discord.ButtonStyle.green,
     )
     async def claim_all(self, interaction, button):
@@ -294,7 +291,7 @@ class DailyTasksView(View):
 
     @ui.button(
         label="⁺﹒Claim Bonus﹗𖹭﹒⁺",
-        emoji="<a:ML_ornament2:1311495049111932942>",
+        emoji=CLAIM_BONUS_EMOJI,
         style=discord.ButtonStyle.red,
     )
     async def claim_bonus(self, interaction, button):

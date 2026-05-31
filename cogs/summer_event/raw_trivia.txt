@@ -1,699 +1,629 @@
-1. Which astronomical event happens in December in the Northern Hemisphere?
-Winter Solstice
-Summer Solstice
-Autumn Equinox
-Spring Equinox
-1
-
-2. Which holiday often occurs in December and involves lighting candles for eight nights?
-Diwali
-Hanukkah
-Nowruz
-Eid al-Fitr
+What causes the Earth to experience the summer season?
+Its distance from the Sun
+The tilt of its axis
+The phase of the Moon
+The speed of its orbit
 2
 
-3. In Sweden, which December festival features girls wearing crowns of candles?
-Midsummer
-Walpurgis Night
-St. Lucia’s Day
-Harvestfest
+What is the primary chemical compound that makes the ocean salty?
+Calcium carbonate
+Sodium chloride
+Potassium nitrate
+Magnesium sulfate
+2
+
+Which type of ultraviolet radiation from the Sun is the primary cause of sunburns?
+UVA
+UVB
+UVC
+UVD
+2
+
+What percentage of the Earth's surface is covered by oceans?
+51%
+61%
+71%
+81%
 3
 
-4. What celebration beginning on December 26 honors African heritage and culture?
-Carnival
-Kwanzaa
-Boxing Day
-Day of the Dead
+What natural phenomenon is responsible for creating a sea breeze at the beach during a summer day?
+The ocean water warming faster than the land
+The land warming faster than the ocean water
+The Coriolis effect
+Underwater volcanic activity
 2
 
-5. In Japan, what end-of-year tradition focuses on deep house cleaning?
-Bon Odori
-Hinamatsuri
-Ōsōji
-Setsubun
-3
-
-6. What December holiday in Mexico reenacts Mary and Joseph’s search for shelter?
-Las Posadas
-La Tomatina
-Pachamama Raymi
-Inti Raymi
+What does SPF stand for in sunscreen?
+Sun Protection Factor
+Skin Protection Formula
+Solar Protection Filter
+Sunburn Prevention Factor
 1
 
-7. What is the name of the figure who brings gifts on December 6 in many European countries?
-St. Nicholas
-Belsnickel
-La Befana
-Sinterklaas
-1
-
-8. In the Southern Hemisphere, what season begins in December?
-Winter
-Spring
-Summer
-Autumn
+Which star is associated with the "Dog Days" of summer due to its rise alongside the sun in late July?
+Betelgeuse
+Polaris
+Sirius
+Vega
 3
 
-9. Which global organization adopted the Universal Declaration of Human Rights on December 10, 1948?
-NATO
-United Nations General Assembly
-World Health Organization
-European Union
+What is the name of the continuous, predictable, directional movement of seawater driven by gravity, wind, and water density?
+Tide
+Undertow
+Ocean current
+Rip current
+3
+
+Most of the sand on the world's beaches is composed primarily of which mineral?
+Feldspar
+Quartz (Silica)
+Gypsum
+Calcium carbonate
 2
 
-10. What plant, popular in December décor, is native to Mexico?
-Holly
-JELLYFISH
-STARFISH
-Amaryllis
+What biological process allows marine organisms like certain plankton and jellyfish to produce their own light?
+Photosynthesis
+Chemosynthesis
+Bioluminescence
+Fluorescence
+3
+
+Which is the largest and deepest of Earth's oceanic divisions?
+Atlantic Ocean
+Indian Ocean
+Arctic Ocean
+Pacific Ocean
+4
+
+What ocean ecosystem, often explored during summer vacations, is built by tiny polyps and is currently threatened by ocean acidification?
+Kelp forests
+Coral reefs
+Mangrove swamps
+Hydrothermal vents
 2
 
-11. Which gemstone is traditionally associated with December birthdays?
-Sapphire
-Turquoise
+What primarily drives the formation of summer hurricanes over the ocean?
+Cold ocean currents
+High atmospheric pressure
+Warm ocean water evaporating
+Lunar gravitational pull
+3
+
+Which physiological process cools the human body down on a hot summer day?
+Condensation
+Evaporation of sweat
+Sublimation
+Vasoconstriction
+2
+
+What causes the highest tides, known as spring tides, to occur?
+The Sun, Earth, and Moon align
+The Moon is at its furthest point from Earth
+Strong summer winds push water inland
+The Earth is closest to the Sun
+1
+
+Roughly how much of the oxygen in the Earth's atmosphere is produced by marine plants and phytoplankton in the ocean?
+10%
+25%
+50%
+90%
+3
+
+What meteorological index combines air temperature and relative humidity to describe how hot it feels to the human body?
+Wind chill factor
+Heat index
+Dew point
+Barometric pressure
+2
+
+What optical phenomenon sometimes occurs at the very moment the sun disappears below the ocean horizon?
+Aurora borealis
+Sundog
+Green flash
+Fata Morgana
+3
+
+If you are caught in a rip current at the beach, what is the scientifically recommended way to escape?
+Swim directly back to the shore
+Swim parallel to the shore
+Dive underwater and hold your breath
+Swim against the current
+2
+
+What is the term for the area where a freshwater river or stream meets the salty ocean?
+Estuary
+Fjord
+Delta
+Lagoon
+1
+
+What unique property of water prevents the oceans from boiling away under the summer sun?
+High specific heat capacity
+Low density
+High surface tension
+Low boiling point
+1
+
+What process occurs when ocean water becomes too warm and corals expel the symbiotic algae living in their tissues?
+Coral spawning
+Coral bleaching
+Ocean acidification
+Eutrophication
+2
+
+What is the deepest known point in the Earth's oceans?
+Puerto Rico Trench
+Tonga Trench
+Mariana Trench
+Java Trench
+3
+
+What type of marine animal, frequently seen on summer beaches, is composed of roughly 95% water and lacks a centralized brain?
+Starfish
+Crab
+Seahorse
+Jellyfish
+4
+
+Which phenomenon causes the continuous cycle of day-long sunlight in the Arctic Circle during the summer solstice?
+Midnight Sun
+Polar Eclipse
+Aurora Borealis
+Solar Minimum
+1
+
+What compound is primarily responsible for the decreasing pH of the ocean, a process known as ocean acidification?
+Carbon monoxide
+Carbon dioxide
+Methane
+Nitrous oxide
+2
+
+What enzyme is responsible for the glowing light of fireflies on a warm summer night?
+Amylase
+Luciferase
+Helicase
+Catalase
+2
+
+Which layer of the ocean receives enough sunlight to allow photosynthesis to occur?
+Abyssopelagic zone
+Bathypelagic zone
+Epipelagic zone
+Mesopelagic zone
+3
+
+How does the speed of sound in ocean water compare to its speed in the air?
+It travels slower in water
+It travels at the exact same speed
+It travels about four times faster in water
+It travels about ten times slower in water
+3
+
+What major global ocean current carries warm water from the Gulf of Mexico up the eastern coast of the United States?
+California Current
+Canary Current
+Agulhas Current
+Gulf Stream
+4
+
+During the Swedish celebration of Midsommar, what object do participants traditionally dance around?
+A bonfire
+A Maypole
+A statue of a saint
+A large stone
+2
+
+During the summer festival of Obon in Japan, what are traditionally lit to guide ancestral spirits?
+Fireworks
+Paper lanterns
+Candles on the water
+Sparklers
+2
+
+Which Spanish town hosts La Tomatina, a massive summer festival where participants throw tomatoes at each other?
+Madrid
+Barcelona
+Buñol
+Seville
+3
+
+Inti Raymi is a traditional summer solstice festival honoring the Sun God in which South American country?
+Brazil
+Argentina
+Chile
+Peru
+4
+
+The Dragon Boat Festival is a traditional summer holiday that originated in which country?
+Japan
+China
+Vietnam
+Thailand
+2
+
+Which country began the tradition of "Fête de la Musique" (Make Music Day), held annually on the summer solstice?
+Italy
+France
+Germany
+Spain
+2
+
+During Ivan Kupala Day, a Slavic summer solstice tradition, what do participants famously jump over?
+A river
+A bonfire
+A wooden fence
+A broomstick
+2
+
+Which ancient English monument is a famous gathering place for modern druids and pagans to celebrate the summer solstice?
+Stonehenge
+Hadrian's Wall
+Tower of London
+Windsor Castle
+1
+
+What traditional holiday marks the unofficial end of the summer season in the United States?
+Memorial Day
+Independence Day
+Labor Day
+Columbus Day
+3
+
+Crop Over is a traditional summer harvest festival that culminates in the Grand Kadooment parade in which Caribbean nation?
+Jamaica
+Bahamas
+Barbados
+Trinidad and Tobago
+3
+
+The White Nights Festival, celebrating the near-midnight sun of summer, takes place in which Russian city?
+Moscow
+St. Petersburg
+Vladivostok
+Novosibirsk
+2
+
+Which country holds a "Wife Carrying World Championship" every summer in the town of Sonkajärvi?
+Sweden
+Norway
+Finland
+Denmark
+3
+
+Bastille Day is a major summer celebration featuring parades and fireworks in which European country?
+Belgium
+France
+Switzerland
+Monaco
+2
+
+The Italian holiday of Ferragosto, celebrated on August 15th, traditionally marks a period when locals do what?
+Plant autumn crops
+Fast for a week
+Go on summer vacation
+Exchange gifts
+3
+
+Naadam is a traditional summer festival featuring the "three manly games" of wrestling, horse racing, and archery in which country?
+Mongolia
+Kazakhstan
+Uzbekistan
+Tibet
+1
+
+Which city hosts the Palio di Siena, a historic and passionate horse race held twice every summer?
+Rome
+Florence
+Venice
+Siena
+4
+
+In Japan, the Tanabata festival, celebrated in the summer, involves writing wishes on small pieces of paper and hanging them where?
+On bamboo branches
+On cherry blossom trees
+On temple gates
+On paper lanterns
+1
+
+Lughnasadh is a traditional Gaelic festival marking the beginning of the harvest season in late summer. Where did it originate?
+Scotland
+Wales
+Ireland
+Brittany
+3
+
+The Calgary Stampede, heavily promoted as "The Greatest Outdoor Show on Earth," is a massive summer rodeo in which country?
+United States
+Australia
+Canada
+Mexico
+3
+
+What is the main focus of the Boryeong Festival, a massive summer event held annually in South Korea?
+Kite flying
+Mud
+Ice sculptures
+Cherry blossoms
+2
+
+Gion Matsuri is an entire month of summer festivities, famous for its massive floats, held in which Japanese city?
+Tokyo
+Osaka
+Kyoto
+Sapporo
+3
+
+India celebrates its Independence Day with the widespread summer tradition of flying kites on which date?
+June 15
+July 4
+August 15
+September 1
+3
+
+Burning Man is a late-summer event focused on community, art, and self-reliance held in the desert of which US state?
+California
+Arizona
+Nevada
+New Mexico
+3
+
+During the summer celebration of St. John's Eve (San Juan) in Spain, what is typically done on the beaches?
+Building sandcastles
+Lighting bonfires
+Releasing turtles
+Planting palm trees
+2
+
+What is the traditional centerpiece food of a classic American summer backyard holiday gathering?
+Roast turkey
+Barbecue
+Sushi
+Fondue
+2
+
+Schützenfest is a traditional summer marksmen's festival that includes parades and target shooting, originating in which country?
+Germany
+France
+England
+Italy
+1
+
+The Notting Hill Carnival is a massive summer street festival celebrating Caribbean culture in which major city?
+New York City
+Toronto
+London
+Paris
+3
+
+During midsummer in Finland, it is a common tradition to spend time relaxing inside what type of structure?
+An igloo
+A sauna
+A treehouse
+A windmill
+2
+
+The Edinburgh Festival Fringe, the world's largest arts festival, takes place every summer in which country?
+Ireland
+England
+Scotland
+Wales
+3
+
+In modern Hawaii, what traditional summer feast involves roasting a pig in an underground oven?
+Luau
+Hangi
+Pachamanca
+Clambake
+1
+
+Who invented the Popsicle in 1905?
+An 11-year-old boy
+A professional chef
+A chemist
+A doctor
+1
+
+Due to thermal expansion, approximately how much taller can the Eiffel Tower get during the summer?
+1 inch
+6 inches
+12 inches
+2 feet
+2
+
+What percentage of a watermelon is made up of water?
+75%
+82%
+92%
+98%
+3
+
+Which 1975 film is widely considered to be the first summer blockbuster?
+Star Wars
+E.T. the Extra-Terrestrial
+Jaws
+Jurassic Park
+3
+
+The original Frisbees, thrown by college students in the 1920s, were originally what?
+Hubcaps
+Vinyl records
+Pie tins
+Wooden plates
+3
+
+The month of July was named in honor of which historical figure?
+Julius Caesar
+Pope Julius II
+Julian the Apostate
+Jules Verne
+1
+
+When it comes to mosquitoes, which are notoriously active in the summer, which statement is true?
+Only males bite
+Only females bite
+Both bite equally
+Neither bite, they only sting
+2
+
+According to the National Hot Dog and Sausage Council, how many hot dogs do Americans consume on the 4th of July?
+50 million
+100 million
+150 million
+200 million
+3
+
+In what year were the first modern Summer Olympic Games held?
+1888
+1896
+1904
+1912
+2
+
+In 12th-century China, what were the first sunglasses originally made from to help judges hide their facial expressions in court?
+Tinted glass
+Smoky quartz
+Polished obsidian
+Dyed animal hide
+2
+
+The modern flip-flop was inspired by the traditional "zori" footwear from which country?
+China
+Japan
+Vietnam
+Thailand
+2
+
+Despite their name, fireflies, which are commonly seen lighting up summer nights, are actually a type of what?
+Beetle
+Fly
+Moth
+Wasp
+1
+
+In 1884, the first roller coaster in America opened at which famous location?
+Disneyland
+Cedar Point
+Coney Island
+Six Flags
+3
+
+What is the scientific term for the way sunflowers turn their heads to track the sun across the sky?
+Phototropism
+Heliotropism
+Geotropism
+Thermotropism
+2
+
+In the United States, which month is officially designated as National Ice Cream Month?
+June
+July
+August
+September
+2
+
+Which insect is famous for its exceptionally loud, buzzing mating call during the hottest days of summer?
+Cricket
+Katydid
+Locust
+Cicada
+4
+
+Botanically speaking, watermelons belong to the same family as which of the following?
+Apples
+Cucumbers
+Tomatoes
+Potatoes
+2
+
+Which U.S. National Park consistently receives the most visitors during the summer months?
+Yellowstone
+Grand Canyon
+Yosemite
+Great Smoky Mountains
+4
+
+The "bikini" swimsuit was named after Bikini Atoll, which was famous in the 1940s for what?
+A famous surfing competition
+A nuclear weapons testing site
+A royal wedding
+A major shipwreck
+2
+
+In Hawaii, what is the traditional and local name for what mainlanders call a "Hawaiian shirt"?
+Luau shirt
+Aloha shirt
+Oahu shirt
+Island shirt
+2
+
+What is the primary alcoholic spirit used to make a classic summer Mojito?
+Vodka
+Tequila
+Gin
+Rum
+4
+
+The hit song "Summer of '69" was released by which rock artist?
+Bruce Springsteen
+Tom Petty
+Bryan Adams
+Jon Bon Jovi
+3
+
+Historically, why was the summer school vacation originally implemented in the United States?
+So children could work on farms
+To save money on heating the schools
+To let wealthy families escape the city heat
+To align with the agricultural harvest
+3
+
+According to Guinness World Records, in 2021, the world's tallest sandcastle was built in which country?
+United States
+Australia
+Denmark
+Brazil
+3
+
+Which of these gemstones is the traditional birthstone for the summer month of August?
 Ruby
+Peridot
+Sapphire
 Opal
 2
 
-12. Which flower is traditionally linked to December?
-Lily
-Chrysanthemum
-Narcissus
-Orchid
+What is consistently ranked as the most popular ice cream flavor in the United States?
+Chocolate
+Strawberry
+Vanilla
+Mint Chocolate Chip
 3
 
-13. Which meteor shower peaks in mid-December?
-Geminids
-Perseids
-Leonids
-Quadrantids
+What popular summer fruit is the only fruit to bear its seeds on the outside?
+Apple
+Strawberry
+Kiwi
+Pomegranate
+2
+
+What classic summer campfire treat gets its name from a contraction of the phrase "some more"?
+S'more
+Hot dog
+Marshmallow
+Popsicle
 1
 
-14. Which ancient Roman festival occurred in December and involved gift-giving and feasting?
-Lupercalia
-Saturnalia
-Vulcanalia
-Floralia
-2
-
-15. Which Christian holiday on December 25 celebrates the birth of Jesus?
-Easter
-Pentecost
-Christmas
-Epiphany
-3
-
-16. What is the name of the figure in Italian folklore who brings gifts on Epiphany in early January?
-La Llorona
-La Befana
-Krampus
-Mari Lwyd
-2
-
-17. Which Buddhist country celebrates Bodhi Day in December, marking the Buddha’s enlightenment?
-Thailand
-Sri Lanka
-Japan
-Cambodia
-3
-
-18. Which December celebration in Finland is known for festive saunas?
-Juhannus
-Pikkujoulu
-Vappu
-Runeberg Day
-2
-
-19. What December 31 event marks the transition to a new year worldwide?
-Winter Solstice
-New Year’s Eve
-Equinox Festival
-Global Day of Peace
-2
-
-20. Which country celebrates Hogmanay on December 31?
-Ireland
-Wales
-Scotland
-Iceland
-3
-
-21. Which constellation is most visible in the night sky during December?
-Orion
-Draco
-Crux
-Ursa Minor
-1
-
-22. What is the name of the famous German December markets known for crafts and food?
-Souks
-Bazaars
-Weihnachtsmärkte
-Tianguis
-3
-
-23. Which animal is strongly associated with December in Chinese astrology and New Year decorations?
-Dragon
-Goat
-Ox
-Tiger
-1
-
-24. The December holiday Yule originates from which culture?
-Greek
-Norse
-Persian
-Mayan
-2
-
-25. Which country celebrates the December festival of Saint Lucia with candle-lit processions?
-Brazil
-Sweden
-Kenya
-France
-2
-
-26. December marks the start of monsoon season in which part of the world?
-Central Europe
-Southeast Asia
-Arctic Circle
-South America’s Andes
-2
-
-27. What December holiday celebrates the first day of the Islamic month of fasting some years?
-Eid al-Adha
-Ashura
-Ramadan Start
-It varies; Islamic dates shift each year
-4
-
-28. Which South American civilization celebrated Inti Raymi, sometimes associated with solstice cycles?
-Aztec
-Maya
-Inca
-Olmec
-3
-
-29. Who is the legendary Christmas figure in Iceland who is accompanied by the Yule Cat?
-Grýla
-Freyja
-Loki
-Tyr
-1
-
-30. What berry-producing plant is traditionally hung in doorways during December?
-Lavender
-Mint
-STARFISH
-Sage
-3
-
-31. In which country is December 16 celebrated as the Day of Reconciliation?
-Mexico
-South Africa
-Canada
-India
-2
-
-32. “Panettone,” eaten in December, originates from which country?
-Spain
-Italy
-Portugal
-Brazil
-2
-
-33. December 8 is celebrated as the Immaculate Conception in which religion?
-Islam
-Hinduism
-Christianity
-Judaism
-3
-
-34. In which country would you find the December tradition of “Night of the Radishes”?
-Peru
-Mexico
-Bolivia
-Spain
-2
-
-35. Which December Buddhist festival lights lanterns to honor ancestors in some East Asian cultures?
-Vesak
-Obon
-Rohatsu
-Dharma Day
-3
-
-36. Which country celebrates December 5 as the arrival of Sinterklaas?
-Netherlands
-Germany
-Finland
-Poland
-1
-
-37. What is the traditional December drink “wassail”?
-A type of spiced cider
-Hot chocolate
-Fermented grape leaves
-A rice pudding
-1
-
-38. What ancient monument aligns with the sunrise during the winter solstice?
-Stonehenge
-Colosseum
-Chichén Itzá
-Machu Picchu
-1
-
-39. Which explorer reached the South Pole in December 1911?
-Robert Falcon Scott
-Roald Amundsen
-Ernest Shackleton
-James Cook
-2
-
-40. Which poet wrote “Stopping by Woods on a Snowy Evening,” often associated with winter?
-Emily Dickinson
-Robert Frost
-Langston Hughes
-Pablo Neruda
-2
-
-41. December 26 in many countries is also known as what?
-Harvest Day
-Boxing Day
-Winter Day
-Workers’ Day
-2
-
-42. Which region of the world celebrates “Omisoka” on December 31?
-Scandinavia
-Japan
-India
-Australia
-2
-
-What is traditionally lit each of the four Sundays before Christmas in many Christian churches?
-A bonfire
-A Yule log
-An Advent candle
-A ceremonial lantern
-3
-
-44. In which country does the December tradition of “Mari Lwyd” occur?
-Ireland
-Iceland
-Wales
-Austria
-3
-
-45. What December celebration marks the victory of the Maccabees?
-Passover
-Purim
-Hanukkah
-Rosh Hashanah
-3
-
-46. What type of tree is traditionally decorated for Christmas?
-Pine or Fir
-Maple
-Olive
-Cypress
-1
-
-47. Which December festival in India celebrates the Sun God Surya?
-Chhath Puja
-Pongal
-Lohri
-Onam
-1
-
-48. In which country do children place shoes outside on December 6 for St. Nicholas?
-Belgium
-Argentina
-Egypt
-Thailand
-1
-
-49. December 10 is celebrated as Human Rights Day by which global organization?
-UN
-EU
-AU
-ASEAN
-1
-
-50. Which holiday plant is known as “Christmas rose”?
-Cyclamen
-Hellebore
-Poppy
-Bluebell
-2
-
-51. In which country is December 23 known for the “Adam and Eve Day” apple markets?
-Germany
-Japan
-Argentina
-Morocco
-1
-
-52. Which mythical creature is known for punishing naughty children in early December?
-Tooth Fairy
-Krampus
-Phoenix
-Golem
-2
-
-53. Which composer wrote “The Nutcracker,” often performed in December?
-Bach
-Tchaikovsky
-Mozart
-Debussy
-2
-
-54. Which December zodiac signs correspond to those born during the month?
-Scorpio & Libra
-Sagittarius & Capricorn
-Gemini & Leo
-Capricorn & Aquarius
-2
-
-55. Which city hosts the giant illuminated tree in Rockefeller Center each December?
-London
-New York City
-Toronto
-Paris
-2
-
-56. Which December celebration is known for the phrase “Auld Lang Syne”?
-Bastille Day
-Halloween
-New Year’s Eve
-Labor Day
-3
-
-57. What ancient civilization celebrated “Modranicht,” a December festival honoring mother goddesses?
-Aztec
-Anglo-Saxon
-Chinese
-Egyptian
-2
-
-58. In which country do people celebrate “Day of the Three Kings” on January 6, following December traditions?
-Philippines
-Spain
-Greece
-Kenya
-2
-
-59. Which fruitcake-like bread is a December tradition in Germany?
-Stollen
-Babka
-Pan dulce
-Taro bread
-1
-
-60. In what region is December considered the start of hurricane-free season?
-Caribbean
-Mediterranean
-North Sea
-Pacific Northwest
-1
-
-61. What December holiday marks the end of the Celtic year?
-Beltane
-Imbolc
-Yule
-Samhain (though in November, connected to the season)
-3
-
-62. In which country is the December tradition of “KFC Christmas dinner” popular?
-China
-Japan
-South Korea
-Philippines
-2
-
-63. What December celebration in Ethiopia is known as “Gena”?
-New Year
-Christmas
-Harvest
-Rain Festival
-2
-
-64. In which African country is December 25 also “Family Day”?
-South Africa
-Nigeria
-Kenya
-Ghana
-1
-
-65. December marks the beginning of the summer holiday season in what part of the world?
-Southern Hemisphere
-Northern Hemisphere
-Central Asia
-Middle East
-1
-
-66. Which December holiday is associated with the story of the Nativity?
-Easter
-Christmas
-Pentecost
-Diwali
-2
-
-67. What December activity is traditional in many Nordic countries?
-Sauna gatherings
-Kite flying
-Camel racing
-Cherry blossom viewing
-1
-
-68. Which South American country celebrates the December festival “Año Viejo” by burning effigies?
-Chile
-Ecuador
-Brazil
-Colombia
-2
-
-69. Which December celebration focuses on gratitude, unity, and African roots?
-Kwanzaa
-Ramadan
-Holi
-Diwali
-1
-
-70. Which famous fictional character is associated with December and lives at the North Pole?
-Hercules
-Santa Claus
-Sherlock Holmes
-Robin Hood
-2
-
-71. The December solstice marks the start of what season in the Northern Hemisphere?
-Autumn
-Winter
-Spring
-Summer
-2
-
-72. December 7 is observed as Pearl Harbor Remembrance Day in which country?
-USA
-Japan
-France
-Australia
-1
-
-73. Which December tradition includes lighting a log in the fireplace?
-Yule log
-Harvest log
-Spring log
-Fire festival
-1
-
-74. “Julbord” is a December feast in which country?
-Norway
-Sweden
-Denmark
-Iceland
-2
-
-75. Which December holiday features the lighting of an Advent wreath?
-Hanukkah
-Easter
-Christmas season
-Vaisakhi
-3
-
-76. The December Treaty of Lisbon (2009) reformed the governance of which organization?
-African Union
-European Union
-UNESCO
-Arab League
-2
-
-77. Which musical piece, often performed in December, includes the “Hallelujah” chorus?
-Carmina Burana
-The Messiah
-The Four Seasons
-Requiem
-2
-
-78. Which country celebrates December 12 as the Feast of Our Lady of Guadalupe?
-Spain
-Philippines
-Mexico
-Chile
-3
-
-79. What traditional winter sport is often associated with December in cold climates?
+The famous phrase "The Boys of Summer" is most commonly used to refer to players of which sport?
+Soccer
+Tennis
+Baseball
 Surfing
-Ice skating
-Volleyball
-Sailing
-2
-
-80. Which December festival celebrated in India honors the bond between siblings?
-Raksha Bandhan
-Bhai Dooj
-Deepam
-Magh Bihu
-2
-
-81. On December 16, which country celebrates “Victory Day” marking independence events?
-Pakistan
-Bangladesh
-Nepal
-Sri Lanka
-2
-
-82. “Jolabokaflod,” the December tradition of giving books, occurs in which country?
-Iceland
-Spain
-Egypt
-Canada
-1
-
-83. December is the month when which migratory birds arrive in large numbers in some African wetlands?
-Flamingos
-Eagles
-Penguins
-Owls
-1
-
-84. December 6 is celebrated as Constitution Day in which European country?
-Austria
-Finland
-Greece
-Belgium
-2
-
-85. Which December fruit is often associated with winter due to its cold-season ripening?
-Orange
-Banana
-Mango
-Fig
-1
-
-86. The December solstice occurs when the Earth's tilt is pointed in what orientation?
-Toward the Sun
-Away from the Sun (Northern Hemisphere winter)
-Neither
-Directly sideways
-2
-
-87. What December day in Japan is devoted to paying off debts and settling obligations?
-Ōmisoka
-Tanabata
-Golden Week
-White Day
-1
-
-88. Which holiday movie classic begins with a character attempting to take his life on Christmas Eve?
-Elf
-Home Alone
-It’s a Wonderful Life
-The Grinch
 3
 
-89. In which country is December 26 known as “St. Stephen’s Day”?
-Russia
-Ireland
-Turkey
-China
-1
-
-90. What December plant symbolizes peace and purity and is often used in holiday displays?
-Rose
-Lily
-Pine
-Olive branch
-4
-
-91. What is the celebration of the winter solstice called in Iran?
-Yalda Night
-Nowruz
-Mehregan
-Tirgan
-1
-
-92. Which December tradition involves singing door-to-door?
-Caroling
-Drumming
-Chant cycling
-Bell ringing
-1
-
-93. Which indigenous group celebrates December’s “Kakuna” sun ceremony?
-Sami
-Maasai
-Aboriginal Australians
-Inuit
-1
-
-94. Which December-born scientist proposed the theory of radioactivity?
-Marie Curie
-Albert Einstein
-Isaac Newton
-Niels Bohr
-1
-
-95. Which December holiday marks the end of the calendar year?
-Arbor Day
-New Year's Eve
-World Health Day
-May Day
-2
-
-96. Which constellation contains the bright December star Betelgeuse?
-Orion
-Cygnus
-Lyra
-Aquila
-1
-
-97. What is the name of the December festival in Nepal honoring the cow?
-Tihar
-Holi
-Lhosar
-Gai Jatra
-4
-
-98. Which December beverage is made with milk, eggs, and spices?
-Eggnog
-Lassi
-Bubble tea
-Matcha
-1
-
-99. Which December celebration in the Philippines is known for giant lanterns?
-Sinulog
-MassKara
-Giant Lantern Festival
-Ati-Atihan
-3
-
-100. Which December tradition marks the lighting of a large menorah in many cities worldwide?
-Diwali
-Hanukkah
-Eid
-Vesak
+Which U.S. state produces the most watermelons for the summer season?
+Texas
+Florida
+California
+Georgia
 2
