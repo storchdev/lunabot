@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 
 LOAD = True
-TEST = True
+TEST = False
 
 if TEST:
     TEST_CHANNEL_ID = 900493541959139329

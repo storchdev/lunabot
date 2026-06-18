@@ -260,12 +260,12 @@ class Tools(commands.Cog, description="storchs tools"):
 
         await ctx.invoke(self.bot.get_command("jsk reload"), cog_names)
 
-    # @commands.command()
-    # async def rm(self, ctx, *modules):
-    #     info = []
-    #     for mname in modules:
-    #         await self.reload_module(mname, info)
-    #     await ctx.send('\n'.join(info))
+    @commands.command()
+    async def rm(self, ctx, *modules):
+        info = []
+        for mname in modules:
+            await self.reload_module(mname, info)
+        await ctx.send('\n'.join(info))
 
     @commands.command()
     async def grabembed(self, ctx, url):

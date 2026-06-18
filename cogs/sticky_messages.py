@@ -84,7 +84,6 @@ class StickyMessages(commands.Cog):
         await view.wait()
         if view.cancelled:
             return
-
         query = """INSERT INTO
                        sticky_messages (channel_id, layout)
                    VALUES
@@ -94,7 +93,7 @@ class StickyMessages(commands.Cog):
         sm = StickyMessage(self.bot, channel, view.layout, None)
         self.sticky_messages[channel.id] = sm
 
-        await ctx.send("Successfully added the sticky message.")
+        await view.final_interaction.response.edit_message(content="Successfully added the sticky message.", view=None, embed=None)
 
     @commands.command()
     async def removesm(self, ctx, *, channel: discord.TextChannel):

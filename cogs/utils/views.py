@@ -395,17 +395,17 @@ class BaseModal(discord.ui.Modal):
     def get_embeds(self):
         raise NotImplementedError
 
-    async def on_error(
-        self, interaction: discord.Interaction, error: Exception, /
-    ) -> None:
-        if isinstance(error, InvalidModalField):
-            # self.parent_view.update_buttons()
-            await interaction.response.edit_message(
-                embed=self.parent_view.embed, view=self.parent_view
-            )
-            await interaction.followup.send(str(error), ephemeral=True)
-            return
-        await super().on_error(interaction, error)
+    # async def on_error(
+    #     self, interaction: discord.Interaction, error: Exception, /
+    # ) -> None:
+    #     if isinstance(error, InvalidModalField):
+    #         # self.parent_view.update_buttons()
+    #         await interaction.response.edit_message(
+    #             embed=self.parent_view.embed, view=self.parent_view
+    #         )
+    #         await interaction.followup.send(str(error), ephemeral=True)
+    #         return
+    #     await super().on_error(interaction, error)
 
     async def on_submit(self, interaction: discord.Interaction, /) -> None:
         self.update_parent()
@@ -431,7 +431,7 @@ class LayoutChooserOrEditor(View):
 
     @discord.ui.button(label="Choose layout", style=discord.ButtonStyle.blurple, row=0)
     async def set_layout(self, interaction, button):
-        modal = ChooseLayoutModal(self, self.layout)
+        modal = ChooseLayoutModal(self)
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Create layout", style=discord.ButtonStyle.blurple, row=1)
@@ -461,8 +461,8 @@ class CreateLayoutModal(BaseModal, title="Enter Message Fields"):
     )
 
     def __init__(self, parent_view: LayoutChooserOrEditor):
-        super().__init__()
-        self.parent_view = parent_view
+        super().__init__(parent_view=parent_view)
+        # self.parent_view = parent_view
 
     def update_defaults(self):
         self.content.default = self.parent_view.layout.content
@@ -478,11 +478,18 @@ class CreateLayoutModal(BaseModal, title="Enter Message Fields"):
                 if name not in self.parent_view.bot.embeds:
                     raise InvalidModalField(f"Embed {name} does not exist!")
                 names.append(name)
-        self.parent_view.update_submit()
         self.parent_view.layout.content = self.content.value
         self.parent_view.layout.embed_names = names
-        self.parent_view.stop()
+        self.parent_view.update_submit()
 
+    def get_content(self):
+        return self.parent_view.layout.content
+
+    def get_embeds(self):
+        return [self.parent_view.bot.get_embed(n) for n in self.parent_view.layout.embed_names]
+
+    async def on_error(self, inter, error):
+        await inter.response.send_message(f"Something went wrong: `{error}`", ephemeral=True)
 
 class ChooseLayoutModal(BaseModal, title="Enter Layout"):
     layout_name = discord.ui.TextInput(label="Layout name", required=True)
@@ -496,10 +503,17 @@ class ChooseLayoutModal(BaseModal, title="Enter Layout"):
         if name not in self.parent_view.bot.layouts:
             raise InvalidModalField(f"Layout {name} does not exist!")
 
-        self.parent_view.update_submit()
         self.parent_view.layout = self.parent_view.bot.layouts[name]
-        self.parent_view.stop()
+        self.parent_view.update_submit()
 
+    async def on_error(self, inter, error):
+        await inter.response.send_message(f"Something went wrong: `{error}`", ephemeral=True)
+
+    def get_content(self):
+        return self.parent_view.layout.content
+
+    def get_embeds(self):
+        return [self.parent_view.bot.get_embed(n) for n in self.parent_view.layout.embed_names]
 
 class ChannelSelectView(View):
     def __init__(self, *, timeout=300):

@@ -207,15 +207,25 @@ class ActivityEvent(commands.Cog):
             for member_id in member_ids:
                 await self.bot.db.execute(query, member_id, team)
     
-    async def save_tables(self, prefix: str):
-        ch = self.bot.get_var_channel("private")
-        for tbl in ["num_redeems", "saved_powerups", "event_stats", "event_log", "powerups", "event_dailies"]:
-            query = "ALTER TABLE $1 RENAME TO $2"
-            try:
-                await self.bot.db.execute(query, tbl, prefix + tbl)
-                await ch.send(f"renamed {tbl} to {prefix+tbl}")  
-            except Exception as e:
-                await ch.send(f"{e}")
+    async def drop_tables(self):
+        query = """DROP TABLE num_redeems;
+                   DROP TABLE saved_powerups;
+                   DROP TABLE event_stats;
+                   DROP TABLE event_log;
+                   DROP TABLE powerups;
+                   DROP TABLE event_dailies;
+                """
+        await self.bot.db.execute(query)
+
+    # async def save_tables(self, prefix: str):
+    #     ch = self.bot.get_var_channel("private")
+    #     for tbl in ["num_redeems", "saved_powerups", "event_stats", "event_log", "powerups", "event_dailies"]:
+    #         query = "ALTER TABLE $1 RENAME TO $2"
+    #         try:
+    #             await self.bot.db.execute(query, tbl, prefix + tbl)
+    #             await ch.send(f"renamed {tbl} to {prefix+tbl}")  
+    #         except Exception as e:
+    #             await ch.send(f"{e}")
 
     async def cog_load(self):
         self.guild = self.bot.get_guild(self.bot.GUILD_ID)
