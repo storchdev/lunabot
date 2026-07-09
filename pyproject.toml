@@ -20,6 +20,7 @@ dependencies = [
     "prettytable>=3.16.0",
     "pytz>=2025.2",
     "rapidfuzz>=3.14.1",
+    "topggpy",
 ]
 
 [tool.uv.sources]
