@@ -139,10 +139,10 @@ class LunaBot(commands.Bot):
         if log_flags is not None:
             self.log_flags = json.loads(log_flags)
 
-        if discord.utils.utcnow() < START_TIME:
-            self.loop.create_task(self.load_summer_event())
-        else:
-            await self.load_extension("cogs.summer_event")
+        # if discord.utils.utcnow() < START_TIME:
+        #     self.loop.create_task(self.load_summer_event())
+        # else:
+        #     await self.load_extension("cogs.summer_event")
 
         logging.info("LunaBot is ready")
 

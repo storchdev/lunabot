@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from ..utils import LayoutContext
-from ..utils.checks import staff_only
+from ..utils.checks import is_booster, staff_only
 from . import items  # for automatically finding Item classes
 from .inv import InvMainPages, InvMainPageSource
 from .items import ItemCategory, ItemReq
@@ -457,6 +457,42 @@ class Economy(commands.Cog):
         bal = await self.get_balance(member.id)
         layout = self.bot.get_layout("bal")
         await layout.send(ctx, LayoutContext(author=member), repls={"balance": bal})
+
+    @commands.hybrid_command()
+    async def flowerpick(self, ctx):
+        """Pick flowers for a chance at some Lunara."""
+        end_time = await self.bot.get_cooldown_end("flowerpick", 21600, obj=ctx.author)
+        if end_time:
+            layout = self.bot.get_layout("econ/flowers/cd")
+            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            return
+
+        if random.random() < 0.5:
+            amount = random.randint(3000, 5000)
+            await self.add_balance(ctx.author.id, amount)
+            layout = self.bot.get_layout("econ/flowers/good")
+            await layout.send(ctx, repls={"3k-to-5k": amount})
+        else:
+            amount = random.randint(1000, 2000)
+            await self.add_balance(ctx.author.id, -amount)
+            layout = self.bot.get_layout("econ/flowers/bad")
+            await layout.send(ctx, repls={"1k-to-2k": amount})
+
+    @commands.hybrid_command()
+    async def stargaze(self, ctx):
+        """Stargaze for a chance to wish upon a shooting star."""
+        duration = 7 * 86400 if is_booster(ctx.author, self.bot) else 30 * 86400
+
+        end_time = await self.bot.get_cooldown_end("stargaze", duration, obj=ctx.author)
+        if end_time:
+            layout = self.bot.get_layout("econ/stargaze/cd")
+            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            return
+
+        amount = random.randint(20000, 25000)
+        await self.add_balance(ctx.author.id, amount)
+        layout = self.bot.get_layout("econ/stargaze")
+        await layout.send(ctx, repls={"20k-to-25k": amount})
 
     @commands.hybrid_command()
     @app_commands.describe(item="The item you want to view")

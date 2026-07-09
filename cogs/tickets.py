@@ -59,10 +59,11 @@ async def create_ticket(
         await ticket.thread.add_user(creator)
         bot.log(f"added {creator} ({creator.id}) to Ticket {ticket_id}", "ticket")
     except Exception as e:
-        await ticket.thread.send(
-            f"I failed to add {creator.mention} to this ticket normally. "
-            "Maybe pinging fixed it, or Storch will need to investigate."
-        )
+        # ticket opened in another server, shouldn't happen
+        # await ticket.thread.send(
+        #     f"I failed to add {creator.mention} to this ticket normally. "
+        #     "Maybe pinging fixed it, or Storch will need to investigate."
+        # )
         logging.error(
             f"failed to add {creator} ({creator.id}) to Ticket {ticket_id}. Error: {e}"
         )
@@ -176,6 +177,10 @@ class TicketTypeMenu(View):
 
     @ui.select(placeholder="What is this ticket for?")
     async def ticket_type(self, interaction, select):
+        if select.values[0] == "Trusted Seller" and all(r.id != self.bot.vars.get("vip-artist-role-id") for r in self.owner.roles):
+            await interaction.response.edit_message(content="Only VIP Artists can open these tickets!", view=None)
+            return
+
         await interaction.response.edit_message(
             content="Please wait a moment...", view=None
         )

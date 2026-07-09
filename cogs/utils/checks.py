@@ -27,6 +27,11 @@ def is_staff_msg(bot, msg: discord.Message):
     return staff_role in msg.author.roles or msg.author.id == luna_id
 
 
+def is_booster(member: discord.Member, bot) -> bool:
+    booster_role = member.guild.get_role(bot.vars.get("booster-role-id"))
+    return booster_role in member.roles
+
+
 def is_admin(ctx):
     return (
         ctx.author.guild_permissions.administrator or ctx.author.id in ctx.bot.owner_ids

@@ -97,43 +97,49 @@ class Embeds(commands.Cog, description="Create, save, and edit your own embeds."
         await ctx.send(f"Added your embed {name}!")
 
     @embed.command()
-    async def fromluna(self, ctx, name, msg_link):
+    async def fromluna(self, ctx, name, *, text):
         name = name.lower()
         if name in self.bot.embeds:
             await ctx.send("There is already an embed with that name!", ephemeral=True)
 
-        try:
-            msg = await self.bot.fetch_message_from_url(msg_link)
-        except InvalidURL:
-            return await ctx.send("Bad message URL.")
+        # try:
+        #     conv = commands.MessageConverter()
+        #     msg = await conv.convert(ctx, msg_link)
+        # except commands.MessageNotFound:
+        #     return await ctx.send("Bad message URL.")
 
         # AI GENERATED!
 
-        pattern = re.compile(
-            r"^(?P<title>.+?)\n+"  # title
-            r"(?P<description>.*?)"  # description (anything until final divider-block)
+        # pattern = re.compile(
+            # r"^(?P<title>.+?)\n+"  # title
+            # r"(?P<description>.*?)",  # description (anything until final divider-block)
             # r"(?P<divider>(^\s*(?:\u2027[\s\u2027\u2574]*)+\u2574.*\n+)+)"  # final divider-block
-            r"\n{2,}"  # required blank lines
-            r"(?:(?P<image>https?://\S+)\n+)?"  # optional image link
-            r"(?P<footer>.*)?$",  # optional footer
-            re.MULTILINE | re.DOTALL,
-        )
+            # r"\n{2,}"  # required blank lines
+            # r"(?:(?P<image>https?://\S+)\n+)?"  # optional image link
+            # r"(?P<footer>.*)?$",  # optional footer
+            # re.MULTILINE | re.DOTALL,
+        # )
 
-        m = pattern.search(msg.content)
-        if not m:
-            return await ctx.send("Hmm... regex didn't match.")
+        # m = pattern.search(text.strip())
+        # if not m:
+        #     return await ctx.send("Hmm... regex didn't match.")
 
-        embed = discord.Embed(
-            title=m["title"],
-            color=self.bot.DEFAULT_EMBED_COLOR,
-            description=m["description"],
-        )
+        # embed = discord.Embed(
+        #     title=m["title"],
+        #     color=self.bot.DEFAULT_EMBED_COLOR,
+        #     description=m["description"],
+        # )
 
-        if m["image"]:
-            embed.set_image(url=m["image"])
+        # if m["image"]:
+        #     embed.set_image(url=m["image"])
 
-        if m["footer"]:
-            embed.set_footer(text=m["footer"])
+        # if m["footer"]:
+        #     embed.set_footer(text=m["footer"])
+
+        # Title/desc only:
+        text = text.strip()
+        title, rest = text.split("\n", 1)
+        embed = discord.Embed(title=title, description=rest, color=self.bot.DEFAULT_EMBED_COLOR)
 
         v = ConfirmView(ctx)
         await ctx.send("Does this look right?", embed=embed, view=v)

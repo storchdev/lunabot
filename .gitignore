@@ -12,3 +12,4 @@ start.sh
 guild_data.json
 *.log
 .ruff_cache/
+CLAUDE.md

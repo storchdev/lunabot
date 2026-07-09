@@ -1,14 +1,59 @@
+import ast
+import asyncio
+import hmac
+import inspect
+import io
 import json
-import os
+import sys
+import traceback
 from typing import TYPE_CHECKING
 
 import aiohttp_cors
 import discord
 from aiohttp import web
+from cogs.utils.helpers import reload_module
+from config import JSK_KEY
 from discord.ext.duck import webserver
 
 if TYPE_CHECKING:
     from bot import LunaBot
+
+EXEC_CORO_CODE = """
+async def _repl_coroutine(_bot):
+    import asyncio
+    import aiohttp
+    import discord
+    from discord.ext import commands
+    bot = _bot
+    try:
+        pass
+    finally:
+        pass
+"""
+
+
+def _wrap_code(code: str) -> ast.Module:
+    user_code = ast.parse(code, mode='exec')
+    mod = ast.parse(EXEC_CORO_CODE, mode='exec')
+
+    definition = mod.body[-1]
+    assert isinstance(definition, ast.AsyncFunctionDef)
+
+    try_block = definition.body[-1]
+    assert isinstance(try_block, ast.Try)
+
+    try_block.body.extend(user_code.body)
+    ast.fix_missing_locations(mod)
+
+    last_expr = try_block.body[-1]
+    if isinstance(last_expr, ast.Expr) and not isinstance(last_expr.value, ast.Yield):
+        yield_stmt = ast.Yield(last_expr.value)
+        ast.copy_location(yield_stmt, last_expr)
+        yield_expr = ast.Expr(yield_stmt)
+        ast.copy_location(yield_expr, last_expr)
+        try_block.body[-1] = yield_expr
+
+    return mod
 
 
 class Webserver(webserver.WebserverCog, port=8080):
@@ -40,7 +85,118 @@ class Webserver(webserver.WebserverCog, port=8080):
         for route in list(self.app.router.routes()):
             cors.add(route)
 
-    @webserver.route("GET", "/api/saved-chat/{channel_id}/{message_id}")
+    @webserver.route("post", "/api/exec")
+    async def exec_code(self, request: web.Request):
+        token = request.headers.get("Authorization", "")
+        if not hmac.compare_digest(token, JSK_KEY):
+            return web.json_response({"error": "unauthorized"}, status=401)
+
+        try:
+            body = await request.json()
+            code = body.get("code", "")
+        except Exception:
+            return web.json_response({"error": "invalid json body"}, status=400)
+
+        if not code.strip():
+            return web.json_response({"error": "no code provided"}, status=400)
+
+        stdout_capture = io.StringIO()
+        results = []
+
+        old_stdout = sys.stdout
+        sys.stdout = stdout_capture
+        try:
+            mod = _wrap_code(code)
+            compiled = compile(mod, '<exec>', 'exec')
+
+            scope: dict = {}
+            exec(compiled, scope)
+
+            func = scope['_repl_coroutine']
+
+            if inspect.isasyncgenfunction(func):
+                async for result in func(self.bot):
+                    if result is not None:
+                        results.append(repr(result))
+            else:
+                result = await func(self.bot)
+                if result is not None:
+                    results.append(repr(result))
+        except Exception:
+            return web.json_response({
+                "error": traceback.format_exc(),
+                "stdout": stdout_capture.getvalue(),
+            }, status=200)
+        finally:
+            sys.stdout = old_stdout
+
+        return web.json_response({
+            "results": results,
+            "stdout": stdout_capture.getvalue(),
+        })
+
+    @webserver.route("post", "/api/reload")
+    async def reload_modules(self, request: web.Request):
+        token = request.headers.get("Authorization", "")
+        if not hmac.compare_digest(token, JSK_KEY):
+            return web.json_response({"error": "unauthorized"}, status=401)
+
+        try:
+            body = await request.json()
+            modules = body.get("modules", [])
+            cogs = body.get("cogs", [])
+        except Exception:
+            return web.json_response({"error": "invalid json body"}, status=400)
+
+        info = []
+        for mname in modules:
+            info.extend(reload_module(mname))
+
+        for cog in cogs:
+            ext = "cogs." + cog
+            try:
+                await self.bot.reload_extension(ext)
+                info.append(f"Reloaded extension `{ext}`")
+            except Exception as e:
+                info.append(f"Error reloading extension `{ext}`: {e}")
+
+        return web.json_response({"info": info})
+
+    @webserver.route("post", "/api/sh")
+    async def exec_shell(self, request: web.Request):
+        token = request.headers.get("Authorization", "")
+        if not hmac.compare_digest(token, JSK_KEY):
+            return web.json_response({"error": "unauthorized"}, status=401)
+
+        try:
+            body = await request.json()
+            command = body.get("command", "")
+        except Exception:
+            return web.json_response({"error": "invalid json body"}, status=400)
+
+        if not command.strip():
+            return web.json_response({"error": "no command provided"}, status=400)
+
+        try:
+            proc = await asyncio.create_subprocess_shell(
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+        except asyncio.TimeoutError:
+            proc.kill()
+            return web.json_response({
+                "error": "command timed out after 30 seconds",
+            }, status=200)
+
+        return web.json_response({
+            "return_code": proc.returncode,
+            "stdout": stdout.decode(errors="replace"),
+            "stderr": stderr.decode(errors="replace"),
+        })
+
+    @webserver.route("get", "/api/saved-chat/{channel_id}/{message_id}")
     async def get_saved_chat(self, request: web.Request):
         try:
             channel_id = int(request.match_info["channel_id"])

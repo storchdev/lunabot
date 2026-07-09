@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib
 import json
+import sys
 from typing import TYPE_CHECKING, Any, Optional, Self
 
 import discord
@@ -119,6 +121,39 @@ class Cooldown:
         return json.dumps(
             {"rate": self.rate, "per": self.per, "bucket_type": self.typestr}, indent=4
         )
+
+
+def reload_module(mname: str) -> list[str]:
+    info = []
+    full_name = "cogs." + mname
+
+    submodules = sorted(k for k in sys.modules if k.startswith(full_name + "."))
+    for sub in submodules:
+        try:
+            importlib.reload(sys.modules[sub])
+            info.append(f"Reloaded `{sub}`")
+        except Exception as e:
+            info.append(f"Error reloading `{sub}`: {e}")
+            return info
+
+    if mname == "utils":
+        for dep in ["cogs.layouts.layout", "cogs.embeds.editor"]:
+            if dep in sys.modules:
+                try:
+                    importlib.reload(sys.modules[dep])
+                    info.append(f"Reloaded `{dep}`")
+                except Exception as e:
+                    info.append(f"Error reloading `{dep}`: {e}")
+                    return info
+
+    if full_name in sys.modules:
+        try:
+            importlib.reload(sys.modules[full_name])
+            info.append(f"Reloaded `{full_name}`")
+        except Exception as e:
+            info.append(f"Error reloading `{full_name}`: {e}")
+
+    return info
 
 
 class AdminCog(commands.Cog):
