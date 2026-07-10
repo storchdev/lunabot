@@ -1,7 +1,7 @@
 import asyncio
 import json
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import Self, TYPE_CHECKING
 
 import discord
 from discord.ext import commands
@@ -20,7 +20,7 @@ class FutureTask:
         self.task = None
 
     @classmethod
-    def from_db_row(cls, bot, row):
+    def from_db_row(cls, bot, row) -> Self:
         kwargs = json.loads(row["data"])
         return cls(bot, row["id"], row["action"], row["time"], **kwargs)
 
@@ -62,9 +62,13 @@ class FutureTask:
             await self.lock_thread()
         elif self.action == "kick_sus_member":
             await self.kick_sus_member()
+        else:
+            self.bot.log(f"unknown task: {self}")
 
         query = "DELETE FROM future_tasks WHERE id = $1"
         await self.bot.db.execute(query, self.id)
+
+        self.bot.future_tasks.pop(self.id)
 
     def start(self):
         self.task = self.bot.loop.create_task(self.task_coro())
@@ -89,14 +93,16 @@ class FutureTasksCog(commands.Cog):
             task = FutureTask.from_db_row(self.bot, row)
             self.bot.future_tasks[task.id] = task
             task.start()
+            if task.dt < discord.utils.utcnow():
+                self.bot.log(f"future task immediately dispatched: {task}")
 
     async def cog_load(self):
         await self.spawn_tasks()
 
     async def cog_unload(self):
-        for task_id in self.bot.future_tasks:
-            task = self.bot.future_tasks.pop(task_id)
+        for task in self.bot.future_tasks.values():
             task.cancel()
+        self.bot.future_tasks.clear()
 
 
 async def setup(bot):

@@ -57,9 +57,15 @@ class TopGG(commands.Cog):
                         user_id=user_id,
                         role_id=role_id,
                     )
-                    await self.bot.get_var_channel("action-log").send(
-                        f"{member.name} ({member.id}) voted for the server on TopGG"
+                    layout = self.bot.get_layout("newvote")
+                    await layout.send(
+                        self.bot.get_var_channel("voter"),
+                        repls={"mention": member.mention},
+                        special=False,
                     )
+                    # await self.bot.get_var_channel("action-log").send(
+                    #     f"{member.name} ({member.id}) voted for the server on TopGG"
+                    # )
                     self.bot.log(
                         f"{member.name} ({member.id}) voted for the server on TopGG",
                         "topgg",
