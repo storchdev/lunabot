@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
+import pinboard
 from cogs.utils import staff_only, general_only
 
 if TYPE_CHECKING:
@@ -155,6 +156,10 @@ class Misc(commands.Cog):
             color=self.bot.DEFAULT_EMBED_COLOR, description="six seven"
         ).set_image(url=banner.url)
         await ctx.send(embed=embed)
+
+    @commands.command()
+    async def positivity(self, ctx):
+        await ctx.send(random.choice(pinboard.links))
 
     @commands.command()
     @commands.is_owner()
