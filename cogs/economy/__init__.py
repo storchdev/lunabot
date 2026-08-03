@@ -628,10 +628,10 @@ class Economy(commands.Cog):
             await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
             return
 
-        amount = random.randint(20000, 25000)
+        amount = random.randint(60000, 90000)
         await self.add_balance(ctx.author.id, amount)
         layout = self.bot.get_layout("econ/stargaze")
-        await layout.send(ctx, repls={"20k-to-25k": amount})
+        await layout.send(ctx, repls={"60k-to-90k": amount})
 
     @commands.hybrid_command(name="music", aliases=["vibe"], extras={"econ": True})
     async def music(self, ctx):
@@ -685,10 +685,10 @@ class Economy(commands.Cog):
             await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
             return
 
-        amount = random.randint(2000, 7000)
+        amount = random.randint(1500, 4000)
         await self.add_balance(ctx.author.id, amount)
         layout = self.bot.get_layout("econ/hug")
-        await layout.send(ctx, repls={"2k-to-7k": amount})
+        await layout.send(ctx, repls={"1.5k-to-4k": amount})
 
     @commands.hybrid_command(extras={"econ": True})
     async def daily(self, ctx):
@@ -701,7 +701,7 @@ class Economy(commands.Cog):
             await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
             return
 
-        await self.add_balance(ctx.author.id, 10000)
+        await self.add_balance(ctx.author.id, 15000)
         layout = self.bot.get_layout("econ/daily")
         timethingy = discord.utils.format_dt(now + timedelta(seconds=duration), "R")
         await layout.send(ctx, repls={"timethingy": timethingy})
@@ -720,74 +720,74 @@ class Economy(commands.Cog):
         timethingy = discord.utils.format_dt(now + timedelta(seconds=duration), "R")
 
         if random.random() < 0.25:
-            amount = random.randint(15000, 20000)
+            amount = random.randint(30000, 40000)
             await self.add_balance(ctx.author.id, amount)
             layout = self.bot.get_layout("econ/event/great")
-            await layout.send(ctx, repls={"15k-to-20k": amount, "timethingy": timethingy})
+            await layout.send(ctx, repls={"30k-to-40k": amount, "timethingy": timethingy})
         else:
-            await self.add_balance(ctx.author.id, 5000)
+            await self.add_balance(ctx.author.id, 10000)
             layout = self.bot.get_layout("econ/event/good")
             await layout.send(ctx, repls={"timethingy": timethingy})
 
     @commands.hybrid_command(extras={"econ": True})
     async def gfx(self, ctx):
         """Design some GFX for a chance at some Lunara."""
-        end_time = await self.bot.get_cooldown_end("gfx", 1200, obj=ctx.author)
+        end_time = await self.bot.get_cooldown_end("gfx", 2400, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/gfx/cd")
             await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
             return
 
-        amount = random.randint(5000, 7000)
+        amount = random.randint(2000, 3000)
         await self.add_balance(ctx.author.id, amount)
         layout = self.bot.get_layout("econ/gfx")
-        await layout.send(ctx, repls={"5k-to-7k": amount, "gfxchoices": random.choice(GFX_CHOICES)})
+        await layout.send(ctx, repls={"2k-to-3k": amount, "gfxchoices": random.choice(GFX_CHOICES)})
 
     @commands.hybrid_command(extras={"econ": True})
     async def bake(self, ctx):
         """Bake something delicious for some Lunara."""
-        end_time = await self.bot.get_cooldown_end("bake", 300, obj=ctx.author)
+        end_time = await self.bot.get_cooldown_end("bake", 1800, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/bake/cd")
             await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
             return
 
-        await self.add_balance(ctx.author.id, 3000)
+        await self.add_balance(ctx.author.id, 1000)
         layout = self.bot.get_layout("econ/bake")
         await layout.send(ctx, repls={"bakingchoices": random.choice(BAKING_CHOICES)})
 
     @commands.hybrid_command(extras={"econ": True})
     async def draw(self, ctx):
         """Draw something creative for some Lunara."""
-        end_time = await self.bot.get_cooldown_end("draw", 600, obj=ctx.author)
+        end_time = await self.bot.get_cooldown_end("draw", 1800, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/draw/cd")
             await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
             return
 
-        await self.add_balance(ctx.author.id, 5000)
+        await self.add_balance(ctx.author.id, 2000)
         layout = self.bot.get_layout("econ/draw")
         await layout.send(ctx, repls={"drawingchoices": random.choice(DRAWING_CHOICES)})
 
     @commands.hybrid_command(extras={"econ": True})
     async def paint(self, ctx):
         """Paint a scenery for a chance at some Lunara."""
-        end_time = await self.bot.get_cooldown_end("paint", 300, obj=ctx.author)
+        end_time = await self.bot.get_cooldown_end("paint", 1800, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/paint/cd")
             await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
             return
 
         if random.random() < 0.75:
-            amount = random.randint(3000, 7000)
+            amount = random.randint(1000, 2000)
             await self.add_balance(ctx.author.id, amount)
             layout = self.bot.get_layout("econ/paint/good")
-            await layout.send(ctx, repls={"3k-to-7k": amount})
+            await layout.send(ctx, repls={"1k-to-2k": amount})
         else:
             layout = self.bot.get_layout("econ/paint/bad")
             await layout.send(ctx)
 
-    @commands.hybrid_command(extras={"econ": True})
+    @commands.hybrid_command()
     async def buypaint(self, ctx):
         """Buy some paint supplies."""
         end_time = await self.bot.get_cooldown_end("buypaint", 300, obj=ctx.author)
