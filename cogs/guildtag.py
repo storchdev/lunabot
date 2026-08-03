@@ -1,9 +1,9 @@
 import asyncio
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
-from .utils import LayoutContext
+from .utils import LayoutContext, next_day
 from .utils.checks import is_admin
 
 from typing import TYPE_CHECKING
@@ -26,6 +26,12 @@ class GuildTag(commands.Cog):
             0,
             0,
         ]  # magic tuple = [added,addtotal,removed,removetotal]
+
+    async def cog_load(self):
+        self.update_roles_loop.start()
+
+    async def cog_unload(self):
+        self.update_roles_loop.cancel()
 
     # --- helpers --------------------------------------------------------------
 
@@ -118,8 +124,21 @@ class GuildTag(commands.Cog):
                 _delayed_remove(after.id, after.guild.id)
             )
 
-    # @tasks.loop(hours=1)
+    @tasks.loop(hours=24)
+    async def update_roles_loop(self):
+        try:
+            await self.update_roles()
+        except Exception as err:
+            await self.bot.errors.add_error(err)
+
+    @update_roles_loop.before_loop
+    async def wait_until_next_day(self):
+        await discord.utils.sleep_until(next_day())
+
     async def update_roles(self, channel=None):
+        if channel is None:
+            channel = self.bot.get_var_channel("private")
+
         guild = self.bot.get_guild(self.bot.GUILD_ID)
         role = guild.get_role(self.bot.vars.get("guildtag-role-id"))
 
@@ -143,9 +162,6 @@ class GuildTag(commands.Cog):
 
         self.role_progress = [0, len(toadd), 0, len(toremove)]
 
-        if channel is None:
-            channel = self.bot.get_var_channel("private")
-
         await channel.send("roleing... do !gtrp to check progress")
 
         for m in toadd:
@@ -157,19 +173,19 @@ class GuildTag(commands.Cog):
 
         self.role_progress = [0, 0, 0, 0]
 
-    @commands.command()
-    @commands.check(is_admin)
-    @commands.max_concurrency(1)
-    async def ugtr(self, ctx):
-        """updates everyone's guild tag roles"""
-        await self.update_roles(ctx.channel)
+    # @commands.command()
+    # @commands.check(is_admin)
+    # @commands.max_concurrency(1)
+    # async def ugtr(self, ctx):
+    #     """updates everyone's guild tag roles"""
+    #     await self.update_roles(ctx.channel)
 
-    @commands.command()
-    @commands.check(is_admin)
-    async def gtrp(self, ctx):
-        """checks progress for guild tag roleing"""
-        a, b, c, d = self.role_progress
-        await ctx.send(f"added {a}/{b}, removed {c}/{d}")
+    # @commands.command()
+    # @commands.check(is_admin)
+    # async def gtrp(self, ctx):
+    #     """checks progress for guild tag roleing"""
+    #     a, b, c, d = self.role_progress
+    #     await ctx.send(f"added {a}/{b}, removed {c}/{d}")
 
 
 async def setup(bot):
