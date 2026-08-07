@@ -1,10 +1,14 @@
 # from .utils import InvalidURL
+import asyncio
 import json
+from typing import Optional
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 from rapidfuzz import process
+
+from fuzzy_rust import extract_bests
 
 from cogs.utils.paginators import SimplePages
 
@@ -156,6 +160,23 @@ class Layouts(commands.Cog):
             return
 
         entries.sort()
+        view = SimplePages(entries, ctx=ctx)
+        await view.start()
+
+    @layout.command(name="search")
+    @app_commands.default_permissions()
+    async def _search(self, ctx, limit: Optional[int] = 25, *, query: str):
+        names = list(self.bot.layouts.keys())
+        if not names:
+            await ctx.send("No layouts found.", ephemeral=True)
+            return
+
+        results = await asyncio.to_thread(extract_bests, query, names, limit)
+        if not results:
+            await ctx.send("No matches found.", ephemeral=True)
+            return
+
+        entries = [name for name, _score in results]
         view = SimplePages(entries, ctx=ctx)
         await view.start()
 

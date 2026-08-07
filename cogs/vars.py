@@ -1,5 +1,12 @@
+import asyncio
+from typing import Optional
+
 from discord.ext import commands
 from rapidfuzz import process
+
+from fuzzy_rust import extract_bests
+
+from cogs.utils.paginators import SimplePages
 
 
 class Vars(commands.Cog):
@@ -64,6 +71,22 @@ class Vars(commands.Cog):
         await self.bot.db.execute(query, name)
         self.bot.vars.pop(name, None)
         await ctx.send(f"Successfully deleted the variable `{name}`")
+
+    @commands.command()
+    async def searchvars(self, ctx, limit: Optional[int] = 25, *, query: str):
+        names = list(self.bot.vars.keys())
+        if not names:
+            await ctx.send("No variables found.", ephemeral=True)
+            return
+
+        results = await asyncio.to_thread(extract_bests, query, names, limit)
+        if not results:
+            await ctx.send("No matches found.", ephemeral=True)
+            return
+
+        entries = [name for name, _score in results]
+        view = SimplePages(entries, ctx=ctx)
+        await view.start()
 
 
 async def setup(bot):
