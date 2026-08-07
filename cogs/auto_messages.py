@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 from time import time as rn
 
 import discord
@@ -8,7 +9,7 @@ from discord.ext import commands
 
 from bot import LunaBot
 
-from .utils import Layout, LayoutChooserOrEditor, TimeConverter
+from .utils import Layout, LayoutChooserOrEditor, SimplePages, TimeConverter
 
 
 class AutoMessage:
@@ -66,11 +67,14 @@ class Automessages(commands.Cog):
         query = "SELECT * FROM auto_messages"
         rows = await self.bot.db.fetch(query)
         for row in rows:
-            self.auto_messages[row["name"]] = AutoMessage.from_db_row(self.bot, row)
+            am = AutoMessage.from_db_row(self.bot, row)
+            self.auto_messages[row["name"]] = am
+            am.start()
 
     async def cog_unload(self):
         for am in self.auto_messages.values():
-            am.task.cancel()
+            if am.task is not None:
+                am.task.cancel()
 
     async def cog_check(self, ctx):
         return (
@@ -97,6 +101,11 @@ class Automessages(commands.Cog):
         if time is None:
             return
 
+        if time < 5:
+            return await ctx.send(
+                "The interval must be at least 5 seconds.", ephemeral=True
+            )
+
         name = name.lower()
         query = "SELECT id FROM auto_messages WHERE name = $1"
         val = await self.bot.db.fetchval(query, name)
@@ -111,14 +120,18 @@ class Automessages(commands.Cog):
         if view.cancelled:
             return
 
+        lastsent = rn()
         query = """INSERT INTO
                        auto_messages (name, channel_id, interval, layout, lastsent)
                    VALUES
                        ($1, $2, $3, $4, $5)
                 """
         await self.bot.db.execute(
-            query, name, channel.id, time, view.layout.to_json(), rn()
+            query, name, channel.id, time, view.layout.to_json(), lastsent
         )
+        am = AutoMessage(self.bot, name, channel, view.layout, time, lastsent)
+        self.auto_messages[name] = am
+        am.start()
         await view.final_interaction.response.edit_message(
             content=f"Added your automessage `{name}`!", view=None
         )
@@ -144,18 +157,19 @@ class Automessages(commands.Cog):
     @automessage.command(name="list", aliases=["show"])
     @app_commands.default_permissions()
     async def automessage_list(self, ctx):
-        query = "SELECT name, channel_id FROM auto_messages"
+        query = "SELECT name, channel_id, interval FROM auto_messages"
         rows = await self.bot.db.fetch(query)
         if not rows:
             return await ctx.send("No automessages found.")
-        embed = discord.Embed(color=0xCAB7FF, title="Automessages")
-        fields = []
+        entries = []
         for row in rows:
             channel = self.bot.get_channel(row["channel_id"])
             name = row["name"]
-            fields.append(f"`{name}` in {channel.mention}")
-        embed.description = "\n".join(fields)
-        await ctx.send(embed=embed)
+            interval = timedelta(seconds=row["interval"])
+            entries.append(f"`{name}` in {channel.mention} every {interval}")
+        embed = discord.Embed(color=0xCAB7FF, title="Automessages")
+        view = SimplePages(entries, ctx=ctx, embed=embed)
+        await view.start()
 
 
 async def setup(bot):
