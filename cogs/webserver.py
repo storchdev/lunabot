@@ -57,7 +57,7 @@ def _wrap_code(code: str) -> ast.Module:
 
 
 class Webserver(webserver.WebserverCog, port=8080):
-    """The description for Webserver goes here."""
+    """aiohttp web server exposing remote code execution and shell endpoints."""
 
     def __init__(self, bot: "LunaBot"):
         self.bot = bot

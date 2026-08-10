@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class WeeklyCheckup(commands.Cog):
-    """The description for WeeklyCheckup goes here."""
+    """Scheduled weekly summary posts."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

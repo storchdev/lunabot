@@ -10,6 +10,8 @@ from cogs.utils.paginators import SimplePages
 
 
 class Vars(commands.Cog):
+    """Hot editable key-value store, cached in bot.vars."""
+
     def __init__(self, bot):
         self.bot = bot
 

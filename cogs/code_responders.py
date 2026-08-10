@@ -295,6 +295,8 @@ class CodeResponderAPI:
 
 
 class CodeResponders(commands.Cog):
+    """Python code executed in response to message triggers."""
+
     def __init__(self, bot):
         self.bot = bot
         self.lookup: dict[str, CodeResponderItem] = {}

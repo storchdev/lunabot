@@ -30,7 +30,7 @@ class AffirmationView(View):
 
 
 class Confess(commands.Cog):
-    """The description for Confess goes here."""
+    """Anonymous confessions."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

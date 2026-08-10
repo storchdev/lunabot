@@ -82,6 +82,8 @@ class FutureTask:
 
 
 class FutureTasksCog(commands.Cog):
+    """Delayed actions (remove role, lock thread, kick) scheduled to DB and executed later."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

@@ -17,6 +17,8 @@ from .layout import Layout
 
 
 class Layouts(commands.Cog):
+    """Reusable message templates (text + embeds) with placeholders/templating, manages bot.layouts cache."""
+
     def __init__(self, bot):
         self.bot = bot
 

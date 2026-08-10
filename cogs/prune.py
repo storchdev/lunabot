@@ -22,7 +22,7 @@ def randomstring():
 
 
 class Prune(commands.Cog):
-    """The description for Prune goes here."""
+    """Bulk remove inactive/unverified members with progress tracking."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

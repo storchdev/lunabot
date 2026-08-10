@@ -41,7 +41,7 @@ def get_post_date(days):
 
 
 class XoTD(commands.Cog):
-    """The description for Xotd goes here."""
+    """Scheduled daily posts with Spotify integration."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

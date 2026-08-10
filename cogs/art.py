@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
 
 class Art(commands.Cog):
+    """Hall of fame for art posts based on reaction count."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
         self.art_channel_ids = json.loads(self.bot.vars.get("art-channel-ids"))

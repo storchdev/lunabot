@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 class AutoResponderCog(
     AdminCog, name="Autoresponders", description="Autoresponder stuff (admin only)"
 ):
+    """Manages bot auto responses to user messages."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
         self.auto_responders = []

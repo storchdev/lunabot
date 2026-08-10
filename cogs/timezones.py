@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
 
 class TimezoneCog(commands.Cog):
+    """Timezone lookup/autocomplete for user preferences (adapted from RoboDanny)."""
+
     DEFAULT_POPULAR_TIMEZONE_IDS = (
         "usnyc",
         "uslax",

@@ -12,7 +12,7 @@ from typing import List
 
 
 class ExclusiveRoles(commands.Cog):
-    """The description for ExclusiveRoles goes here."""
+    """Mutually exclusive role groups."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

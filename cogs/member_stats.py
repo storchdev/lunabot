@@ -139,6 +139,8 @@ def parse_time_interval(string):
 
 
 class MemberStats(commands.Cog):
+    """Join/leave graphs with matplotlib."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

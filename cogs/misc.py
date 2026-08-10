@@ -29,6 +29,8 @@ def check_dad(msg: discord.Message):
 
 
 class Misc(commands.Cog):
+    """One-off commands that aren't tied to anything else."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

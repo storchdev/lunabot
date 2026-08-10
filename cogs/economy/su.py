@@ -7,6 +7,8 @@ if TYPE_CHECKING:
 
 
 class EconomySu(commands.Cog):
+    """Owner-only economy debug commands (drop tables, bulk-insert shop items)."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

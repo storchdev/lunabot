@@ -27,6 +27,8 @@ class StickyMessage:
 
 
 class StickyMessages(commands.Cog):
+    """Messages that persist at the bottom of a channel."""
+
     def __init__(self, bot):
         self.bot: LunaBot = bot
         self.sticky_messages = {}

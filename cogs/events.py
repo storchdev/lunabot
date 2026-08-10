@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 class Events(
     commands.Cog, description="Manage join, leave, boost, and birthday messages"
 ):
+    """Join/leave handlers, auto-reactions."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

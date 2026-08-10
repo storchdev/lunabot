@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 class StickyRoles(commands.Cog):
-    """The description for StickyRoles goes here."""
+    """Persists roles across rejoins."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

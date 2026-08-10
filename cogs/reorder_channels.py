@@ -243,7 +243,7 @@ class ChannelReorderView(View):
 
 
 class ReorderChannels(commands.Cog):
-    """The description for ReorderChannels goes here."""
+    """Interactive channel/category reordering via button UI."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

@@ -198,6 +198,8 @@ REMIND_GAP = 86400 * 7
 
 
 class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
+    """Improved thread tickets, handles pinging based on ticket type and extensions."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

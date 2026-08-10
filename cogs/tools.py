@@ -163,6 +163,8 @@ class StickerFlags(commands.FlagConverter):
 
 
 class Tools(commands.Cog, description="storchs tools"):
+    """Admin utils."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

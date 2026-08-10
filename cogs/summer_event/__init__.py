@@ -53,6 +53,8 @@ def is_on_break(ctx):
 
 
 class ActivityEvent(commands.Cog):
+    """Summer 2026 activity event."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
         self.teams: Dict[str, Team] = {}

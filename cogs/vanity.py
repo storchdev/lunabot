@@ -14,8 +14,9 @@ DEBOUNCE_SECONDS = 20  # wait this long before removing to survive activity blip
 
 
 class Vanity(commands.Cog):
+    """Auto-role for users with a vanity invite in their custom status."""
+
     def __init__(self, bot: "LunaBot"):
-        """Auto roleing for users with vanity invite in status"""
         self.bot = bot
         self.invite = (
             str(self.bot.vars.get("vanity-invite", "")).lower().strip().lstrip("/")

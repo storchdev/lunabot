@@ -23,7 +23,7 @@ class AFKEntry:
 
 
 class AFK(commands.Cog):
-    """The description for Afk goes here."""
+    """AFK status, auto-removed on activity."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

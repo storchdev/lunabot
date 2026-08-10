@@ -110,6 +110,8 @@ def parse_time_interval(string):
 
 
 class MessageStats(commands.Cog):
+    """Message volume time-series graphs."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

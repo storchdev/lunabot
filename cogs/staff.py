@@ -32,7 +32,7 @@ def is_art_manager():
 
 
 class Staff(commands.Cog):
-    """The description for Staff goes here."""
+    """Staff-only commands."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

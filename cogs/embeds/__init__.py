@@ -16,6 +16,8 @@ from .editor import EmbedEditor
 
 
 class Embeds(commands.Cog, description="Create, save, and edit your own embeds."):
+    """CRUD+convenience embed commands, manages bot.embeds cache."""
+
     def __init__(self, bot):
         self.bot = bot
 

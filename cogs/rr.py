@@ -310,6 +310,8 @@ class RRView3(ui.View):
 
 
 class RR(commands.Cog, name="Reaction Roles"):
+    """Reaction roles."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

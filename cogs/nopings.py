@@ -23,7 +23,7 @@ class ResendView(View):
 
 
 class NoPings(commands.Cog):
-    """The description for Nopings goes here."""
+    """No-ping list preventing certain users from being mentioned."""
 
     def __init__(self, bot):
         self.bot = bot

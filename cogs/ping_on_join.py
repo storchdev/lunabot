@@ -5,6 +5,8 @@ from .utils import ChannelSelectView
 
 
 class PingOnJoin(commands.Cog):
+    """Pings channels when members join."""
+
     def __init__(self, bot):
         self.bot = bot
         self.channels = {}

@@ -27,6 +27,8 @@ def get_level(xp: int):
 
 
 class Levels(commands.Cog):
+    """XP system, role rewards, rank cards."""
+
     def __init__(self, bot):
         self.bot = bot
         self.xp_cooldowns = {}

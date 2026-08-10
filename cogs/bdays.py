@@ -28,6 +28,8 @@ def is_valid_day(month, day):
 
 
 class Birthdays(commands.Cog, description="Set your birthday, see other birthdays"):
+    """Birthday tracking and scheduled celebration messages."""
+
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 

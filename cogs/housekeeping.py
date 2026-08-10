@@ -30,7 +30,7 @@ VC_IDS = {
 
 # haha funny
 class Housekeeping(commands.Cog):
-    """The description for Housekeeping goes here."""
+    """Auto-cleanup and voice channel management."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

@@ -59,6 +59,8 @@ class AutoMessage:
 
 
 class Automessages(commands.Cog):
+    """Scheduled message posting at intervals using layouts."""
+
     def __init__(self, bot):
         self.bot: LunaBot = bot
         self.auto_messages: dict[str, AutoMessage] = {}

@@ -157,6 +157,8 @@ def reload_module(mname: str) -> list[str]:
 
 
 class AdminCog(commands.Cog):
+    """Base class restricting commands to admins and bot owners."""
+
     async def cog_check(self, ctx):
         assert ctx.bot.owner_ids is not None
         if isinstance(ctx.author, discord.User):

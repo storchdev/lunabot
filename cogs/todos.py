@@ -319,7 +319,7 @@ class TodoEditView(View):
 
 
 class TodoCog(commands.Cog, name="Todos"):
-    """The description for Todo goes here."""
+    """Per-user to-do lists."""
 
     def __init__(self, bot):
         self.bot = bot
