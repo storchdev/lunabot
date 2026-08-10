@@ -82,7 +82,7 @@ class InfoSections(commands.Cog):
     MAX_BUTTONS_PER_LAYOUT = 25
 
     def __init__(self, bot: "LunaBot"):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self.sections: dict[str, InfoSectionConfig] = {}
         self.section_views: dict[tuple[str, str], InfoSectionView] = {}
         self.button_targets: dict[str, str] = {}

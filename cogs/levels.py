@@ -3,6 +3,7 @@ import math
 import random
 import time
 from io import BytesIO
+from typing import TYPE_CHECKING
 
 import discord
 from discord import app_commands
@@ -17,6 +18,9 @@ from .utils import (
     next_sunday,
 )
 
+if TYPE_CHECKING:
+    from bot import LunaBot
+
 
 def get_xp(lvl: int):
     return 50 * lvl * lvl
@@ -30,7 +34,7 @@ class Levels(commands.Cog):
     """XP system, role rewards, rank cards."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self.xp_cooldowns = {}
         self.main_guild_id = 899108709450543115
         self.leveled_roles = {

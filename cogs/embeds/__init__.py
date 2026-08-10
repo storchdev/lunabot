@@ -1,7 +1,7 @@
 import asyncio
 import json
 import re
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import discord
 from discord import app_commands
@@ -14,12 +14,15 @@ from ..utils.errors import InvalidURL
 
 from .editor import EmbedEditor
 
+if TYPE_CHECKING:
+    from bot import LunaBot
+
 
 class Embeds(commands.Cog, description="Create, save, and edit your own embeds."):
     """CRUD+convenience embed commands, manages bot.embeds cache."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
 
     async def cog_check(self, ctx):
         return (

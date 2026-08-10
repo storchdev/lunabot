@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import discord
 import topgg
@@ -9,6 +10,9 @@ from aiohttp import web
 from discord.ext import commands
 
 from config import TOPGG_WEBHOOK_KEY
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 def _verify_topgg_signature(raw_body: str, signature: str, secret: str) -> bool:
@@ -30,7 +34,7 @@ class TopGG(commands.Cog):
     """Handles server votes"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
 
         async def bot_vote_handler(request):
             signature = request.headers.get("x-topgg-signature", "")

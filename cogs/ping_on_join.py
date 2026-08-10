@@ -1,14 +1,19 @@
+from typing import TYPE_CHECKING
+
 from discord import app_commands
 from discord.ext import commands
 
 from .utils import ChannelSelectView
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 class PingOnJoin(commands.Cog):
     """Pings channels when members join."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self.channels = {}
 
     async def cog_check(self, ctx):

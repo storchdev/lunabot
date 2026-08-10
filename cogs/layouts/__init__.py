@@ -1,7 +1,7 @@
 # from .utils import InvalidURL
 import asyncio
 import json
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import discord
 from discord import app_commands
@@ -15,12 +15,15 @@ from cogs.utils.paginators import SimplePages
 from .editor import LayoutEditor
 from .layout import Layout
 
+if TYPE_CHECKING:
+    from bot import LunaBot
+
 
 class Layouts(commands.Cog):
     """Reusable message templates (text + embeds) with placeholders/templating, manages bot.layouts cache."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
 
     async def cog_load(self):
         rows = await self.bot.db.fetch("select * from layouts")

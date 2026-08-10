@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from discord.ext import commands
 from rapidfuzz import process
@@ -8,12 +8,15 @@ from fuzzy_rust import extract_bests
 
 from cogs.utils.paginators import SimplePages
 
+if TYPE_CHECKING:
+    from bot import LunaBot
+
 
 class Vars(commands.Cog):
     """Hot editable key-value store, cached in bot.vars."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
 
     async def cog_check(self, ctx):
         return (

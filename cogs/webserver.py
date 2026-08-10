@@ -60,7 +60,7 @@ class Webserver(webserver.WebserverCog, port=8080):
     """aiohttp web server exposing remote code execution and shell endpoints."""
 
     def __init__(self, bot: "LunaBot"):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         super().__init__()
 
         # Catch-all fallback to index.html

@@ -10,6 +10,8 @@ from .utils.paginators import ViewMenuPages
 if TYPE_CHECKING:
     from discord.ext.commands import Context
 
+    from bot import LunaBot
+
 
 class Todo:
     def __init__(
@@ -322,7 +324,7 @@ class TodoCog(commands.Cog, name="Todos"):
     """Per-user to-do lists."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
 
     async def cog_check(self, ctx):
         return (

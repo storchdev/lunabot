@@ -18,7 +18,7 @@ class GuildTag(commands.Cog):
     """Guild tag auto roleing"""
 
     def __init__(self, bot: "LunaBot"):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self._pending_removals: dict[int, asyncio.Task] = {}  # member_id -> task
         self.role_progress = [
             0,

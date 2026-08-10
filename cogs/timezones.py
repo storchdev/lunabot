@@ -49,7 +49,7 @@ class TimezoneCog(commands.Cog):
     )
 
     def __init__(self, bot: "LunaBot"):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self.valid_timezones = set(zoneinfo.available_timezones())
         self._timezone_aliases = {
             "Eastern Time": "America/New_York",

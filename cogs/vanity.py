@@ -17,7 +17,7 @@ class Vanity(commands.Cog):
     """Auto-role for users with a vanity invite in their custom status."""
 
     def __init__(self, bot: "LunaBot"):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self.invite = (
             str(self.bot.vars.get("vanity-invite", "")).lower().strip().lstrip("/")
         )

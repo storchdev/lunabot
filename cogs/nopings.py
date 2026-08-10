@@ -1,8 +1,13 @@
+from typing import TYPE_CHECKING
+
 from discord.ext import commands
 import discord
 import json
 
 from cogs.utils import View
+
+if TYPE_CHECKING:
+    from bot import LunaBot
 
 
 class ResendView(View):
@@ -26,7 +31,7 @@ class NoPings(commands.Cog):
     """No-ping list preventing certain users from being mentioned."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: "LunaBot" = bot
         self.no_ping_ids = set()
 
     async def cog_load(self):
