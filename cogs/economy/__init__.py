@@ -357,7 +357,7 @@ class Economy(commands.Cog):
         if not shop_item:
             return
 
-        if not await shop_item.is_buyable(ctx.author):
+        if not await shop_item.is_buyable(ctx.author, self.bot):
             await ctx.send("you dont have buy requirements")
             return
 

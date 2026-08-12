@@ -4,9 +4,10 @@ import discord
 from discord.ext import commands
 
 from cogs.tickets import create_ticket
+from cogs.utils.checks import is_booster
 
 if TYPE_CHECKING:
-    from bot import LunaCtx
+    from bot import LunaBot, LunaCtx
 
 
 class ItemCategory:
@@ -80,7 +81,7 @@ class BaseItem:
     def is_tradable_at_all(self) -> bool:
         return self.tradable
 
-    async def is_buyable(self, member: discord.Member) -> bool:
+    async def is_buyable(self, member: discord.Member, bot: "LunaBot") -> bool:
         return True
 
     async def is_sellable(self, member: discord.Member) -> bool:
@@ -264,3 +265,54 @@ class PrettyInPink(ColorRoleItem):
 
     async def deactivate(self, ctx, **kwargs):
         return await super().deactivate(ctx, name="prettyinpink")
+
+
+class BoosterOnlyItem(BaseItem):
+    async def is_buyable(self, member: discord.Member, bot: "LunaBot") -> bool:
+        if not is_booster(member, bot):
+            return False
+        return await super().is_buyable(member, bot)
+
+
+class BoosterColorRoleItem(BoosterOnlyItem, ColorRoleItem):
+    pass
+
+
+class StrawberryPop(BoosterColorRoleItem):
+    async def activate(self, ctx, **kwargs):
+        return await super().activate(ctx, name="strawberrypop")
+
+    async def deactivate(self, ctx, **kwargs):
+        return await super().deactivate(ctx, name="strawberrypop")
+
+
+class OrangeCreame(BoosterColorRoleItem):
+    async def activate(self, ctx, **kwargs):
+        return await super().activate(ctx, name="orangecreame")
+
+    async def deactivate(self, ctx, **kwargs):
+        return await super().deactivate(ctx, name="orangecreame")
+
+
+class RainDroplet(BoosterColorRoleItem):
+    async def activate(self, ctx, **kwargs):
+        return await super().activate(ctx, name="raindroplet")
+
+    async def deactivate(self, ctx, **kwargs):
+        return await super().deactivate(ctx, name="raindroplet")
+
+
+class LavenderClouds(BoosterColorRoleItem):
+    async def activate(self, ctx, **kwargs):
+        return await super().activate(ctx, name="lavenderclouds")
+
+    async def deactivate(self, ctx, **kwargs):
+        return await super().deactivate(ctx, name="lavenderclouds")
+
+
+class RaspberrySorbet(BoosterColorRoleItem):
+    async def activate(self, ctx, **kwargs):
+        return await super().activate(ctx, name="raspberrysorbet")
+
+    async def deactivate(self, ctx, **kwargs):
+        return await super().deactivate(ctx, name="raspberrysorbet")

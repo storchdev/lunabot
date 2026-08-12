@@ -5,9 +5,10 @@ from discord import ui
 from discord.ext import commands, menus
 
 from cogs.utils import View
+from cogs.utils.checks import is_booster
 from cogs.utils.paginators import SkipToModal
 
-from .items import BaseItem
+from .items import BaseItem, BoosterOnlyItem
 from .search import search_item
 
 if TYPE_CHECKING:
@@ -71,8 +72,13 @@ class ShopMainView(View):
             if item.category.display_name == select.values[0]:
                 filtered_items.append(item)
 
-        source = ShopResultsPageSource(self.ctx, filtered_items)
-        view = ShopResultsPages(source, parent_view=self)
+        regular_items = [
+            item for item in filtered_items if not isinstance(item, BoosterOnlyItem)
+        ]
+        source = ShopResultsPageSource(self.ctx, regular_items)
+        view = ShopResultsPages(
+            source, parent_view=self, category_items=filtered_items
+        )
         await view.start(interaction)
 
     @discord.ui.button(label="Help", style=discord.ButtonStyle.gray, row=1)
@@ -109,10 +115,12 @@ class ShopResultsPageSource(menus.ListPageSource):
         self.ctx = ctx
         self.bot: "LunaBot" = ctx.bot
         self.entries = items.copy()
+        self.sort_by = sort_by
         self.sort_entries(sort_by)
         super().__init__(self.entries, per_page=5)
 
     def sort_entries(self, sort_by):
+        self.sort_by = sort_by
         if sort_by == "number_id":
             self.entries.sort(key=lambda it: it.number_id)
         elif sort_by == "name_id":
@@ -134,6 +142,10 @@ class ShopResultsPageSource(menus.ListPageSource):
         branch_middle = self.bot.vars.get("branch-middle-emoji")
         branch_final = self.bot.vars.get("branch-final-emoji")
         divider = self.bot.vars.get("divider")
+
+        if not entries:
+            embed.description = "No items to display."
+            return embed
 
         plines = []
 
@@ -164,13 +176,24 @@ class ShopResultsPageSource(menus.ListPageSource):
 
 
 class ShopResultsPages(View):
-    def __init__(self, source, *, parent_view: ShopMainView):
+    def __init__(
+        self,
+        source,
+        *,
+        parent_view: ShopMainView,
+        category_items: Optional[List[BaseItem]] = None,
+        showing_booster: bool = False,
+    ):
         super().__init__(parent_view=parent_view)
         self.current_modal = None
         self.source: ShopResultsPageSource = source
         self.ctx: commands.Context = parent_view.ctx
         self.bot: "LunaBot" = self.ctx.bot
         self.current_page: int = 0
+        self.category_items = (
+            category_items if category_items is not None else list(source.entries)
+        )
+        self.showing_booster = showing_booster
         self.clear_items()
         self.fill_items()
 
@@ -184,12 +207,18 @@ class ShopResultsPages(View):
         self.go_to_next_page.label = None
         self.go_to_next_page.emoji = self.ctx.bot.vars.get("arrow-r-emoji")
 
+        self.toggle_shop_mode.label = (
+            "Regular Shop" if self.showing_booster else "Booster Shop"
+        )
+        self.toggle_shop_mode.disabled = not is_booster(self.ctx.author, self.bot)
+
         # if self.source.is_paginating():
         self.add_item(self.go_to_previous_page)
         self.add_item(self.go_to_next_page)
         self.add_item(self.numbered_page)
 
         self.add_item(self.search)
+        self.add_item(self.toggle_shop_mode)
         self.add_item(self.sort_by_select)
         self.add_item(self.go_back)
         # self.add_item(self.stop_pages)
@@ -306,6 +335,25 @@ class ShopResultsPages(View):
         """sends the search modal"""
         modal = ShopSearchModal(self, self.source.entries)
         await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="Booster Shop", style=discord.ButtonStyle.gray, row=0)
+    async def toggle_shop_mode(self, interaction, button):
+        """toggles between the booster-only and regular shop for this category"""
+        showing_booster = not self.showing_booster
+        filtered_items = [
+            item
+            for item in self.category_items
+            if isinstance(item, BoosterOnlyItem) == showing_booster
+        ]
+
+        source = ShopResultsPageSource(self.ctx, filtered_items, self.source.sort_by)
+        view = ShopResultsPages(
+            source,
+            parent_view=self.parent_view,
+            category_items=self.category_items,
+            showing_booster=showing_booster,
+        )
+        await view.start(interaction)
 
     @discord.ui.select(
         placeholder="Sort by",
