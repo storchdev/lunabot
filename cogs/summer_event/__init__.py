@@ -115,7 +115,7 @@ class ActivityEvent(commands.Cog):
 
         team_members_readable = json.loads(self.bot.vars.get("ae-teams"))
         nick_dict_str_ids = json.loads(self.bot.vars.get("ae-nicks"))
-        self.nick_dict = {int(k) : v for k, v in nick_dict_str_ids.items()}
+        self.nick_dict = {int(k): v for k, v in nick_dict_str_ids.items()}
 
         self.team_members = {tname: [] for tname in team_members_readable.keys()}
         nick_dict_rev = {v: k for k, v in self.nick_dict.items()}
@@ -208,7 +208,7 @@ class ActivityEvent(commands.Cog):
                     """
             for member_id in member_ids:
                 await self.bot.db.execute(query, member_id, team)
-    
+
     async def drop_tables(self):
         query = """DROP TABLE num_redeems;
                    DROP TABLE saved_powerups;
@@ -225,7 +225,7 @@ class ActivityEvent(commands.Cog):
     #         query = "ALTER TABLE $1 RENAME TO $2"
     #         try:
     #             await self.bot.db.execute(query, tbl, prefix + tbl)
-    #             await ch.send(f"renamed {tbl} to {prefix+tbl}")  
+    #             await ch.send(f"renamed {tbl} to {prefix+tbl}")
     #         except Exception as e:
     #             await ch.send(f"{e}")
 
@@ -526,10 +526,7 @@ class ActivityEvent(commands.Cog):
         now = time.time()
 
         for player in self.players.values():
-            if (
-                player.team.name == "starfish"
-                and (now - player.last_message_time) < 60
-            ):
+            if player.team.name == "starfish" and (now - player.last_message_time) < 60:
                 starfish += 1
             elif (
                 player.team.name == "jellyfish"

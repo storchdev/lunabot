@@ -76,9 +76,7 @@ class ShopMainView(View):
             item for item in filtered_items if not isinstance(item, BoosterOnlyItem)
         ]
         source = ShopResultsPageSource(self.ctx, regular_items)
-        view = ShopResultsPages(
-            source, parent_view=self, category_items=filtered_items
-        )
+        view = ShopResultsPages(source, parent_view=self, category_items=filtered_items)
         await view.start(interaction)
 
     @discord.ui.button(label="Help", style=discord.ButtonStyle.gray, row=1)

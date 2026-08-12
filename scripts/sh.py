@@ -3,6 +3,7 @@
 
 Usage: scripts/sh.sh '<command>'
 """
+
 import sys
 from pathlib import Path
 

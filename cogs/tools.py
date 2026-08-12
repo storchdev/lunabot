@@ -267,7 +267,7 @@ class Tools(commands.Cog, description="storchs tools"):
         info = []
         for mname in modules:
             await self.reload_module(mname, info)
-        await ctx.send('\n'.join(info))
+        await ctx.send("\n".join(info))
 
     @commands.command()
     async def grabembed(self, ctx, url):
@@ -474,8 +474,9 @@ class Tools(commands.Cog, description="storchs tools"):
         try:
             await self.bot.wait_for(
                 "message",
-                check=lambda m: m.author == ctx.author
-                and m.content.lower() in ["y", "yes"],
+                check=lambda m: (
+                    m.author == ctx.author and m.content.lower() in ["y", "yes"]
+                ),
                 timeout=30,
             )
         except asyncio.TimeoutError:

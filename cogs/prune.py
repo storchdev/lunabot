@@ -42,10 +42,12 @@ class Prune(commands.Cog):
         return list(
             sorted(
                 filter(
-                    lambda m: verify_role not in m.roles
-                    and m.joined_at < cutoff
-                    and m.status is discord.Status.offline
-                    and not m.bot,
+                    lambda m: (
+                        verify_role not in m.roles
+                        and m.joined_at < cutoff
+                        and m.status is discord.Status.offline
+                        and not m.bot
+                    ),
                     guild.members,
                 ),
                 key=lambda m: m.joined_at,
@@ -62,9 +64,11 @@ class Prune(commands.Cog):
         return list(
             sorted(
                 filter(
-                    lambda m: verify_role not in m.roles
-                    and m.status is discord.Status.offline
-                    and not m.bot,
+                    lambda m: (
+                        verify_role not in m.roles
+                        and m.status is discord.Status.offline
+                        and not m.bot
+                    ),
                     guild.members,
                 ),
                 key=lambda m: m.joined_at,
@@ -110,9 +114,11 @@ class Prune(commands.Cog):
         try:
             await self.bot.wait_for(
                 "message",
-                check=lambda m: m.author == ctx.author
-                and m.channel == ctx.channel
-                and m.content == string,
+                check=lambda m: (
+                    m.author == ctx.author
+                    and m.channel == ctx.channel
+                    and m.content == string
+                ),
                 timeout=60,
             )
         except asyncio.TimeoutError:

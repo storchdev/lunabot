@@ -13,6 +13,7 @@ Usage:
 
 Comma-separated for multiples.
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -22,9 +23,21 @@ from _remote import call  # noqa: E402
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-m", "--modules", default="", help="comma-separated shared modules to reload (e.g. utils)")
-    parser.add_argument("-c", "--cogs", default="", help="comma-separated cogs to reload (e.g. levels,economy)")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "-m",
+        "--modules",
+        default="",
+        help="comma-separated shared modules to reload (e.g. utils)",
+    )
+    parser.add_argument(
+        "-c",
+        "--cogs",
+        default="",
+        help="comma-separated cogs to reload (e.g. levels,economy)",
+    )
     args = parser.parse_args()
 
     modules = [m.strip() for m in args.modules.split(",") if m.strip()]

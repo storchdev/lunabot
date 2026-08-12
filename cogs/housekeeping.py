@@ -101,19 +101,27 @@ class Housekeeping(commands.Cog):
 
             # print(f"--- added welc message by {msg.author.name} ---")
 
-        if (msg.guild and msg.channel.id == self.bot.vars.get("auto-softban-channel-id") and not is_staff_msg(self.bot, msg)):
+        if (
+            msg.guild
+            and msg.channel.id == self.bot.vars.get("auto-softban-channel-id")
+            and not is_staff_msg(self.bot, msg)
+        ):
             try:
-                await msg.author.send(f"Hi! You have been softbanned in **{msg.guild.name}** on suspicion of your account being hacked. "
-                                       "Join back here: discord.gg/lunalilac")
+                await msg.author.send(
+                    f"Hi! You have been softbanned in **{msg.guild.name}** on suspicion of your account being hacked. "
+                    "Join back here: discord.gg/lunalilac"
+                )
                 tag = ""
             except discord.Forbidden:
                 tag = "I wasn't able to DM them."
 
-            await msg.guild.ban(msg.author, reason="auto softbanned due to sending message in channel")
+            await msg.guild.ban(
+                msg.author, reason="auto softbanned due to sending message in channel"
+            )
             await msg.guild.unban(msg.author)
             await self.bot.get_var_channel("private").send(
                 f"softbanned {msg.author.mention} (username {msg.author.name}), "
-                f"account created {discord.utils.format_dt(msg.author.created_at, "R")}. {tag}"
+                f"account created {discord.utils.format_dt(msg.author.created_at, 'R')}. {tag}"
                 "\n"
                 f"message they sent: ```{msg.content}```"
             )

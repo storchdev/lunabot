@@ -1,16 +1,15 @@
-import random 
+import random
 from typing import Dict, List
 
 
 class TriviaQuestion:
-
     def __init__(self, question: str, choices: List[str], answer: str):
-        self.question = question 
+        self.question = question
         self.choices = choices
         self.answer = answer
 
         assert len(self.choices) == 4
-    
+
     def shuffle_choices(self):
         random.shuffle(self.choices)
 
@@ -18,9 +17,9 @@ class TriviaQuestion:
         repls = {"question": self.question}
 
         for i, choice in enumerate(self.choices):
-            repls[f"choice{i+1}"] = choice
-        
-        return repls 
+            repls[f"choice{i + 1}"] = choice
+
+        return repls
 
     def get_incorrect_layout_repls(self) -> Dict[str, str]:
         answer_index = self.choices.index(self.answer)
@@ -41,12 +40,14 @@ class TriviaQuestion:
         }
 
 
-def parse_raw(filename: str = "cogs/summer_event/raw_trivia.txt") -> List[TriviaQuestion]:
+def parse_raw(
+    filename: str = "cogs/summer_event/raw_trivia.txt",
+) -> List[TriviaQuestion]:
 
     with open(filename) as f:
         text = f.read().strip()
-    
-    questions = [] 
+
+    questions = []
     blocks = text.split("\n\n")
     for block in blocks:
         lines = block.split("\n")
@@ -54,5 +55,5 @@ def parse_raw(filename: str = "cogs/summer_event/raw_trivia.txt") -> List[Trivia
         choices = lines[1:5]
         answer = choices[int(lines[5]) - 1]
         questions.append(TriviaQuestion(question, choices, answer))
-    
-    return questions 
+
+    return questions

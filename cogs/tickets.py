@@ -177,8 +177,12 @@ class TicketTypeMenu(View):
 
     @ui.select(placeholder="What is this ticket for?")
     async def ticket_type(self, interaction, select):
-        if select.values[0] == "Trusted Seller" and all(r.id != self.bot.vars.get("vip-artist-role-id") for r in self.owner.roles):
-            await interaction.response.edit_message(content="Only VIP Artists can open these tickets!", view=None)
+        if select.values[0] == "Trusted Seller" and all(
+            r.id != self.bot.vars.get("vip-artist-role-id") for r in self.owner.roles
+        ):
+            await interaction.response.edit_message(
+                content="Only VIP Artists can open these tickets!", view=None
+            )
             return
 
         await interaction.response.edit_message(

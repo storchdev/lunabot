@@ -486,10 +486,16 @@ class CreateLayoutModal(BaseModal, title="Enter Message Fields"):
         return self.parent_view.layout.content
 
     def get_embeds(self):
-        return [self.parent_view.bot.get_embed(n) for n in self.parent_view.layout.embed_names]
+        return [
+            self.parent_view.bot.get_embed(n)
+            for n in self.parent_view.layout.embed_names
+        ]
 
     async def on_error(self, inter, error):
-        await inter.response.send_message(f"Something went wrong: `{error}`", ephemeral=True)
+        await inter.response.send_message(
+            f"Something went wrong: `{error}`", ephemeral=True
+        )
+
 
 class ChooseLayoutModal(BaseModal, title="Enter Layout"):
     layout_name = discord.ui.TextInput(label="Layout name", required=True)
@@ -507,13 +513,19 @@ class ChooseLayoutModal(BaseModal, title="Enter Layout"):
         self.parent_view.update_submit()
 
     async def on_error(self, inter, error):
-        await inter.response.send_message(f"Something went wrong: `{error}`", ephemeral=True)
+        await inter.response.send_message(
+            f"Something went wrong: `{error}`", ephemeral=True
+        )
 
     def get_content(self):
         return self.parent_view.layout.content
 
     def get_embeds(self):
-        return [self.parent_view.bot.get_embed(n) for n in self.parent_view.layout.embed_names]
+        return [
+            self.parent_view.bot.get_embed(n)
+            for n in self.parent_view.layout.embed_names
+        ]
+
 
 class ChannelSelectView(View):
     def __init__(self, *, timeout=300):

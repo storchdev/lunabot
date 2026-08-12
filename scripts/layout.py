@@ -14,6 +14,7 @@ Usage:
     scripts/layout.py set-content <layout_name> [FILE | -]  # edit layout.content only
     scripts/layout.py list [substring]             # fuzzy-list layout names
 """
+
 import argparse
 import ast
 import json
@@ -40,7 +41,9 @@ else:
 json.dumps(result, indent=2)
 """
     raw = exec_code_or_die(code)
-    data = json.loads(ast.literal_eval(raw))  # repr(str) -> str, then parse the JSON it contains
+    data = json.loads(
+        ast.literal_eval(raw)
+    )  # repr(str) -> str, then parse the JSON it contains
     text = json.dumps(data, indent=2, ensure_ascii=False)
     if args.out:
         Path(args.out).write_text(text)
@@ -100,7 +103,9 @@ sorted([n for n in bot.layouts.keys() if {substr!r} in n])
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_get = sub.add_parser("get", help="dump a layout's content + resolved embed JSON")
@@ -108,17 +113,26 @@ def main():
     p_get.add_argument("-o", "--out", help="write to this file instead of stdout")
     p_get.set_defaults(func=cmd_get)
 
-    p_set_embed = sub.add_parser("set-embed", help="push an edited embed dict (JSON file) back to DB + cache")
+    p_set_embed = sub.add_parser(
+        "set-embed", help="push an edited embed dict (JSON file) back to DB + cache"
+    )
     p_set_embed.add_argument("name")
-    p_set_embed.add_argument("file", help="path to a JSON file containing the full embed dict")
+    p_set_embed.add_argument(
+        "file", help="path to a JSON file containing the full embed dict"
+    )
     p_set_embed.set_defaults(func=cmd_set_embed)
 
-    p_set_content = sub.add_parser("set-content", help="overwrite a layout's raw content (text), keeping its embed_names")
+    p_set_content = sub.add_parser(
+        "set-content",
+        help="overwrite a layout's raw content (text), keeping its embed_names",
+    )
     p_set_content.add_argument("name")
     p_set_content.add_argument("file", help="path to a text file, or '-' for stdin")
     p_set_content.set_defaults(func=cmd_set_content)
 
-    p_list = sub.add_parser("list", help="list layout names, optionally filtered by substring")
+    p_list = sub.add_parser(
+        "list", help="list layout names, optionally filtered by substring"
+    )
     p_list.add_argument("substring", nargs="?")
     p_list.set_defaults(func=cmd_list)
 

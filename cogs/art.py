@@ -59,7 +59,9 @@ class Art(commands.Cog):
             try:
                 await msg.add_reaction(self.bot.vars.get("art-hof-emote"))
                 await msg.add_reaction("<a:ML_sparkles:899826759313293432>")
-                await msg.add_reaction("<a:ML_lilac_heart_NF2U_DNS:1046191564055138365>")
+                await msg.add_reaction(
+                    "<a:ML_lilac_heart_NF2U_DNS:1046191564055138365>"
+                )
                 await msg.create_thread(name="⁺﹒Compliments & Discussion﹗𖹭﹒⁺")
             except discord.NotFound:
                 print(f"Message {msg.jump_url} not found")

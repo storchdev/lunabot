@@ -95,7 +95,9 @@ class StickyMessages(commands.Cog):
         sm = StickyMessage(self.bot, channel, view.layout, None)
         self.sticky_messages[channel.id] = sm
 
-        await view.final_interaction.response.edit_message(content="Successfully added the sticky message.", view=None, embed=None)
+        await view.final_interaction.response.edit_message(
+            content="Successfully added the sticky message.", view=None, embed=None
+        )
 
     @commands.command()
     async def removesm(self, ctx, *, channel: discord.TextChannel):

@@ -3,6 +3,7 @@
 
 Usage: scripts/exec.sh '<python code>'
 """
+
 import sys
 from pathlib import Path
 

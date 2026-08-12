@@ -518,7 +518,7 @@ class Economy(commands.Cog):
         bal = await self.get_balance(member.id)
         layout = self.bot.get_layout("bal")
         await layout.send(ctx, LayoutContext(author=member), repls={"balance": bal})
-        
+
     @commands.hybrid_command()
     @app_commands.describe(item="The item you want to view")
     async def iteminfo(self, ctx, *, item):
@@ -591,7 +591,9 @@ class Economy(commands.Cog):
     @commands.hybrid_command(name="econ", aliases=["earn", "econhelp"])
     async def econ(self, ctx):
         """View all the ways to earn Lunara."""
-        commands_list = sorted(c.name for c in self.get_commands() if c.extras.get("econ"))
+        commands_list = sorted(
+            c.name for c in self.get_commands() if c.extras.get("econ")
+        )
         layout = self.bot.get_layout("econ/commands")
         await layout.send(ctx, repls={"commands": commands_list}, jinja=True)
 
@@ -603,7 +605,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("flowerpick", 21600, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/flowers/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         if random.random() < 0.5:
@@ -625,7 +629,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("stargaze", duration, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/stargaze/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         amount = random.randint(60000, 90000)
@@ -639,7 +645,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("music", 3600, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/vibe/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         if random.random() < 0.25:
@@ -657,10 +665,14 @@ class Economy(commands.Cog):
     async def spin(self, ctx):
         """Spin a randomizer wheel for a chance at some Lunara. Boosters get 2 spins per day."""
         rate = 2 if is_booster(ctx.author, self.bot) else 1
-        end_time = await self.bot.get_cooldown_end("spin", 86400, rate=rate, obj=ctx.author)
+        end_time = await self.bot.get_cooldown_end(
+            "spin", 86400, rate=rate, obj=ctx.author
+        )
         if end_time:
             layout = self.bot.get_layout("econ/spin/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         query = "SELECT end_time FROM cooldowns WHERE action = $1 AND object_id = $2 AND bucket = 'user'"
@@ -682,7 +694,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("hug", 1800, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/hug/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         amount = random.randint(1500, 4000)
@@ -698,7 +712,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("daily", duration, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/daily/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         await self.add_balance(ctx.author.id, 15000)
@@ -714,7 +730,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("event", duration, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/event/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         timethingy = discord.utils.format_dt(now + timedelta(seconds=duration), "R")
@@ -723,7 +741,9 @@ class Economy(commands.Cog):
             amount = random.randint(30000, 40000)
             await self.add_balance(ctx.author.id, amount)
             layout = self.bot.get_layout("econ/event/great")
-            await layout.send(ctx, repls={"30k-to-40k": amount, "timethingy": timethingy})
+            await layout.send(
+                ctx, repls={"30k-to-40k": amount, "timethingy": timethingy}
+            )
         else:
             await self.add_balance(ctx.author.id, 10000)
             layout = self.bot.get_layout("econ/event/good")
@@ -735,13 +755,17 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("gfx", 2400, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/gfx/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         amount = random.randint(2000, 3000)
         await self.add_balance(ctx.author.id, amount)
         layout = self.bot.get_layout("econ/gfx")
-        await layout.send(ctx, repls={"2k-to-3k": amount, "gfxchoices": random.choice(GFX_CHOICES)})
+        await layout.send(
+            ctx, repls={"2k-to-3k": amount, "gfxchoices": random.choice(GFX_CHOICES)}
+        )
 
     @commands.hybrid_command(extras={"econ": True})
     async def bake(self, ctx):
@@ -749,7 +773,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("bake", 1800, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/bake/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         await self.add_balance(ctx.author.id, 1000)
@@ -762,7 +788,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("draw", 1800, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/draw/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         await self.add_balance(ctx.author.id, 2000)
@@ -775,7 +803,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("paint", 1800, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/paint/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         if random.random() < 0.75:
@@ -793,7 +823,9 @@ class Economy(commands.Cog):
         end_time = await self.bot.get_cooldown_end("buypaint", 300, obj=ctx.author)
         if end_time:
             layout = self.bot.get_layout("econ/buypaint/cd")
-            await layout.send(ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")})
+            await layout.send(
+                ctx, repls={"timethingy": discord.utils.format_dt(end_time, "R")}
+            )
             return
 
         amount = random.randint(3000, 4000)

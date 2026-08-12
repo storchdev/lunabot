@@ -33,8 +33,8 @@ async def _repl_coroutine(_bot):
 
 
 def _wrap_code(code: str) -> ast.Module:
-    user_code = ast.parse(code, mode='exec')
-    mod = ast.parse(EXEC_CORO_CODE, mode='exec')
+    user_code = ast.parse(code, mode="exec")
+    mod = ast.parse(EXEC_CORO_CODE, mode="exec")
 
     definition = mod.body[-1]
     assert isinstance(definition, ast.AsyncFunctionDef)
@@ -107,12 +107,12 @@ class Webserver(webserver.WebserverCog, port=8080):
         sys.stdout = stdout_capture
         try:
             mod = _wrap_code(code)
-            compiled = compile(mod, '<exec>', 'exec')
+            compiled = compile(mod, "<exec>", "exec")
 
             scope: dict = {}
             exec(compiled, scope)
 
-            func = scope['_repl_coroutine']
+            func = scope["_repl_coroutine"]
 
             if inspect.isasyncgenfunction(func):
                 async for result in func(self.bot):
@@ -123,17 +123,22 @@ class Webserver(webserver.WebserverCog, port=8080):
                 if result is not None:
                     results.append(repr(result))
         except Exception:
-            return web.json_response({
-                "error": traceback.format_exc(),
-                "stdout": stdout_capture.getvalue(),
-            }, status=200)
+            return web.json_response(
+                {
+                    "error": traceback.format_exc(),
+                    "stdout": stdout_capture.getvalue(),
+                },
+                status=200,
+            )
         finally:
             sys.stdout = old_stdout
 
-        return web.json_response({
-            "results": results,
-            "stdout": stdout_capture.getvalue(),
-        })
+        return web.json_response(
+            {
+                "results": results,
+                "stdout": stdout_capture.getvalue(),
+            }
+        )
 
     @webserver.route("post", "/api/reload")
     async def reload_modules(self, request: web.Request):
@@ -186,15 +191,20 @@ class Webserver(webserver.WebserverCog, port=8080):
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
         except asyncio.TimeoutError:
             proc.kill()
-            return web.json_response({
-                "error": "command timed out after 30 seconds",
-            }, status=200)
+            return web.json_response(
+                {
+                    "error": "command timed out after 30 seconds",
+                },
+                status=200,
+            )
 
-        return web.json_response({
-            "return_code": proc.returncode,
-            "stdout": stdout.decode(errors="replace"),
-            "stderr": stderr.decode(errors="replace"),
-        })
+        return web.json_response(
+            {
+                "return_code": proc.returncode,
+                "stdout": stdout.decode(errors="replace"),
+                "stderr": stderr.decode(errors="replace"),
+            }
+        )
 
     @webserver.route("get", "/api/saved-chat/{channel_id}/{message_id}")
     async def get_saved_chat(self, request: web.Request):

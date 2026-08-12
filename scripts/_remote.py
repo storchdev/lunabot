@@ -3,6 +3,7 @@
 Not a CLI itself -- imported by exec.py, layout.py, etc. Uses only the stdlib
 so these scripts run with a bare `python3`, no venv needed.
 """
+
 import json
 import sys
 import urllib.error
