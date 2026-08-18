@@ -12,6 +12,24 @@ if TYPE_CHECKING:
     from bot import LunaBot
 
 
+async def set_var(bot: "LunaBot", name: str, value: str) -> str | int:
+    query = """INSERT INTO
+                    vars (name, value)
+                VALUES
+                    ($1, $2)
+                ON CONFLICT (name) DO
+                UPDATE
+                SET
+                    value = $2
+            """
+    await bot.db.execute(query, name, value)
+    if value.isdigit():
+        bot.vars[name] = int(value)
+    else:
+        bot.vars[name] = value
+    return bot.vars[name]
+
+
 class Vars(commands.Cog):
     """Hot editable key-value store, cached in bot.vars."""
 
@@ -41,19 +59,8 @@ class Vars(commands.Cog):
     async def setvar(self, ctx, name: str, *, value: str):
         if value.startswith('"') and value.endswith('"'):
             value = value[1:-1]
-        query = """INSERT INTO
-                       vars (name, value)
-                   VALUES
-                       ($1, $2)
-                   ON CONFLICT (name) DO
-                   UPDATE
-                   SET
-                       value = $2
-                """
-        await self.bot.db.execute(query, name, value)
-        if value.isdigit():
-            value = int(value)
-        self.bot.vars[name] = value
+
+        await set_var(self.bot, name, value)
         await ctx.send(f"Successfully set the variable `{name}` to `{value}`")
 
     @commands.command()

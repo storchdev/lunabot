@@ -3,6 +3,7 @@ import json
 from datetime import timedelta
 from io import StringIO
 from typing import TYPE_CHECKING
+from cogs.vars import set_var
 
 import discord
 from discord.ext import commands
@@ -395,7 +396,7 @@ class Staff(commands.Cog):
     async def dni(
         self,
         ctx,
-        role: Optional[discord.Role],
+        # role: Optional[discord.Role],
         name: str,
         hex1: str,
         hex2: str | None = None,
@@ -415,11 +416,13 @@ class Staff(commands.Cog):
         if v2 is not None and not 0 <= v2 <= 0xFFFFFF:
             return await ctx.send("Invalid hex code.")
 
-        if role is None:
-            role = ctx.guild.get_role(1434398478003605514)
+        custom_roles = json.loads(self.bot.vars.get("custom-roles"))
+        if str(ctx.author.id) not in custom_roles:
+            return await ctx.send("no custom role linked to you")
 
+        role = ctx.guild.get_role(custom_roles[str(ctx.author.id)])
         if role is None:
-            return await ctx.send("no role")
+            return await ctx.send("custom role couldn't be found")
 
         if v2 is None:
             await role.edit(name=name, colour=discord.Colour(v1))
@@ -435,6 +438,17 @@ class Staff(commands.Cog):
             color=self.bot.DEFAULT_EMBED_COLOR,
         )
         await ctx.send(embed=embed)
+
+    @commands.command(name="link-custom-role")
+    async def link_custom_role(self, ctx, member: discord.Member, role: discord.Role):
+
+        custom_roles = json.loads(self.bot.vars.get("custom-roles"))
+        custom_roles[str(member.id)] = role.id
+        await set_var(self.bot, "custom-roles", json.dumps(custom_roles, indent=4))
+        await ctx.send(
+            f"Linked {role.mention} to {member.mention}",
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
 
 
 async def setup(bot):
