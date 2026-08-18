@@ -119,7 +119,7 @@ class LunaBot(commands.Bot):
         self.db = await init_db()
 
         await self.load_extension("jishaku")
-        priority = ["cogs.vars", "cogs.tools"]
+        priority = ["cogs.vars", "cogs.tools", "cogs.embeds", "cogs.layouts"]
         not_cogs = ["cogs.utils", "cogs.db", "cogs.activity_event", "cogs.summer_event"]
 
         for cog in priority:
