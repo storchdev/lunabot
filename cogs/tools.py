@@ -11,9 +11,10 @@ import discord
 from discord import ui
 from discord.ext import commands
 from discord.utils import escape_markdown
+from fuzzy_rust import extract_bests
 from rapidfuzz import fuzz
 
-from .utils import ConfirmView, EmbedEditor, View
+from .utils import ConfirmView, EmbedEditor, SimplePages, View
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -438,6 +439,31 @@ class Tools(commands.Cog, description="storchs tools"):
         roles = ctx.guild.roles
         view = CleanRoleView(ctx, roles)
         view.message = await ctx.send(embed=view.get_embed(), view=view)
+
+    @commands.command()
+    async def searchroles(self, ctx, limit: Optional[int] = 25, *, query: str):
+        names = {}
+        for role in ctx.guild.roles:
+            names.setdefault(role.name, []).append(role)
+
+        results = await asyncio.to_thread(
+            extract_bests, query, list(names.keys()), limit
+        )
+        if not results:
+            await ctx.send("No matches found.", ephemeral=True)
+            return
+
+        entries = []
+        seen = set()
+        for name, _score in results:
+            for role in names[name]:
+                if role.id in seen:
+                    continue
+                seen.add(role.id)
+                entries.append(f"{role.mention} `{role.id}`")
+
+        view = SimplePages(entries, ctx=ctx)
+        await view.start()
 
     @commands.command()
     async def addlf(self, ctx, *, flag: str):
