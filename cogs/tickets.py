@@ -85,28 +85,31 @@ async def create_ticket(
     luna_id = bot.vars.get("luna-id")
     pm_id = bot.vars.get("pm-role-id")
     staff_id = bot.vars.get("staff-role-id")
-    molly_id = bot.vars.get("molly-id")
+    nala_id = bot.vars.get("nala-id")
 
-    if reason == "VIP Artist":
+    # First two: art-manager-ids
+    if reason == "VIP Artist or Trusted Buyer":
         var = str(bot.vars.get("art-manager-ids"))
         ping_ids = json.loads(var)
         pings = " ".join(f"<@{x}>" for x in ping_ids)
     elif reason == "Trusted Seller":
-        pings = f"<@{luna_id}> <@{molly_id}>"
-    elif reason == "Partnership Request":
-        pings = f"<@&{pm_id}>"
-    elif reason == "PM Request":
+        var = str(bot.vars.get("art-manager-ids"))
+        ping_ids = json.loads(var)
+        pings = " ".join(f"<@{x}>" for x in ping_ids)
+    elif reason == "Claiming Perks or Prizes":
         pings = f"<@{luna_id}>"
-    elif reason == "Booster Perks":
-        pings = f"<@{luna_id}>"
-    elif reason == "User Report":
+    elif reason == "Reporting Issues":
         pings = f"<@&{staff_id}>"
-    elif reason == "General Inquiry":
+    elif reason == "General Inquiries":
         pings = f"<@&{staff_id}>"
+    elif reason == "Giveaway Hosting":
+        pings = f"<@{luna_id}> <@{nala_id}>"
+    elif reason == "Collaborations":
+        pings = f"<@{luna_id}> <@{nala_id}>"
     elif reason == "Other":
         pings = f"<@&{staff_id}>"
-    elif "Shoutout" in reason:
-        pings = f"<@{luna_id}>"
+    # elif "Shoutout" in reason:
+    #     pings = f"<@{luna_id}>"
     else:
         pings = f"<@{bot.owner_id}>"
 
@@ -147,16 +150,18 @@ class TicketTypeMenu(View):
     def __init__(self, bot, owner):
         super().__init__(bot=bot, owner=owner)
 
+        emoji = bot.vars.get("purple-heart-emoji")
         for option in [
-            "VIP Artist",
+            "VIP Artist or Trusted Buyer",
             "Trusted Seller",
-            "PM Request",
-            "Booster Perks",
-            "User Report",
-            "General Inquiry",
+            "Claiming Perks or Prizes",
+            "Reporting Issues",
+            "General Inquiries",
+            "Giveaway Hosting",
+            "Collaborations",
             "Other",
         ]:
-            self.ticket_type.add_option(label=option)
+            self.ticket_type.add_option(label=f"{option}﹒⁺", value=option, emoji=emoji)
 
         if owner.id in self.bot.owner_ids:
             self.ticket_type.add_option(label="test")
@@ -185,6 +190,15 @@ class TicketTypeMenu(View):
             )
             return
 
+        if select.values[0] == "Giveaway Hosting" and all(
+            r.id != self.bot.vars.get("trusted-seller-role-id")
+            for r in self.owner.roles
+        ):
+            await interaction.response.edit_message(
+                content="Only Trusted Sellers can open these tickets!", view=None
+            )
+            return
+
         await interaction.response.edit_message(
             content="Please wait a moment...", view=None
         )
@@ -209,7 +223,8 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
 
     async def cog_load(self):
         self.bot.add_view(TicketView(self.bot))
-        self.remind_inactive.start()
+        if not self.remind_inactive.is_running():
+            self.remind_inactive.start()
 
     async def cog_unload(self):
         self.remind_inactive.cancel()
