@@ -94,6 +94,13 @@ CREATE TABLE IF NOT EXISTS cooldowns (
   UNIQUE(action, user_id)
 );
 
+-- Source of truth for perk currency amounts. Cached in bot.perk_rewards and
+-- used both to grant currency and as {key} placeholders in perk layout embeds.
+CREATE TABLE IF NOT EXISTS perk_rewards (
+  key TEXT PRIMARY KEY,
+  amount INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS active_tickets (
   ticket_id SERIAL PRIMARY KEY,
   channel_id BIGINT,

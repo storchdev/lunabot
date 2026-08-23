@@ -49,6 +49,7 @@ class LunaBot(commands.Bot):
         self.embeds: dict[str, discord.Embed] = {}
         self.future_tasks: dict[int, FutureTask] = {}
         self.layouts: dict[str, Layout] = {}
+        self.perk_rewards: dict[str, int] = {}
         self.tickets: dict[discord.Thread, Ticket] = {}
         self.tz_cache: dict[discord.User, str] = {}
         self.vars: dict[str, str | int] = {}

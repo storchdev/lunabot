@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 from cogs.utils import View, SimplePages
+from .perks import format_lunaras
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -87,6 +88,12 @@ class InfoSections(commands.Cog):
         self.section_views: dict[tuple[str, str], InfoSectionView] = {}
         self.button_targets: dict[str, str] = {}
         self._registered_views: list[InfoSectionView] = []
+
+    def _perk_repls(self) -> dict[str, str]:
+        return {
+            key: format_lunaras(amount)
+            for key, amount in self.bot.perk_rewards.items()
+        }
 
     @staticmethod
     def default_rules_config() -> dict[str, Any]:
@@ -338,7 +345,9 @@ class InfoSections(commands.Cog):
                 )
             return
 
-        await self.bot.get_layout(target_layout).send(interaction, ephemeral=True)
+        await self.bot.get_layout(target_layout).send(
+            interaction, repls=self._perk_repls(), ephemeral=True
+        )
 
     def _get_section(self, name: str) -> Optional[InfoSectionConfig]:
         return self.sections.get(name.lower())
@@ -444,7 +453,9 @@ class InfoSections(commands.Cog):
 
         for layout in section.layouts:
             view = self.section_views.get((section.name, layout.name))
-            await self.bot.get_layout(layout.name).send(channel, view=view)
+            await self.bot.get_layout(layout.name).send(
+                channel, repls=self._perk_repls(), view=view
+            )
             await divider.send(channel)
 
     async def cog_load(self):

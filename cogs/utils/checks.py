@@ -33,6 +33,16 @@ def is_booster(member: discord.Member, bot) -> bool:
     return booster_role in member.roles
 
 
+def is_vanity_rep(member: discord.Member, bot) -> bool:
+    vanity_role = member.guild.get_role(bot.vars.get("vanity-role-id"))
+    return vanity_role in member.roles
+
+
+def is_tag_rep(member: discord.Member, bot) -> bool:
+    tag_role = member.guild.get_role(bot.vars.get("guildtag-role-id"))
+    return tag_role in member.roles
+
+
 def is_admin(ctx):
     return (
         ctx.author.guild_permissions.administrator or ctx.author.id in ctx.bot.owner_ids

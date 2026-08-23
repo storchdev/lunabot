@@ -61,6 +61,19 @@ class TopGG(commands.Cog):
                         user_id=user_id,
                         role_id=role_id,
                     )
+
+                    economy = self.bot.get_cog("Economy")
+                    amount = self.bot.perk_rewards.get("voter")
+                    if amount and economy:
+                        end_time = await self.bot.get_cooldown_end(
+                            "voter-currency", 11 * 3600, obj=member
+                        )
+                        if end_time is None:
+                            await economy.add_balance(user_id, amount)
+                            self.bot.log(
+                                f"granted {amount} voter perk currency to {user_id}",
+                                "topgg",
+                            )
                     layout = self.bot.get_layout("newvote")
                     await layout.send(
                         self.bot.get_var_channel("voter"),

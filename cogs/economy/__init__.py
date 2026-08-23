@@ -11,7 +11,8 @@ from discord import app_commands
 from discord.ext import commands
 
 from ..utils import LayoutContext, next_day
-from ..utils.checks import is_booster, staff_only
+from ..utils.checks import is_booster, is_tag_rep, is_vanity_rep, staff_only
+from ..perks import format_lunaras
 from . import items  # for automatically finding Item classes
 from .inv import InvMainPages, InvMainPageSource
 from .items import ItemCategory, ItemReq
@@ -718,9 +719,29 @@ class Economy(commands.Cog):
             return
 
         await self.add_balance(ctx.author.id, 15000)
+
+        bonus_lines = []
+        if is_vanity_rep(ctx.author, self.bot):
+            amount = self.bot.perk_rewards.get("vanity")
+            if amount:
+                await self.add_balance(ctx.author.id, amount)
+                bonus_lines.append(
+                    f"+ **{format_lunaras(amount)}** Lunaras for your vanity perk"
+                )
+        if is_tag_rep(ctx.author, self.bot):
+            amount = self.bot.perk_rewards.get("tagrep")
+            if amount:
+                await self.add_balance(ctx.author.id, amount)
+                bonus_lines.append(
+                    f"+ **{format_lunaras(amount)}** Lunaras for your tag rep perk"
+                )
+
         layout = self.bot.get_layout("econ/daily")
         timethingy = discord.utils.format_dt(now + timedelta(seconds=duration), "R")
         await layout.send(ctx, repls={"timethingy": timethingy})
+
+        if bonus_lines:
+            await ctx.send("\n".join(bonus_lines))
 
     @commands.hybrid_command(extras={"econ": True})
     async def event(self, ctx):

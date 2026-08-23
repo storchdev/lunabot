@@ -117,7 +117,7 @@ def _entry_channel_id(entry: discord.AuditLogEntry) -> int | None:
 
 
 class RaidProtection(commands.Cog, name="Raid Protection"):
-    """Watches for mass bans/kicks, channel/role deletions, and message purges, and neutralizes whoever's doing it."""
+    """Watches for mass bans/kicks, channel/role deletions, and message purges, and neutralizes the culprit."""
 
     def __init__(self, bot):
         self.bot: "LunaBot" = bot

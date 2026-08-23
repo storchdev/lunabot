@@ -91,7 +91,7 @@ class HelpSelectMenu(discord.ui.Select["HelpMenu"]):
         for cog, cmds in self.commands.items():
             if not cmds:
                 continue
-            description = cog.description.split("\n", 1)[0] or None
+            description = cog.description.split("\n", 1)[0][:100] or None
             emoji = getattr(cog, "display_emoji", None)
             self.add_option(
                 label=cog.qualified_name,
