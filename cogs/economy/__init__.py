@@ -735,6 +735,13 @@ class Economy(commands.Cog):
                 bonus_lines.append(
                     f"+ **{format_lunaras(amount)}** Lunaras for your tag rep perk"
                 )
+        if is_booster(ctx.author, self.bot):
+            amount = self.bot.perk_rewards.get("booster")
+            if amount:
+                await self.add_balance(ctx.author.id, amount)
+                bonus_lines.append(
+                    f"+ **{format_lunaras(amount)}** Lunaras for your booster perk"
+                )
 
         layout = self.bot.get_layout("econ/daily")
         timethingy = discord.utils.format_dt(now + timedelta(seconds=duration), "R")
