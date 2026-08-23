@@ -851,6 +851,7 @@ class Economy(commands.Cog):
 
         amount = random.randint(3000, 4000)
         await self.add_balance(ctx.author.id, -amount)
+        await self.bot.reset_cooldown("paint", obj=ctx.author)
         layout = self.bot.get_layout("econ/buypaint")
         await layout.send(ctx, repls={"3k-to-4k": amount})
 

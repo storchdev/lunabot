@@ -264,6 +264,24 @@ class LunaBot(commands.Bot):
 
         return None
 
+    async def reset_cooldown(
+        self,
+        action: str,
+        *,
+        obj: Member | TextChannel | None = None,
+    ) -> None:
+        if isinstance(obj, Member):
+            bucket = "user"
+        elif isinstance(obj, TextChannel):
+            bucket = "channel"
+        else:
+            bucket = "global"
+
+        obj_id = obj.id if obj else None
+
+        query = "DELETE FROM cooldowns WHERE action = $1 AND object_id = $2 AND bucket = $3"
+        await self.db.execute(query, action, obj_id, bucket)
+
     def get_var_channel(
         self, name: str
     ) -> GuildChannel | Thread | PrivateChannel | TextChannel | None:
