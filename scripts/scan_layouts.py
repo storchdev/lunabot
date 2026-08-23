@@ -1,7 +1,7 @@
 import re
 import glob
 import sys
-from prettytable import PrettyTable
+from prettytable import PrettyTable, TableStyle
 
 
 # Function to extract layout names and their line numbers
@@ -38,6 +38,7 @@ if __name__ == "__main__":
 
     # Create and print a nicely formatted table
     table = PrettyTable()
+    table.set_style(TableStyle.SINGLE_BORDER)
     table.field_names = ["Name", "File", "Line Numbers"]
     for row in table_data:
         table.add_row(row)

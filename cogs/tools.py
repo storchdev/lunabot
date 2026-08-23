@@ -12,6 +12,7 @@ from discord import ui
 from discord.ext import commands
 from discord.utils import escape_markdown
 from fuzzy_rust import extract_bests
+from prettytable import PrettyTable, TableStyle
 from rapidfuzz import fuzz
 
 from .utils import ConfirmView, EmbedEditor, SimplePages, View
@@ -194,25 +195,14 @@ class Tools(commands.Cog, description="storchs tools"):
             info.append(f"Error when reloading module `{module}`")
 
     @commands.command()
-    async def sql(self, ctx, *, query):
-        if query.lower().startswith("select"):
-            try:
-                rows = await self.bot.db.fetch(query)
-            except Exception as e:
-                await ctx.send(f"Error: {e}")
-                return
-            if not rows:
-                await ctx.send("No results.")
-                return
-            buf = StringIO()
-            writer = csv.writer(buf)
-            writer.writerow(rows[0].keys())
-            for row in rows:
-                row = dict(row)
-                writer.writerow(row.values())
-            buf.seek(0)
-            await ctx.send(file=discord.File(buf, filename="query.csv"))
-        else:
+    async def sql(
+        self,
+        ctx,
+        fmt: Optional[Literal["md", "csv", "txt"]] = None,
+        *,
+        query: str,
+    ):
+        if not query.lower().startswith("select"):
             try:
                 await self.bot.db.execute(query)
             except Exception as e:
@@ -220,6 +210,56 @@ class Tools(commands.Cog, description="storchs tools"):
                 return
 
             await ctx.send("Done!")
+            return
+
+        try:
+            rows = await self.bot.db.fetch(query)
+        except Exception as e:
+            await ctx.send(f"Error: {e}")
+            return
+        if not rows:
+            await ctx.send("No results.")
+            return
+
+        if fmt == "csv":
+            buf = StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(rows[0].keys())
+            for row in rows:
+                writer.writerow(dict(row).values())
+            buf.seek(0)
+            await ctx.send(file=discord.File(buf, filename="query.csv"))
+            return
+
+        table = PrettyTable()
+        table.field_names = list(rows[0].keys())
+        for row in rows:
+            table.add_row(list(dict(row).values()))
+        table.max_width = 80
+        table.align = "l"
+
+        if fmt == "md":
+            table.set_style(TableStyle.MARKDOWN)
+            buf = StringIO(table.get_string())
+            await ctx.send(file=discord.File(buf, filename="query.md"))
+            return
+
+        table.set_style(TableStyle.SINGLE_BORDER)
+        table_str = table.get_string()
+
+        if fmt == "txt":
+            buf = StringIO(table_str)
+            await ctx.send(file=discord.File(buf, filename="query.txt"))
+            return
+
+        max_width = self.bot.vars.get("sql-output-max-width") or 0
+        table_width = max(len(line) for line in table_str.splitlines())
+        message = f"```\n{table_str}\n```"
+        if table_width <= max_width and len(message) <= 2000:
+            await ctx.send(message)
+        else:
+            buf = StringIO(table_str)
+            await ctx.send(file=discord.File(buf, filename="query.txt"))
 
     @commands.command()
     async def buildembed(self, ctx):
