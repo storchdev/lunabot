@@ -505,6 +505,37 @@ class Tools(commands.Cog, description="storchs tools"):
         view = SimplePages(entries, ctx=ctx)
         await view.start()
 
+    @commands.command(aliases=["searchcommands"])
+    async def searchcmds(self, ctx, limit: Optional[int] = 25, *, query: str):
+        cmds: dict[str, commands.Command] = {}
+        for command in self.bot.walk_commands():
+            if command.hidden:
+                continue
+            try:
+                if not await command.can_run(ctx):
+                    continue
+            except commands.CommandError:
+                continue
+            cmds[command.qualified_name] = command
+
+        if not cmds:
+            await ctx.send("No commands found.", ephemeral=True)
+            return
+
+        results = await asyncio.to_thread(extract_bests, query, list(cmds.keys()), limit)
+        if not results:
+            await ctx.send("No matches found.", ephemeral=True)
+            return
+
+        entries = []
+        for name, _score in results:
+            command = cmds[name]
+            signature = f"{ctx.clean_prefix}{command.qualified_name} {command.signature}".strip()
+            entries.append(f"`{signature}` — {command.short_doc or 'No description'}")
+
+        view = SimplePages(entries, ctx=ctx)
+        await view.start()
+
     @commands.command()
     async def addlf(self, ctx, *, flag: str):
         if flag in self.bot.log_flags:

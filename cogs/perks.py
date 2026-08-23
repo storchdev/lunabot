@@ -47,7 +47,7 @@ class PerkRewards(commands.Cog):
         await ctx.send(f"Set perk `{key}` to **{amount:,}** Lunaras.")
 
     @commands.command()
-    async def perkhelp(self, ctx):
+    async def listperks(self, ctx):
         """List all perk currency amounts."""
         if not self.bot.perk_rewards:
             await ctx.send("No perk rewards configured.")
