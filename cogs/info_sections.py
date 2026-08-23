@@ -409,7 +409,7 @@ class InfoSections(commands.Cog):
             raise ValueError(f"Section has missing layouts: {missing_names}")
 
     def _format_section(self, section: InfoSectionConfig) -> str:
-        lines = [f"Info section `{section.name}`"]
+        lines = []
 
         if len(section.layouts) == 0:
             lines.append("No layouts configured.")
