@@ -278,3 +278,12 @@ CREATE TABLE IF NOT EXISTS candybals (
   user_id BIGINT UNIQUE,
   balance INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS user_devices (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  device_name TEXT,
+  char_width INTEGER,
+  is_active BOOLEAN DEFAULT FALSE,
+  UNIQUE(user_id, device_name)
+);

@@ -231,8 +231,15 @@ class Tools(commands.Cog, description="storchs tools"):
             await ctx.send(file=discord.File(buf, filename="query.csv"))
             return
 
+        field_names = list(rows[0].keys())
+
+        if fmt is None:
+            table_rows = [list(dict(row).values()) for row in rows]
+            await self.bot.send_table(ctx, table_rows, field_names=field_names)
+            return
+
         table = PrettyTable()
-        table.field_names = list(rows[0].keys())
+        table.field_names = field_names
         for row in rows:
             table.add_row(list(dict(row).values()))
         table.max_width = 80
@@ -246,20 +253,8 @@ class Tools(commands.Cog, description="storchs tools"):
 
         table.set_style(TableStyle.SINGLE_BORDER)
         table_str = table.get_string()
-
-        if fmt == "txt":
-            buf = StringIO(table_str)
-            await ctx.send(file=discord.File(buf, filename="query.txt"))
-            return
-
-        max_width = self.bot.vars.get("sql-output-max-width") or 0
-        table_width = max(len(line) for line in table_str.splitlines())
-        message = f"```\n{table_str}\n```"
-        if table_width <= max_width and len(message) <= 2000:
-            await ctx.send(message)
-        else:
-            buf = StringIO(table_str)
-            await ctx.send(file=discord.File(buf, filename="query.txt"))
+        buf = StringIO(table_str)
+        await ctx.send(file=discord.File(buf, filename="query.txt"))
 
     @commands.command()
     async def buildembed(self, ctx):

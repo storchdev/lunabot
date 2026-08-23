@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional, Self
 import discord
 from discord.ext import commands, menus
 from discord.ui import Modal, TextInput
+from prettytable import PrettyTable, TableStyle
 
 
 class SkipToModal(Modal, title="Skip to page..."):
@@ -303,3 +304,107 @@ class SimplePages(ViewMenuPages):
             self.embed = discord.Embed(colour=ctx.bot.DEFAULT_EMBED_COLOR)
         else:
             self.embed = embed
+
+
+class TablePageSource(menus.PageSource):
+    """Packs as many rows as fit under `max_chars` per page (instead of a
+    fixed row count), since a row's rendered width depends on `max_width`."""
+
+    def __init__(
+        self,
+        rows: list,
+        *,
+        field_names: list[str],
+        max_width: int,
+        style: TableStyle,
+        max_chars: int,
+        footer_reserve: int = 100,
+    ):
+        self.rows = rows
+        self.field_names = field_names
+        self.max_width = max_width
+        self.style = style
+        self.max_chars = max_chars
+        self.footer_reserve = footer_reserve
+        # computed synchronously (no I/O) so is_paginating() is accurate as
+        # soon as ViewMenuPages.__init__ calls fill_items(), before prepare()
+        # would otherwise get a chance to run
+        self.pages: list[list] = self._pack_pages()
+
+    def is_paginating(self) -> bool:
+        return len(self.pages) > 1
+
+    def get_max_pages(self) -> int:
+        return len(self.pages)
+
+    async def get_page(self, page_number: int) -> list:
+        return self.pages[page_number]
+
+    def _render(self, rows: list) -> str:
+        table = PrettyTable()
+        table.field_names = self.field_names
+        table.align = "l"
+        table.set_style(self.style)
+        table.max_table_width = self.max_width
+        for row in rows:
+            table.add_row(row)
+        return f"```\n{table.get_string()}\n```"
+
+    def _pack_pages(self) -> list[list]:
+        if not self.rows:
+            return [[]]
+
+        budget = self.max_chars - self.footer_reserve
+        pages = []
+        current = []
+        for row in self.rows:
+            candidate = current + [row]
+            if current and len(self._render(candidate)) > budget:
+                pages.append(current)
+                current = [row]
+            else:
+                current = candidate
+        if current:
+            pages.append(current)
+        return pages
+
+    async def format_page(self, menu, page_rows: list) -> str:
+        content = self._render(page_rows)
+
+        maximum = self.get_max_pages()
+        if maximum > 1:
+            start = sum(len(p) for p in self.pages[: menu.current_page]) + 1
+            end = start + len(page_rows) - 1
+            content += (
+                f"\nPage {menu.current_page + 1}/{maximum} "
+                f"({start}-{end} of {len(self.rows)} rows)"
+            )
+
+        return content
+
+
+class TablePages(ViewMenuPages):
+    """A pagination session for codeblock PrettyTables, sized to the viewer's
+    calibrated device width (see cogs/display.py and bot.send_table)."""
+
+    def __init__(
+        self,
+        rows: list,
+        *,
+        ctx,
+        field_names: list[str],
+        max_width: int,
+        style: TableStyle = TableStyle.SINGLE_BORDER,
+        max_chars: int = 2000,
+    ):
+        super().__init__(
+            TablePageSource(
+                rows,
+                field_names=field_names,
+                max_width=max_width,
+                style=style,
+                max_chars=max_chars,
+            ),
+            ctx=ctx,
+            check_embeds=False,
+        )

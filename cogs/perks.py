@@ -99,11 +99,11 @@ class PerkRewards(commands.Cog):
             await ctx.send("No perk rewards configured.")
             return
 
-        lines = [
-            f"`{key}` — **{format_lunaras(amount)}** Lunaras"
+        rows = [
+            [key, format_lunaras(amount)]
             for key, amount in sorted(self.bot.perk_rewards.items())
         ]
-        await ctx.send("\n".join(lines))
+        await self.bot.send_table(ctx, rows, field_names=["Key", "Lunaras"])
 
 
 async def setup(bot):

@@ -12,16 +12,20 @@ from discord.abc import GuildChannel, PrivateChannel
 from discord.ext import commands
 from discord.ext.duck.errors import ErrorManager
 from parsedatetime import Calendar
+from prettytable import TableStyle
 
 from cogs.summer_event.constants import START_TIME
 from cogs.db import init_db
 from cogs.future_tasks import FutureTask
-from cogs.utils import InvalidURL, Layout, View
+from cogs.utils import InvalidURL, Layout, TablePages, View
 from cogs.utils.checks import guild_only
 from config import DEFAULT_TIMEZONE, ERROR_WEBHOOK_URL, LOG_FILE
 
 if TYPE_CHECKING:
     from cogs.tickets import Ticket
+
+# fallback codeblock width for users who haven't calibrated a device yet
+DEFAULT_DISPLAY_WIDTH = 60
 
 
 class LunaBot(commands.Bot):
@@ -53,6 +57,7 @@ class LunaBot(commands.Bot):
         self.tickets: dict[discord.Thread, Ticket] = {}
         self.tz_cache: dict[discord.User, str] = {}
         self.vars: dict[str, str | int] = {}
+        self.width_cache: dict[int, int] = {}
 
         self.errors = ErrorManager(
             self,
@@ -316,6 +321,27 @@ class LunaBot(commands.Bot):
                     """
             return await self.db.fetchval(query, name)
 
+    async def send_table(
+        self,
+        ctx,
+        rows: list,
+        *,
+        field_names: list[str],
+        style: TableStyle = TableStyle.SINGLE_BORDER,
+    ) -> None:
+        """Sends `rows` as a paginated, codeblock-formatted PrettyTable sized
+        to the invoking user's calibrated device width (see cogs/display.py).
+        Each page packs as many rows as fit under Discord's 2000-char limit."""
+        max_width = await ctx.fetch_display_width()
+        pages = TablePages(
+            rows,
+            ctx=ctx,
+            field_names=field_names,
+            max_width=max_width,
+            style=style,
+        )
+        await pages.start()
+
     async def dm_owner(self, message: str):
         assert self.owner_id is not None
         owner = self.get_user(self.owner_id)
@@ -369,6 +395,20 @@ class LunaCtx(commands.Context):
             return None
 
         return dt
+
+    async def fetch_display_width(self) -> int:
+        """Max codeblock line width (in characters) that fits on the author's
+        calibrated device without horizontal scrolling."""
+        if self.author.id in self.bot.width_cache:
+            return self.bot.width_cache[self.author.id]
+
+        query = "SELECT char_width FROM user_devices WHERE user_id = $1 AND is_active = TRUE"
+        width = await self.bot.db.fetchval(query, self.author.id)
+        if width is None:
+            width = DEFAULT_DISPLAY_WIDTH
+
+        self.bot.width_cache[self.author.id] = width
+        return width
 
 
 class AdminCog(commands.Cog):
