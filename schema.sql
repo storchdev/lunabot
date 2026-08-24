@@ -1,14 +1,14 @@
 CREATE TABLE IF NOT EXISTS embeds (
     name TEXT PRIMARY KEY,
-    embed TEXT,
+    embed JSONB,
     creator_id BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS layouts (
     id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE, 
+    name TEXT UNIQUE,
     content TEXT,
-    embeds TEXT,
+    embeds JSONB,
     creator_id BIGINT
 );
 
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS auto_messages (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE,
     channel_id BIGINT,
-    layout JSON,
+    layout JSONB,
     interval INTEGER,
     lastsent INTEGER
 );
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS auto_messages (
 CREATE TABLE IF NOT EXISTS sticky_messages (
     id SERIAL PRIMARY KEY,
     channel_id BIGINT UNIQUE,
-    layout JSON,
+    layout JSONB,
     last_message_id BIGINT DEFAULT NULL
 );
 
