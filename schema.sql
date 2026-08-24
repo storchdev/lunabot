@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS todos (
   id SERIAL PRIMARY KEY,
   name TEXT,
   priority INTEGER,
-  completed BOOLEAN,
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
   creator_id BIGINT,
   time_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   time_completed TIMESTAMP WITH TIME ZONE
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS cooldowns (
   object_id BIGINT,
   end_time TIMESTAMP WITH TIME ZONE,
   bucket TEXT,
-  count INTEGER,
+  count INTEGER NOT NULL DEFAULT 0,
   UNIQUE(action, object_id)
 );
 
@@ -235,8 +235,8 @@ CREATE TABLE IF NOT EXISTS event_dailies (
   user_id BIGINT,
   date_str TEXT,
   task TEXT,
-  num INTEGER DEFAULT 1,
-  claimed BOOLEAN DEFAULT FALSE,
+  num INTEGER NOT NULL DEFAULT 1,
+  claimed BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE(user_id, date_str, task)
 );
 
@@ -285,7 +285,7 @@ CREATE TABLE IF NOT EXISTS exclusive_roles (
 CREATE TABLE IF NOT EXISTS candybals (
   id SERIAL PRIMARY KEY,
   user_id BIGINT UNIQUE,
-  balance INTEGER
+  balance INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS user_devices (
@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS user_devices (
   user_id BIGINT,
   device_name TEXT,
   char_width INTEGER,
-  is_active BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE(user_id, device_name)
 );
 
@@ -305,7 +305,7 @@ CREATE TABLE IF NOT EXISTS vars (
 CREATE TABLE IF NOT EXISTS xp (
   id SERIAL PRIMARY KEY,
   user_id BIGINT UNIQUE,
-  total_xp INTEGER
+  total_xp INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS bdays (
@@ -336,7 +336,7 @@ CREATE TABLE IF NOT EXISTS pingonjoin (
 );
 
 CREATE TABLE IF NOT EXISTS ticket_counter (
-  num BIGINT
+  num BIGINT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS rrs (
