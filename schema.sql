@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS embeds (
-    id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE, 
-    embed JSON,
+    name TEXT PRIMARY KEY,
+    embed TEXT,
     creator_id BIGINT
 );
 
@@ -28,7 +27,8 @@ CREATE TABLE IF NOT EXISTS auto_responders (
     actions TEXT,
     restrictions TEXT,
     cooldown TEXT,
-    author_id BIGINT
+    author_id BIGINT,
+    on_cd_layout_name TEXT
 );
 
 CREATE TABLE IF NOT EXISTS code_responders (
@@ -89,9 +89,11 @@ CREATE TABLE IF NOT EXISTS bump_remind (
 CREATE TABLE IF NOT EXISTS cooldowns (
   id SERIAL PRIMARY KEY,
   action TEXT,
-  user_id BIGINT,
+  object_id BIGINT,
   end_time TIMESTAMP WITH TIME ZONE,
-  UNIQUE(action, user_id)
+  bucket TEXT,
+  count INTEGER,
+  UNIQUE(action, object_id)
 );
 
 -- Source of truth for perk currency amounts. Cached in bot.perk_rewards and
@@ -102,10 +104,10 @@ CREATE TABLE IF NOT EXISTS perk_rewards (
 );
 
 CREATE TABLE IF NOT EXISTS active_tickets (
-  ticket_id SERIAL PRIMARY KEY,
+  ticket_id BIGINT,
   channel_id BIGINT,
   opener_id BIGINT,
-  timestamp INTEGER,
+  timestamp BIGINT,
   archive_id BIGINT,
   remind_after TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -120,7 +122,9 @@ CREATE TABLE IF NOT EXISTS ticket_transcripts (
 CREATE TABLE IF NOT EXISTS confessions (
   id SERIAL PRIMARY KEY,
   user_id BIGINT,
-  confession TEXT
+  confession TEXT,
+  channel_id BIGINT,
+  message_id BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS counters (
@@ -138,7 +142,7 @@ CREATE TABLE IF NOT EXISTS queues (
 CREATE TABLE IF NOT EXISTS balances (
   id SERIAL PRIMARY KEY,
   user_id BIGINT UNIQUE,
-  balance INTEGER
+  balance BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS user_items (
@@ -146,7 +150,7 @@ CREATE TABLE IF NOT EXISTS user_items (
   user_id BIGINT,
   item_name_id TEXT,
   state TEXT,
-  item_count INTEGER,
+  item_count INTEGER DEFAULT 1,
   time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, item_name_id)
@@ -171,12 +175,21 @@ CREATE TABLE IF NOT EXISTS item_categories (
   description TEXT
 );
 
-CREATE TABLE IF NOT EXISTS item_reqs( 
+CREATE TABLE IF NOT EXISTS item_reqs(
   item_name_id TEXT,
-  type TEXT,  
+  type TEXT,
   description TEXT,
   name TEXT,
+  kwargs JSONB,
   UNIQUE(item_name_id, type, name)
+);
+
+CREATE TABLE IF NOT EXISTS item_use_times (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  item_name_id TEXT,
+  time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, item_name_id)
 );
 
 CREATE TABLE IF NOT EXISTS joins (
@@ -243,13 +256,6 @@ CREATE TABLE IF NOT EXISTS user_welc_messages (
   channel_id BIGINT
 );
 
-CREATE TABLE IF NOT EXISTS welc_messages (
-  user_id BIGINT PRIMARY KEY,
-  channel_id BIGINT,
-  message_id BIGINT,
-  time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS intro_messages (
   id SERIAL PRIMARY KEY,
   message_id BIGINT,
@@ -286,4 +292,58 @@ CREATE TABLE IF NOT EXISTS user_devices (
   char_width INTEGER,
   is_active BOOLEAN DEFAULT FALSE,
   UNIQUE(user_id, device_name)
+);
+
+CREATE TABLE IF NOT EXISTS vars (
+  name TEXT PRIMARY KEY,
+  value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS xp (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT UNIQUE,
+  total_xp INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS bdays (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT UNIQUE,
+  month BIGINT,
+  day BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS art_hof (
+  original_id BIGINT,
+  hof_id BIGINT,
+  hof_channel_id BIGINT,
+  author_id BIGINT,
+  stars BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS xotd_tba (
+  id SERIAL PRIMARY KEY,
+  kind TEXT,
+  user_id BIGINT,
+  data JSONB
+);
+
+CREATE TABLE IF NOT EXISTS pingonjoin (
+  guild_id BIGINT,
+  channel_id BIGINT PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS ticket_counter (
+  num BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS rrs (
+  id SERIAL PRIMARY KEY,
+  channel_id BIGINT,
+  message_id BIGINT,
+  map JSONB,
+  max_sel INTEGER,
+  req_role_id BIGINT,
+  no_role_msg TEXT,
+  req_time INTEGER,
+  no_time_msg TEXT
 );
