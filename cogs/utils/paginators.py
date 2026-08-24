@@ -11,6 +11,13 @@ import discord
 from discord.ext import commands, menus
 from discord.ui import Modal, TextInput
 from prettytable import PrettyTable, TableStyle
+from rapidfuzz import fuzz
+
+# A row matches if the query is a substring of some visible column's value,
+# or (for values long enough that short numeric fields like "1"/"-1" can't
+# trivially false-positive) a close fuzzy match of one.
+ROW_FILTER_CUTOFF = 85
+ROW_FILTER_MIN_FUZZY_LEN = 3
 
 
 class SkipToModal(Modal, title="Skip to page..."):
@@ -308,7 +315,10 @@ class SimplePages(ViewMenuPages):
 
 class TablePageSource(menus.PageSource):
     """Packs as many rows as fit under `max_chars` per page (instead of a
-    fixed row count), since a row's rendered width depends on `max_width`."""
+    fixed row count), since a row's rendered width depends on `max_width`.
+
+    Also supports hiding columns and fuzzy-filtering rows by the currently
+    visible columns' content (see TablePages)."""
 
     def __init__(
         self,
@@ -320,16 +330,67 @@ class TablePageSource(menus.PageSource):
         max_chars: int,
         footer_reserve: int = 100,
     ):
-        self.rows = rows
-        self.field_names = field_names
+        self.all_rows = rows
+        self.all_field_names = field_names
         self.max_width = max_width
         self.style = style
         self.max_chars = max_chars
         self.footer_reserve = footer_reserve
+
+        self.visible_indices: list[int] = list(range(len(field_names)))
+        self.row_query: str | None = None
+
+        # rows/field_names/pages are the current filtered/projected view;
         # computed synchronously (no I/O) so is_paginating() is accurate as
         # soon as ViewMenuPages.__init__ calls fill_items(), before prepare()
         # would otherwise get a chance to run
-        self.pages: list[list] = self._pack_pages()
+        self.rows: list = []
+        self.field_names: list[str] = []
+        self.pages: list[list] = []
+        self._recompute()
+
+    def set_visible_columns(self, indices: list[int]) -> None:
+        self.visible_indices = indices
+        self._recompute()
+
+    def set_row_query(self, query: str | None) -> None:
+        self.row_query = query
+        self._recompute()
+
+    def _recompute(self) -> None:
+        idxs = self.visible_indices
+        self.field_names = [self.all_field_names[i] for i in idxs]
+
+        rows = []
+        for row in self.all_rows:
+            visible_values = [row[i] for i in idxs]
+            if self.row_query and not self._row_matches(self.row_query, visible_values):
+                continue
+            rows.append(visible_values)
+
+        self.rows = rows
+        self.pages = self._pack_pages()
+
+    @staticmethod
+    def _row_matches(query: str, values: list) -> bool:
+        """A row matches if the query is a (case-insensitive) substring of
+        some visible value, or a close fuzzy match of one long enough for
+        that to be meaningful."""
+        q = query.strip().lower()
+        if not q:
+            return True
+
+        for v in values:
+            s = str(v).lower()
+            if q in s:
+                return True
+            if (
+                len(s) >= ROW_FILTER_MIN_FUZZY_LEN
+                and fuzz.partial_ratio(q, s) >= ROW_FILTER_CUTOFF
+            ):
+                return True
+
+        return False
 
     def is_paginating(self) -> bool:
         return len(self.pages) > 1
@@ -379,13 +440,39 @@ class TablePageSource(menus.PageSource):
                 f"\nPage {menu.current_page + 1}/{maximum} "
                 f"({start}-{end} of {len(self.rows)} rows)"
             )
+        elif len(self.rows) != len(self.all_rows):
+            content += f"\n{len(self.rows)} of {len(self.all_rows)} rows"
 
         return content
 
 
+class RowFilterModal(Modal, title="Filter rows"):
+    query = TextInput[Self](
+        label="Search",
+        required=False,
+        max_length=100,
+        placeholder="Leave blank to clear the filter",
+    )
+
+    def __init__(self, current: Optional[str]):
+        super().__init__()
+        if current:
+            self.query.default = current
+        self.interaction: Optional[discord.Interaction] = None
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        self.interaction = interaction
+        self.stop()
+
+
 class TablePages(ViewMenuPages):
     """A pagination session for codeblock PrettyTables, sized to the viewer's
-    calibrated device width (see cogs/display.py and bot.send_table)."""
+    calibrated device width (see cogs/display.py and bot.send_table).
+
+    Also lets the viewer pick which columns are visible (multiselect) and
+    fuzzy-filter rows by the currently visible columns' content (button + modal)."""
+
+    MAX_SELECTABLE_COLUMNS = 25
 
     def __init__(
         self,
@@ -408,3 +495,58 @@ class TablePages(ViewMenuPages):
             ctx=ctx,
             check_embeds=False,
         )
+
+    def fill_items(self) -> None:
+        super().fill_items()
+
+        if 1 < len(self.source.all_field_names) <= self.MAX_SELECTABLE_COLUMNS:
+            self._add_column_select()
+
+        self.filter_rows.row = 3
+        self.add_item(self.filter_rows)
+
+    def _build_column_options(self) -> list[discord.SelectOption]:
+        return [
+            discord.SelectOption(
+                label=str(name)[:100],
+                value=str(i),
+                default=i in self.source.visible_indices,
+            )
+            for i, name in enumerate(self.source.all_field_names)
+        ]
+
+    def _add_column_select(self) -> None:
+        select = discord.ui.Select(
+            placeholder="Choose visible columns...",
+            min_values=1,
+            max_values=len(self.source.all_field_names),
+            options=self._build_column_options(),
+            row=2,
+        )
+        select.callback = self._on_column_select
+        self.column_select = select
+        self.add_item(select)
+
+    async def _on_column_select(self, interaction: discord.Interaction) -> None:
+        indices = sorted(int(v) for v in self.column_select.values)
+        self.source.set_visible_columns(indices)
+        self.column_select.options = self._build_column_options()
+        self.current_page = 0
+        await self.show_page(interaction, 0)
+
+    @discord.ui.button(label="Filter rows", style=discord.ButtonStyle.blurple)
+    async def filter_rows(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        modal = RowFilterModal(self.source.row_query)
+        await interaction.response.send_modal(modal)
+        timed_out = await modal.wait()
+
+        if timed_out or modal.interaction is None:
+            return
+
+        query = modal.query.value.strip() or None
+        self.source.set_row_query(query)
+        await modal.interaction.response.defer()
+        self.current_page = 0
+        await self.show_page(interaction, 0)

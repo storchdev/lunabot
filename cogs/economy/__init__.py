@@ -11,7 +11,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from ..utils import LayoutContext, next_day
-from ..utils.checks import is_booster, is_tag_rep, is_vanity_rep, staff_only
+from ..utils.checks import admin_only, is_booster, is_tag_rep, is_vanity_rep, staff_only
 from ..perks import format_lunaras
 from . import items  # for automatically finding Item classes
 from .inv import InvMainPages, InvMainPageSource
@@ -348,6 +348,31 @@ class Economy(commands.Cog):
         """Browse the server shop."""
         view = ShopMainView(self.items, ctx=ctx)
         await ctx.send(embed=view.embed, view=view)
+
+    @commands.command(name="listshopitems")
+    @admin_only()
+    async def listshopitems(self, ctx):
+        """List every shop item, including hidden/unbuyable ones."""
+        rows = []
+        for item in sorted(self.items, key=lambda i: i.number_id):
+            stock = "∞" if item.stock == -1 else str(item.stock)
+            rows.append(
+                [
+                    item.number_id,
+                    item.name_id,
+                    item.display_name,
+                    item.category.display_name,
+                    f"{item.price:,}",
+                    f"{item.sell_price:,}",
+                    stock,
+                ]
+            )
+
+        await self.bot.send_table(
+            ctx,
+            rows,
+            field_names=["#", "Key", "Name", "Category", "Price", "Sell", "Stock"],
+        )
 
     @commands.hybrid_command(aliases=["purchase"])
     @app_commands.describe(item="The item you want to buy")
