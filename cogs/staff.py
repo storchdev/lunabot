@@ -392,53 +392,6 @@ class Staff(commands.Cog):
         await layout.send(ctx, LayoutContext(author=member))
         await ctx.message.delete()
 
-    @commands.command()
-    async def dni(
-        self,
-        ctx,
-        # role: Optional[discord.Role],
-        name: str,
-        hex1: str,
-        hex2: str | None = None,
-    ):
-        v1 = None
-        v2 = None
-        try:
-            v1 = int(hex1.lstrip("#"), base=16)
-            if hex2 is not None:
-                v2 = int(hex2.lstrip("#"), base=16)
-        except ValueError:
-            return await ctx.send("Invalid hex code.")
-
-        if not 0 <= v1 <= 0xFFFFFF:
-            return await ctx.send("Invalid hex code.")
-
-        if v2 is not None and not 0 <= v2 <= 0xFFFFFF:
-            return await ctx.send("Invalid hex code.")
-
-        custom_roles = json.loads(self.bot.vars.get("custom-roles"))
-        if str(ctx.author.id) not in custom_roles:
-            return await ctx.send("no custom role linked to you")
-
-        role = ctx.guild.get_role(custom_roles[str(ctx.author.id)])
-        if role is None:
-            return await ctx.send("custom role couldn't be found")
-
-        if v2 is None:
-            await role.edit(name=name, colour=discord.Colour(v1))
-        else:
-            await role.edit(
-                name=name,
-                colour=discord.Colour(v1),
-                secondary_colour=discord.Colour(v2),
-            )
-
-        embed = discord.Embed(
-            description=f"dni {role.mention}",
-            color=self.bot.DEFAULT_EMBED_COLOR,
-        )
-        await ctx.send(embed=embed)
-
     @commands.command(name="link-custom-role")
     async def link_custom_role(self, ctx, member: discord.Member, role: discord.Role):
 
