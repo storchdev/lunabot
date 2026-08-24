@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS confessions (
 CREATE TABLE IF NOT EXISTS counters (
   id SERIAL PRIMARY KEY,
   name TEXT UNIQUE,
-  count INTEGER
+  count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS queues (
@@ -142,31 +142,7 @@ CREATE TABLE IF NOT EXISTS queues (
 CREATE TABLE IF NOT EXISTS balances (
   id SERIAL PRIMARY KEY,
   user_id BIGINT UNIQUE,
-  balance BIGINT
-);
-
-CREATE TABLE IF NOT EXISTS user_items (
-  id SERIAL PRIMARY KEY,
-  user_id BIGINT,
-  item_name_id TEXT,
-  state TEXT,
-  item_count INTEGER DEFAULT 1,
-  time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(user_id, item_name_id)
-);
-
-CREATE TABLE IF NOT EXISTS shop_items (
-  name_id TEXT PRIMARY KEY,
-  number_id INTEGER UNIQUE,
-  display_name TEXT,
-  price INTEGER,
-  sell_price INTEGER DEFAULT NULL,
-  stock INTEGER DEFAULT -1,
-  usable BOOLEAN,
-  activatable BOOLEAN,
-  category TEXT,
-  description TEXT
+  balance BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS item_categories (
@@ -175,8 +151,32 @@ CREATE TABLE IF NOT EXISTS item_categories (
   description TEXT
 );
 
+CREATE TABLE IF NOT EXISTS shop_items (
+  name_id TEXT PRIMARY KEY,
+  number_id INTEGER UNIQUE,
+  display_name TEXT,
+  price INTEGER,
+  sell_price INTEGER DEFAULT NULL,
+  stock INTEGER NOT NULL DEFAULT -1,
+  usable BOOLEAN,
+  activatable BOOLEAN,
+  category TEXT REFERENCES item_categories(name),
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_items (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  item_name_id TEXT REFERENCES shop_items(name_id),
+  state TEXT,
+  item_count INTEGER NOT NULL DEFAULT 1,
+  time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, item_name_id)
+);
+
 CREATE TABLE IF NOT EXISTS item_reqs(
-  item_name_id TEXT,
+  item_name_id TEXT REFERENCES shop_items(name_id),
   type TEXT,
   description TEXT,
   name TEXT,
