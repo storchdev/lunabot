@@ -1,15 +1,14 @@
 CREATE TABLE IF NOT EXISTS embeds (
-    id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE, 
-    embed JSON,
+    name TEXT PRIMARY KEY,
+    embed JSONB,
     creator_id BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS layouts (
     id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE, 
+    name TEXT UNIQUE,
     content TEXT,
-    embeds TEXT,
+    embeds JSONB,
     creator_id BIGINT
 );
 
@@ -28,7 +27,8 @@ CREATE TABLE IF NOT EXISTS auto_responders (
     actions TEXT,
     restrictions TEXT,
     cooldown TEXT,
-    author_id BIGINT
+    author_id BIGINT,
+    on_cd_layout_name TEXT
 );
 
 CREATE TABLE IF NOT EXISTS code_responders (
@@ -45,15 +45,15 @@ CREATE TABLE IF NOT EXISTS auto_messages (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE,
     channel_id BIGINT,
-    layout JSON,
+    layout JSONB,
     interval INTEGER,
-    lastsent INTEGER
+    lastsent TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS sticky_messages (
     id SERIAL PRIMARY KEY,
     channel_id BIGINT UNIQUE,
-    layout JSON,
+    layout JSONB,
     last_message_id BIGINT DEFAULT NULL
 );
 
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS todos (
   id SERIAL PRIMARY KEY,
   name TEXT,
   priority INTEGER,
-  completed BOOLEAN,
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
   creator_id BIGINT,
   time_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   time_completed TIMESTAMP WITH TIME ZONE
@@ -89,9 +89,11 @@ CREATE TABLE IF NOT EXISTS bump_remind (
 CREATE TABLE IF NOT EXISTS cooldowns (
   id SERIAL PRIMARY KEY,
   action TEXT,
-  user_id BIGINT,
+  object_id BIGINT,
   end_time TIMESTAMP WITH TIME ZONE,
-  UNIQUE(action, user_id)
+  bucket TEXT,
+  count INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(action, object_id)
 );
 
 -- Source of truth for perk currency amounts. Cached in bot.perk_rewards and
@@ -102,10 +104,10 @@ CREATE TABLE IF NOT EXISTS perk_rewards (
 );
 
 CREATE TABLE IF NOT EXISTS active_tickets (
-  ticket_id SERIAL PRIMARY KEY,
+  ticket_id BIGINT,
   channel_id BIGINT,
   opener_id BIGINT,
-  timestamp INTEGER,
+  timestamp TIMESTAMP WITH TIME ZONE,
   archive_id BIGINT,
   remind_after TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -120,13 +122,15 @@ CREATE TABLE IF NOT EXISTS ticket_transcripts (
 CREATE TABLE IF NOT EXISTS confessions (
   id SERIAL PRIMARY KEY,
   user_id BIGINT,
-  confession TEXT
+  confession TEXT,
+  channel_id BIGINT,
+  message_id BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS counters (
   id SERIAL PRIMARY KEY,
   name TEXT UNIQUE,
-  count INTEGER
+  count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS queues (
@@ -138,31 +142,7 @@ CREATE TABLE IF NOT EXISTS queues (
 CREATE TABLE IF NOT EXISTS balances (
   id SERIAL PRIMARY KEY,
   user_id BIGINT UNIQUE,
-  balance INTEGER
-);
-
-CREATE TABLE IF NOT EXISTS user_items (
-  id SERIAL PRIMARY KEY,
-  user_id BIGINT,
-  item_name_id TEXT,
-  state TEXT,
-  item_count INTEGER,
-  time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(user_id, item_name_id)
-);
-
-CREATE TABLE IF NOT EXISTS shop_items (
-  name_id TEXT PRIMARY KEY,
-  number_id INTEGER UNIQUE,
-  display_name TEXT,
-  price INTEGER,
-  sell_price INTEGER DEFAULT NULL,
-  stock INTEGER DEFAULT -1,
-  usable BOOLEAN,
-  activatable BOOLEAN,
-  category TEXT,
-  description TEXT
+  balance BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS item_categories (
@@ -171,12 +151,45 @@ CREATE TABLE IF NOT EXISTS item_categories (
   description TEXT
 );
 
-CREATE TABLE IF NOT EXISTS item_reqs( 
-  item_name_id TEXT,
-  type TEXT,  
+CREATE TABLE IF NOT EXISTS shop_items (
+  name_id TEXT PRIMARY KEY,
+  number_id INTEGER UNIQUE,
+  display_name TEXT,
+  price INTEGER,
+  sell_price INTEGER DEFAULT NULL,
+  stock INTEGER NOT NULL DEFAULT -1,
+  usable BOOLEAN,
+  activatable BOOLEAN,
+  category TEXT REFERENCES item_categories(name),
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_items (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  item_name_id TEXT REFERENCES shop_items(name_id),
+  state TEXT,
+  item_count INTEGER NOT NULL DEFAULT 1,
+  time_acquired TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, item_name_id)
+);
+
+CREATE TABLE IF NOT EXISTS item_reqs(
+  item_name_id TEXT REFERENCES shop_items(name_id),
+  type TEXT,
   description TEXT,
   name TEXT,
+  kwargs JSONB,
   UNIQUE(item_name_id, type, name)
+);
+
+CREATE TABLE IF NOT EXISTS item_use_times (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT,
+  item_name_id TEXT,
+  time_used TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, item_name_id)
 );
 
 CREATE TABLE IF NOT EXISTS joins (
@@ -185,7 +198,8 @@ CREATE TABLE IF NOT EXISTS joins (
   guild_id BIGINT,
   member_count INTEGER,
   time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);  
+);
+CREATE INDEX IF NOT EXISTS idx_joins_time ON joins(time);
 
 CREATE TABLE IF NOT EXISTS leaves (
   id SERIAL PRIMARY KEY,
@@ -194,6 +208,7 @@ CREATE TABLE IF NOT EXISTS leaves (
   member_count INTEGER,
   time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_leaves_time ON leaves(time);
 
 CREATE TABLE IF NOT EXISTS message_data (
   id SERIAL PRIMARY KEY,
@@ -201,6 +216,7 @@ CREATE TABLE IF NOT EXISTS message_data (
   channel_id BIGINT,
   time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_message_data_time ON message_data(time);
 
 CREATE TABLE IF NOT EXISTS afk (
   id SERIAL PRIMARY KEY,
@@ -219,8 +235,8 @@ CREATE TABLE IF NOT EXISTS event_dailies (
   user_id BIGINT,
   date_str TEXT,
   task TEXT,
-  num INTEGER DEFAULT 1,
-  claimed BOOLEAN DEFAULT FALSE,
+  num INTEGER NOT NULL DEFAULT 1,
+  claimed BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE(user_id, date_str, task)
 );
 
@@ -241,13 +257,6 @@ CREATE TABLE IF NOT EXISTS user_welc_messages (
   message_id BIGINT PRIMARY KEY,
   bot_message_id BIGINT,
   channel_id BIGINT
-);
-
-CREATE TABLE IF NOT EXISTS welc_messages (
-  user_id BIGINT PRIMARY KEY,
-  channel_id BIGINT,
-  message_id BIGINT,
-  time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS intro_messages (
@@ -276,7 +285,7 @@ CREATE TABLE IF NOT EXISTS exclusive_roles (
 CREATE TABLE IF NOT EXISTS candybals (
   id SERIAL PRIMARY KEY,
   user_id BIGINT UNIQUE,
-  balance INTEGER
+  balance INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS user_devices (
@@ -284,6 +293,60 @@ CREATE TABLE IF NOT EXISTS user_devices (
   user_id BIGINT,
   device_name TEXT,
   char_width INTEGER,
-  is_active BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE(user_id, device_name)
+);
+
+CREATE TABLE IF NOT EXISTS vars (
+  name TEXT PRIMARY KEY,
+  value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS xp (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT UNIQUE,
+  total_xp INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS bdays (
+  id SERIAL PRIMARY KEY,
+  user_id BIGINT UNIQUE,
+  month BIGINT,
+  day BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS art_hof (
+  original_id BIGINT,
+  hof_id BIGINT,
+  hof_channel_id BIGINT,
+  author_id BIGINT,
+  stars BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS xotd_tba (
+  id SERIAL PRIMARY KEY,
+  kind TEXT,
+  user_id BIGINT,
+  data JSONB
+);
+
+CREATE TABLE IF NOT EXISTS pingonjoin (
+  guild_id BIGINT,
+  channel_id BIGINT PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS ticket_counter (
+  num BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS rrs (
+  id SERIAL PRIMARY KEY,
+  channel_id BIGINT,
+  message_id BIGINT,
+  map JSONB,
+  max_sel INTEGER,
+  req_role_id BIGINT,
+  no_role_msg TEXT,
+  req_time INTEGER,
+  no_time_msg TEXT
 );

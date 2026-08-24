@@ -1,6 +1,5 @@
 import asyncio
-from datetime import timedelta
-from time import time as rn
+from datetime import datetime, timedelta
 
 import discord
 from asyncpg import Record
@@ -20,7 +19,7 @@ class AutoMessage:
         channel: discord.TextChannel,
         layout: Layout,
         interval: int,
-        lastsent: int,
+        lastsent: datetime,
     ):
         self.bot = bot
         self.channel = channel
@@ -43,13 +42,13 @@ class AutoMessage:
         self.task = self.bot.loop.create_task(self.run())
 
     async def run(self):
-        sincelast = rn() - self.lastsent
+        sincelast = (discord.utils.utcnow() - self.lastsent).total_seconds()
         if sincelast < self.interval:
             await asyncio.sleep(self.interval - sincelast)
         while True:
             await self.layout.send(self.channel)
             query = "UPDATE auto_messages SET lastsent = $1 WHERE name = $2"
-            await self.bot.db.execute(query, rn(), self.name)
+            await self.bot.db.execute(query, discord.utils.utcnow(), self.name)
             await asyncio.sleep(self.interval)
 
     async def cancel(self):
@@ -122,7 +121,7 @@ class Automessages(commands.Cog):
         if view.cancelled:
             return
 
-        lastsent = rn()
+        lastsent = discord.utils.utcnow()
         query = """INSERT INTO
                        auto_messages (name, channel_id, interval, layout, lastsent)
                    VALUES
