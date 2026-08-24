@@ -2,6 +2,7 @@ import asyncio
 import csv
 import importlib
 import json
+from datetime import timedelta
 from io import BytesIO, StringIO
 from pkgutil import iter_modules
 from typing import TYPE_CHECKING, List, Literal, Optional, Union
@@ -556,6 +557,66 @@ class Tools(commands.Cog, description="storchs tools"):
         await self.bot.db.execute(query, jsonstr, "log-flags")
 
         await ctx.send(f"Done! Current flags: `{jsonstr}`")
+
+    def _find_bonk_task(self, user_id: int, role_id: int):
+        for task in self.bot.future_tasks.values():
+            if (
+                task.action == "remove_role"
+                and task.kwargs.get("user_id") == user_id
+                and task.kwargs.get("role_id") == role_id
+            ):
+                return task
+        return None
+
+    @commands.command()
+    async def bonk(self, ctx, member: discord.Member):
+        """Gives a member the bonk role for 2 weeks."""
+        role_id = self.bot.vars.get("bonk-role-id")
+        if role_id is None:
+            return await ctx.send("`bonk-role-id` var is not set.")
+        role = ctx.guild.get_role(int(role_id))
+        if role is None:
+            return await ctx.send("Bonk role not found.")
+
+        until = discord.utils.utcnow() + timedelta(weeks=2)
+
+        existing = self._find_bonk_task(member.id, role.id)
+        if existing is not None:
+            view = ConfirmView(ctx)
+            await ctx.send(
+                f"{member.mention} is already bonked until "
+                f"{discord.utils.format_dt(existing.dt, 'f')} "
+                f"({discord.utils.format_dt(existing.dt, 'R')}). "
+                f"Update it to expire {discord.utils.format_dt(until, 'f')} instead?",
+                view=view,
+            )
+            await view.wait()
+
+            if view.choice is None:
+                return
+            if view.choice is False:
+                await view.final_interaction.response.edit_message(
+                    content="Cancelled.", view=None
+                )
+                return
+
+            existing.cancel()
+            query = "DELETE FROM future_tasks WHERE id = $1"
+            await self.bot.db.execute(query, existing.id)
+            self.bot.future_tasks.pop(existing.id, None)
+            await view.final_interaction.response.edit_message(
+                content="Updating bonk duration...", view=None
+            )
+
+        if role not in member.roles:
+            await member.add_roles(role, reason=f"bonked by {ctx.author}")
+
+        await self.bot.schedule_future_task(
+            "remove_role", until, user_id=member.id, role_id=role.id
+        )
+
+        layout = self.bot.get_layout("bonk")
+        await layout.send(ctx)
 
     @commands.command()
     @commands.is_owner()
