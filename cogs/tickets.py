@@ -78,7 +78,7 @@ async def create_ticket(
         ticket.id,
         ticket.thread.id,
         ticket.opener.id,
-        ticket.timestamp.timestamp(),
+        ticket.timestamp,
     )
     # view = CloseView(bot, ticket.id, ticket.channel, ticket.opener.id, ticket.timestamp)
 

@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS auto_messages (
     channel_id BIGINT,
     layout JSONB,
     interval INTEGER,
-    lastsent INTEGER
+    lastsent TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS sticky_messages (
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS active_tickets (
   ticket_id BIGINT,
   channel_id BIGINT,
   opener_id BIGINT,
-  timestamp BIGINT,
+  timestamp TIMESTAMP WITH TIME ZONE,
   archive_id BIGINT,
   remind_after TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
