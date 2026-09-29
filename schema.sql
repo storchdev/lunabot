@@ -192,6 +192,56 @@ CREATE TABLE IF NOT EXISTS item_use_times (
   UNIQUE(user_id, item_name_id)
 );
 
+-- months: calendar months (US Eastern) the banner is open; NULL = permanent
+CREATE TABLE IF NOT EXISTS gacha_banners (
+  name TEXT PRIMARY KEY,
+  display_name TEXT NOT NULL,
+  months INTEGER[],
+  pull_cost INTEGER NOT NULL DEFAULT 100000,
+  rare_rate REAL NOT NULL DEFAULT 0.04,
+  common_rate REAL NOT NULL DEFAULT 0.36,
+  rare_pity INTEGER NOT NULL DEFAULT 15,
+  common_pity INTEGER NOT NULL DEFAULT 5,
+  consolation_min INTEGER NOT NULL DEFAULT 10000,
+  consolation_max INTEGER NOT NULL DEFAULT 30000,
+  common_refund INTEGER NOT NULL DEFAULT 25000,
+  rare_refund INTEGER NOT NULL DEFAULT 50000,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+-- role prizes set shop_item (granted to the inventory); badge prizes set badge_slot
+CREATE TABLE IF NOT EXISTS gacha_items (
+  name TEXT PRIMARY KEY,
+  banner TEXT NOT NULL REFERENCES gacha_banners(name),
+  display_name TEXT NOT NULL,
+  rarity TEXT NOT NULL CHECK (rarity IN ('common', 'rare')),
+  shop_item TEXT REFERENCES shop_items(name_id),
+  badge_slot INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS user_gacha_items (
+  user_id BIGINT NOT NULL,
+  item TEXT NOT NULL REFERENCES gacha_items(name),
+  times_pulled INTEGER NOT NULL DEFAULT 1,
+  time_acquired TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, item)
+);
+
+CREATE TABLE IF NOT EXISTS gacha_pity (
+  user_id BIGINT NOT NULL,
+  banner TEXT NOT NULL REFERENCES gacha_banners(name),
+  since_rare INTEGER NOT NULL DEFAULT 0,
+  since_hit INTEGER NOT NULL DEFAULT 0,
+  total_pulls INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, banner)
+);
+
+-- which permanent badge set to show on permanent rank cards
+CREATE TABLE IF NOT EXISTS rank_card_prefs (
+  user_id BIGINT PRIMARY KEY,
+  badge_set TEXT REFERENCES gacha_banners(name)
+);
+
 CREATE TABLE IF NOT EXISTS joins (
   id SERIAL PRIMARY KEY,
   user_id BIGINT,

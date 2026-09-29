@@ -6,6 +6,8 @@ from discord.ext import commands
 from cogs.tickets import create_ticket
 from cogs.utils.checks import is_booster
 
+from .windows import is_open
+
 if TYPE_CHECKING:
     from bot import LunaBot, LunaCtx
 
@@ -18,10 +20,13 @@ class ItemCategory:
 
 
 class ItemReq:
-    def __init__(self, type: str, description: str, name: str):
+    def __init__(
+        self, type: str, description: str, name: str, kwargs: dict | None = None
+    ):
         self.type = type
         self.description = description
         self.name = name
+        self.kwargs = kwargs or {}
 
         if self.type == "buy":
             self.sort_order = 0
@@ -32,6 +37,9 @@ class ItemReq:
 
 
 class BaseItem:
+    # hidden items never show in the shop and can't be bought (e.g. gacha prizes)
+    SHOP_HIDDEN = False
+
     def __init__(
         self,
         number_id: int,
@@ -75,6 +83,17 @@ class BaseItem:
     def as_list(self) -> list[str]:
         return [str(self.number_id), self.name_id, self.display_name]
 
+    @property
+    def available_months(self) -> list[int] | None:
+        """Months this item can be bought in, from a `buy`/`months` requirement."""
+        for req in self.reqs:
+            if req.type == "buy" and req.name == "months":
+                return req.kwargs["months"]
+        return None
+
+    def in_shop(self) -> bool:
+        return not self.SHOP_HIDDEN and is_open(self.available_months)
+
     def is_sellable_at_all(self) -> bool:
         return self.sell_price != -1
 
@@ -82,7 +101,7 @@ class BaseItem:
         return self.tradable
 
     async def is_buyable(self, member: discord.Member, bot: "LunaBot") -> bool:
-        return True
+        return self.in_shop()
 
     async def is_sellable(self, member: discord.Member) -> bool:
         return self.is_sellable_at_all()
@@ -316,3 +335,51 @@ class RaspberrySorbet(BoosterColorRoleItem):
 
     async def deactivate(self, ctx, **kwargs):
         return await super().deactivate(ctx, name="raspberrysorbet")
+
+
+class GachaRoleItem(ColorRoleItem):
+    """A role only obtainable from a gacha banner. Role id is `<name_id>-role-id`."""
+
+    SHOP_HIDDEN = True
+
+    async def activate(self, ctx, **kwargs):
+        return await super().activate(ctx, name=self.name_id)
+
+    async def deactivate(self, ctx, **kwargs):
+        return await super().deactivate(ctx, name=self.name_id)
+
+
+class RankCardItem(BaseItem):
+    """A rank card template. name_id is `<template>card`; only one can be active."""
+
+    @property
+    def template(self) -> str:
+        return self.name_id.removesuffix("card")
+
+    async def activate(self, ctx, **kwargs):
+        query = """UPDATE user_items
+                   SET
+                     state = 'inactive'
+                   WHERE
+                     user_id = $1
+                     AND state = 'active'
+                     AND item_name_id IN (
+                       SELECT name_id FROM shop_items WHERE category = $2
+                     )
+                """
+        await ctx.bot.db.execute(query, ctx.author.id, self.category.name)
+        await super().activate(
+            ctx, layout_name="rankcard/equipped", repls={"item": self.display_name}
+        )
+
+    async def deactivate(self, ctx, **kwargs):
+        await super().deactivate(
+            ctx, layout_name="rankcard/unequipped", repls={"item": self.display_name}
+        )
+
+
+# items whose name_id has no matching class above fall back to their category's class
+CATEGORY_CLASSES = {
+    "limited_roles": GachaRoleItem,
+    "rank_cards": RankCardItem,
+}

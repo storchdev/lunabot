@@ -204,15 +204,23 @@ class Economy(commands.Cog):
                 if item_cls.__name__.lower() == row["name_id"]:
                     break
             else:
-                fellback.append(row["name_id"])
-                item_cls = items.BaseItem
+                item_cls = items.CATEGORY_CLASSES.get(row["category"])
+                if item_cls is None:
+                    fellback.append(row["name_id"])
+                    item_cls = items.BaseItem
 
             reqs = []
             query = "SELECT * FROM item_reqs WHERE item_name_id = $1"
             req_rows = await self.bot.db.fetch(query, row["name_id"])
             for req_row in req_rows:
+                kwargs = json.loads(req_row["kwargs"]) if req_row["kwargs"] else None
                 reqs.append(
-                    ItemReq(req_row["type"], req_row["description"], req_row["name"])
+                    ItemReq(
+                        req_row["type"],
+                        req_row["description"],
+                        req_row["name"],
+                        kwargs,
+                    )
                 )
 
             reqs.sort(key=lambda r: r.sort_order)
@@ -346,7 +354,7 @@ class Economy(commands.Cog):
     @commands.hybrid_command(name="shop")
     async def shop(self, ctx):
         """Browse the server shop."""
-        view = ShopMainView(self.items, ctx=ctx)
+        view = ShopMainView([it for it in self.items if it.in_shop()], ctx=ctx)
         await ctx.send(embed=view.embed, view=view)
 
     @commands.command(name="listshopitems")
@@ -381,6 +389,11 @@ class Economy(commands.Cog):
         item = item.lower()
         shop_item = await self.get_item_or_send_suggestions(ctx, item)
         if not shop_item:
+            return
+
+        if not shop_item.in_shop():
+            layout = self.bot.get_layout("buy/unavailable")
+            await layout.send(ctx, repls={"item": shop_item.display_name})
             return
 
         if not await shop_item.is_buyable(ctx.author, self.bot):

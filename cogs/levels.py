@@ -306,13 +306,19 @@ class Levels(commands.Cog):
             av_file = BytesIO()
             await m.display_avatar.with_format("png").save(av_file)
 
+            gacha = self.bot.get_cog("Gacha")
+            if gacha is not None:
+                card, badges = await gacha.get_rank_card(m)
+            else:
+                card, badges = "standard", []
+
             file = await self.bot.loop.run_in_executor(
-                None, generate_rank_card, current_level, av_file, pc
+                None, generate_rank_card, card, current_level, av_file, pc, badges
             )
 
             layout = self.bot.get_layout("rankcommand")
             embed = layout.embeds[0].copy()
-            embed.set_image(url="attachment://rank.gif")
+            embed.set_image(url="attachment://rank.png")
             embed = await Layout.fill_embed(
                 embed,
                 {
@@ -322,7 +328,7 @@ class Levels(commands.Cog):
                 },
                 special=False,
             )
-            await ctx.send(embed=embed, file=discord.File(fp=file, filename="rank.gif"))
+            await ctx.send(embed=embed, file=discord.File(fp=file, filename="rank.png"))
 
     @commands.command(aliases=["leaaderboard"])
     async def lb(self, ctx):
