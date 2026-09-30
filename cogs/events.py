@@ -1,4 +1,5 @@
 import json
+import random
 from datetime import datetime
 from typing import TYPE_CHECKING
 import discord
@@ -9,6 +10,25 @@ from .utils import LayoutContext
 
 if TYPE_CHECKING:
     from bot import LunaBot
+
+
+WELC_PROMPTS = [
+    "What is your favorite art period and why??",
+    "Who is your favorite artist and why??",
+    "Share your favorite artwork of your own",
+    "Share with us your latest WIP",
+    "What is your favorite type of artistic media to work with and why??",
+    "What is one piece of art advice that you heavily agree with??",
+    "What is one piece of art advice that you heavily disagree with??",
+    "What type of art do you normally make??",
+    "Do you have any favorite games??",
+    "Do you have any favorite books??",
+    "Do you have any favorite movies??",
+    "Do you have any favorite songs??",
+    "Do you have any favorite animes??",
+    "What was your inspiration or reason for your profile picture??",
+    "Why did you decide to join??",
+]
 
 
 class Events(
@@ -94,17 +114,13 @@ class Events(
                     self.guild_data[str(member.guild.id)]["welc-channel-id"]
                 )
 
-                role_id = self.guild_data[str(member.guild.id)].get("new-welc-role-id")
-                if role_id is None:
-                    role_text = ""
-                else:
-                    role_text = member.guild.get_role(role_id).mention
-
-                layout = self.bot.get_layout("welc")
+                layout = self.bot.get_layout("welc2")
                 ctx = LayoutContext(author=member)
                 # channel = self.bot.get_var_channel('guild-welc')
                 bot_msg = await layout.send(
-                    channel, ctx, repls={"newwelcrole": role_text}
+                    channel,
+                    ctx,
+                    repls={"prompt": random.choice(WELC_PROMPTS)},
                 )
 
                 if member.guild.id == self.bot.vars.get("main-server-id"):
