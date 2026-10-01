@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 from .utils import LayoutContext
+from .vars import set_var
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -80,6 +81,21 @@ class Events(
             await ctx.author.remove_roles(booster_role)
         await ctx.send(":white_check_mark:")
 
+    @commands.command()
+    async def togglewelc(self, ctx):
+        """Turn welcome messages on or off entirely."""
+        on = 0 if self.bot.vars.get("do-welcs") == 1 else 1
+        await set_var(self.bot, "do-welcs", str(on))
+        await ctx.send(f"Welcome messages are now **{'on' if on else 'off'}**.")
+
+    @commands.command()
+    async def switchwelc(self, ctx):
+        """Switch between the new (prompt) and old (role ping) welcome layouts."""
+        new = 0 if self.bot.vars.get("new-welc") == 1 else 1
+        await set_var(self.bot, "new-welc", str(new))
+        style = "new (`welc2`, with prompt)" if new else "old (`welc`, with role ping)"
+        await ctx.send(f"Welcome messages now use the {style} layout.")
+
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
         if len(before.roles) == len(after.roles):
@@ -114,14 +130,23 @@ class Events(
                     self.guild_data[str(member.guild.id)]["welc-channel-id"]
                 )
 
-                layout = self.bot.get_layout("welc2")
                 ctx = LayoutContext(author=member)
                 # channel = self.bot.get_var_channel('guild-welc')
-                bot_msg = await layout.send(
-                    channel,
-                    ctx,
-                    repls={"prompt": random.choice(WELC_PROMPTS)},
-                )
+                if self.bot.vars.get("new-welc") == 1:
+                    layout = self.bot.get_layout("welc2")
+                    repls = {"prompt": random.choice(WELC_PROMPTS)}
+                else:
+                    role_id = self.guild_data[str(member.guild.id)].get(
+                        "new-welc-role-id"
+                    )
+                    if role_id is None:
+                        role_text = ""
+                    else:
+                        role_text = member.guild.get_role(role_id).mention
+                    layout = self.bot.get_layout("welc")
+                    repls = {"newwelcrole": role_text}
+
+                bot_msg = await layout.send(channel, ctx, repls=repls)
 
                 if member.guild.id == self.bot.vars.get("main-server-id"):
                     query = """INSERT INTO
