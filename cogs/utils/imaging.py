@@ -19,7 +19,7 @@ MASK_SUPERSAMPLE = 4  # masks are drawn this many times larger, then downsampled
 # card name -> (left, right) progress bar gradient colors
 RANK_CARDS = {
     "standard": ("#e48ccb", "#9a82e6"),
-    "blue": ("#5b8cff", "#3d4fe0"),
+    "blue": ("#7c99de", "#5e68bf"),
     "purple": ("#a88ae8", "#7757d6"),
     "pink": ("#ff6fbf", "#e0439f"),
     "winter": ("#6fb4ff", "#4a63e8"),

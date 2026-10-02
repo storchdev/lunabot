@@ -20,17 +20,18 @@ RARE_SYMBOL = "☆"
 COMMON_SYMBOL = "♡"
 MAX_PULLS = 10
 
-# seasonal/holiday rank cards always show their own badge set;
-# permanent cards show the user's chosen permanent set
-CARD_BADGE_SETS = {
-    "winter": "snowflakes",
-    "spring": "clovers",
-    "summer": "suns",
-    "fall": "leaves",
+DEFAULT_BADGE_SET = "moons"
+
+# seasonal banners -> the rank card to remind pullers about
+BANNER_CARDS = {
+    "snowflakes": "winter",
+    "clovers": "spring",
+    "suns": "summer",
+    "leaves": "fall",
     "halloween": "halloween",
     "christmas": "christmas",
+    "octoberroles": "halloween",
 }
-DEFAULT_BADGE_SET = "moons"
 
 
 @dataclass
@@ -275,10 +276,8 @@ class Gacha(commands.Cog):
         name_id = await self.bot.db.fetchval(query, member.id)
         template = name_id.removesuffix("card") if name_id else "standard"
 
-        badge_set = CARD_BADGE_SETS.get(template)
-        if badge_set is None:
-            query = "SELECT badge_set FROM rank_card_prefs WHERE user_id = $1"
-            badge_set = await self.bot.db.fetchval(query, member.id) or DEFAULT_BADGE_SET
+        query = "SELECT badge_set FROM rank_card_prefs WHERE user_id = $1"
+        badge_set = await self.bot.db.fetchval(query, member.id) or DEFAULT_BADGE_SET
 
         if badge_set not in self.banners:
             return template, []
@@ -290,6 +289,26 @@ class Gacha(commands.Cog):
             if self.items[name].badge_slot is not None
         ]
         return template, badges
+
+    async def card_reminder(self, member: discord.Member, banner: Banner) -> dict | None:
+        """The seasonal rank card tied to `banner`, if the member doesn't own it yet."""
+        card = BANNER_CARDS.get(banner.name)
+        if card is None:
+            return None
+
+        item = self.economy.get_item_from_str(f"{card}card")
+        if item is None or not item.in_shop():
+            return None
+
+        query = "SELECT 1 FROM user_items WHERE user_id = $1 AND item_name_id = $2"
+        if await self.bot.db.fetchval(query, member.id, item.name_id):
+            return None
+
+        return {
+            "name": item.display_name,
+            "nameid": item.name_id,
+            "price": f"{item.price:,}",
+        }
 
     def banner_repls(self, banner: Banner) -> dict:
         end = window_end(banner.months)
@@ -397,6 +416,7 @@ class Gacha(commands.Cog):
                 "complete": len(await self.owned_items(ctx.author.id, banner))
                 == len(banner.items),
                 "hasrole": any(r.new and r.item.shop_item for r in results),
+                "cardreminder": await self.card_reminder(ctx.author, banner),
             }
         )
         layout = self.bot.get_layout("gacha/pull")
@@ -432,12 +452,10 @@ class Gacha(commands.Cog):
         )
 
     @commands.hybrid_command(name="badgeset")
-    @app_commands.describe(badge_set="The permanent badge set to show on your rank card")
+    @app_commands.describe(badge_set="The badge set to show on your rank card")
     async def badgeset(self, ctx, *, badge_set: str | None = None):
-        """Choose which permanent badge set shows on permanent rank cards."""
-        choices = [
-            b for b in self.sorted_banners() if b.is_badge_set and b.months is None
-        ]
+        """Choose which badge set shows on your rank card."""
+        choices = [b for b in self.sorted_banners() if b.is_badge_set]
         banner = self.find_banner(badge_set) if badge_set else None
 
         if banner is None or banner not in choices:
