@@ -1,4 +1,3 @@
-import json
 import discord
 from discord.ext import commands
 from discord import ui
@@ -6,7 +5,6 @@ import time
 import asyncio
 from datetime import timedelta, datetime
 from .utils import View
-from io import StringIO
 
 from typing import TYPE_CHECKING
 
@@ -34,7 +32,7 @@ class CloseReason(ui.Modal, title="Close"):
     )
 
     async def on_submit(self, inter):
-        await inter.response.send_message("Saving transcript...")
+        await inter.response.send_message("Closing ticket...")
         await self.parent_view.close(inter, str(self.reason))
 
 
@@ -48,40 +46,6 @@ class CloseView(View):
         self.close_without_reason.custom_id = f"ticket-noreason-{ticket_id}"
         self.close_with_reason.custom_id = f"ticket-reason-{ticket_id}"
 
-    async def save_transcript(self):
-        msg_objs = []
-        async for msg in self.channel.history(oldest_first=True, limit=None):
-            if msg.author.bot:
-                continue
-            file_channel = self.bot.get_channel(
-                self.bot.vars.get("transcript-file-channel-id")
-            )
-
-            if msg.attachments:
-                new_msg = await file_channel.send(
-                    files=[await a.to_file() for a in msg.attachments]
-                )
-                attachments = [a.url for a in new_msg.attachments]
-            else:
-                attachments = []
-
-            msg_objs.append(
-                {
-                    "author_id": msg.author.id,
-                    "username": msg.author.name,
-                    "content": msg.content,
-                    "attachments": attachments,
-                }
-            )
-        query = """INSERT INTO
-                       ticket_transcripts (ticket_id, opener_id, messages)
-                   VALUES
-                       ($1, $2, $3)
-                """
-        await self.bot.db.execute(
-            query, self.ticket_id, self.opener_id, json.dumps(msg_objs, indent=4)
-        )
-
     async def interaction_check(self, inter):
         if inter.user.id == self.bot.owner_id:
             return True
@@ -94,8 +58,12 @@ class CloseView(View):
         return True
 
     async def close(self, inter, reason):
-        await self.save_transcript()
-        await self.channel.delete()
+        overwrites = self.channel.overwrites
+        for overwrite in overwrites.values():
+            overwrite.send_messages = False
+        await self.channel.edit(
+            name=f"closed-{self.channel.name}", overwrites=overwrites
+        )
         query = "DELETE FROM active_tickets WHERE ticket_id = $1"
         await inter.client.db.execute(query, self.ticket_id)
 
@@ -114,7 +82,7 @@ class CloseView(View):
 
     @ui.button(label="Close", style=discord.ButtonStyle.red, emoji="\U0001f512")
     async def close_without_reason(self, inter, button):
-        await inter.response.send_message("Saving transcript...")
+        await inter.response.send_message("Closing ticket...")
         await self.close(inter, "No reason given")
 
     @ui.button(
@@ -281,35 +249,11 @@ class TicketCog(
             )
             self.bot.add_view(close)
 
-    async def get_txt_file(self, ticket_id):
-        query = "SELECT messages FROM ticket_transcripts WHERE ticket_id = $1"
-        row = await self.bot.db.fetchrow(query, ticket_id)
-        if not row:
-            return None
-        msgs = json.loads(row["messages"])
-        output = StringIO()
-        for msg in msgs:
-            output.write(f"{msg['username']} ({msg['author_id']}): {msg['content']}\n")
-            for a in msg["attachments"]:
-                output.write(f"  {a}\n")
-            output.write("\n")
-
-        output.seek(0)
-        return discord.File(output, filename=f"transcript-{ticket_id}.txt")
-
     async def cog_check(self, ctx):
         return (
             ctx.author.id == self.bot.owner_id
             or ctx.author.guild_permissions.administrator
         )
-
-    # @commands.command()
-    # async def transcript(self, ctx, ticket_id: int):
-    #     file = await self.get_txt_file(ticket_id)
-    #     if file is None:
-    #         await ctx.send('No transcript found for that ticket')
-    #         return
-    #     await ctx.send(file=file)
 
     @commands.command()
     async def sendembed(self, ctx, channel: discord.TextChannel):

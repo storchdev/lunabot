@@ -5,9 +5,11 @@ from typing import TYPE_CHECKING
 
 import discord
 import matplotlib.dates as mdates
-from discord.ext import commands
+from discord.ext import commands, tasks
 from matplotlib import pyplot as plt
 from pytz import timezone
+
+from .privacy import MESSAGE_STATS_RETENTION_DAYS
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -115,18 +117,39 @@ class MessageStats(commands.Cog):
     def __init__(self, bot):
         self.bot: "LunaBot" = bot
 
+    async def cog_load(self):
+        await self.prune_old_data()
+        self.prune_data.start()
+
+    async def cog_unload(self):
+        self.prune_data.cancel()
+
+    async def prune_old_data(self):
+        cutoff = discord.utils.utcnow() - timedelta(days=MESSAGE_STATS_RETENTION_DAYS)
+        await self.bot.db.execute("DELETE FROM message_data WHERE time < $1", cutoff)
+
+    @tasks.loop(hours=24)
+    async def prune_data(self):
+        await self.prune_old_data()
+
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         if not msg.guild:
             return
 
-        if msg.author.bot or msg.guild.id != self.bot.GUILD_ID:
+        if (
+            msg.author.bot
+            or msg.guild.id != self.bot.GUILD_ID
+            or msg.author.id in self.bot.message_stats_opt_out_ids
+        ):
             return
 
-        query = """INSERT INTO
-                       message_data (user_id, channel_id)
-                   VALUES
-                       ($1, $2)
+        query = """INSERT INTO message_data (user_id, channel_id)
+                   SELECT $1, $2
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM privacy_preferences
+                       WHERE user_id = $1 AND message_stats_opt_out
+                   )
                 """
         await self.bot.db.execute(query, msg.author.id, msg.channel.id)
 

@@ -1,7 +1,6 @@
 import json
 import logging
 from datetime import datetime
-from io import StringIO
 from typing import TYPE_CHECKING, Optional
 
 import discord
@@ -266,37 +265,6 @@ class TicketCog(commands.Cog, name="Tickets v2", description="thread tickets"):
                 None,
                 channel.id,
             )
-
-    async def get_txt_file(self, ticket_id):
-        query = "SELECT messages FROM ticket_transcripts WHERE ticket_id = $1"
-        row = await self.bot.db.fetchrow(query, ticket_id)
-        if not row:
-            return None
-        msgs = json.loads(row["messages"])
-        output = StringIO()
-        for msg in msgs:
-            output.write(f"{msg['username']} ({msg['author_id']}): {msg['content']}\n")
-            for a in msg["attachments"]:
-                output.write(f"  {a}\n")
-            output.write("\n")
-
-        output.seek(0)
-        return discord.File(output, filename=f"transcript-{ticket_id}.txt")
-
-    # async def cog_check(self, ctx):
-    #     return ctx.author.id == self.bot.owner_id or ctx.author.guild_permissions.administrator
-
-    @commands.command()
-    @staff_only()
-    async def transcript(self, ctx, ticket_id: int):
-        file = await self.get_txt_file(ticket_id)
-        if file is None:
-            helpdesk = self.bot.get_var_channel("helpdesk")
-            await ctx.send(
-                f"No transcript found for that ticket. Check the threads in {helpdesk.mention}?"
-            )
-            return
-        await ctx.send(file=file)
 
     @commands.command()
     @admin_only()

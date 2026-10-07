@@ -58,6 +58,8 @@ class Vanity(commands.Cog):
     async def on_presence_update(self, before: discord.Member, after: discord.Member):
         if after.guild.id != self.bot.GUILD_ID:
             return
+        if after.id in self.bot.presence_opt_out_ids:
+            return
         if after.status is discord.Status.offline:
             return
 
@@ -77,9 +79,9 @@ class Vanity(commands.Cog):
             if role not in after.roles:
                 try:
                     await after.add_roles(role)
-                    self.bot.log(f"added vanity role to {after.id}", "vanity")
+                    self.bot.log("added vanity role", "vanity")
                 except discord.HTTPException:
-                    self.bot.log(f"failed to add vanity role to {after.id}", "vanity")
+                    self.bot.log("failed to add vanity role", "vanity")
 
                 # Optional: announce only on first grant
                 channel_id = self.bot.vars.get("vanity-channel-id")
@@ -112,14 +114,9 @@ class Vanity(commands.Cog):
                                 await member.remove_roles(
                                     r, reason=f"No vanity after {DEBOUNCE_SECONDS}s"
                                 )
-                                self.bot.log(
-                                    f"removed vanity role from {after.id}", "vanity"
-                                )
+                                self.bot.log("removed vanity role", "vanity")
                             except discord.HTTPException:
-                                self.bot.log(
-                                    f"failed to remove vanity role from {after.id}",
-                                    "vanity",
-                                )
+                                self.bot.log("failed to remove vanity role", "vanity")
                 finally:
                     self._pending_removals.pop(member_id, None)
 
@@ -143,6 +140,12 @@ class Vanity(commands.Cog):
 
         for member in guild.members:
             if member.bot:
+                continue
+
+            if member.id in self.bot.presence_opt_out_ids:
+                if role in member.roles:
+                    await member.remove_roles(role, reason="Vanity presence opt-out")
+                    removed.append(member.mention)
                 continue
 
             if member.status == discord.Status.offline:

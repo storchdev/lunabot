@@ -112,17 +112,9 @@ CREATE TABLE IF NOT EXISTS active_tickets (
   remind_after TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS ticket_transcripts (
-  id SERIAL PRIMARY KEY,
-  ticket_id BIGINT,
-  opener_id BIGINT,
-  messages JSONB
-);
-
 CREATE TABLE IF NOT EXISTS confessions (
   id SERIAL PRIMARY KEY,
   user_id BIGINT,
-  confession TEXT,
   channel_id BIGINT,
   message_id BIGINT
 );
@@ -267,6 +259,12 @@ CREATE TABLE IF NOT EXISTS message_data (
   time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_message_data_time ON message_data(time);
+
+CREATE TABLE IF NOT EXISTS privacy_preferences (
+  user_id BIGINT PRIMARY KEY,
+  presence_opt_out BOOLEAN NOT NULL DEFAULT FALSE,
+  message_stats_opt_out BOOLEAN NOT NULL DEFAULT FALSE
+);
 
 CREATE TABLE IF NOT EXISTS afk (
   id SERIAL PRIMARY KEY,

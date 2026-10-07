@@ -48,15 +48,13 @@ class Confess(commands.Cog):
 
         channel = self.bot.get_var_channel("confess")
         query = """INSERT INTO
-                       confessions (confession, user_id, channel_id)
+                       confessions (user_id, channel_id)
                    VALUES
-                       ($1, $2, $3)
+                       ($1, $2)
                    RETURNING
                        id
                 """
-        confession_id = await self.bot.db.fetchval(
-            query, confession, ctx.author.id, channel.id
-        )
+        confession_id = await self.bot.db.fetchval(query, ctx.author.id, channel.id)
 
         layout = self.bot.get_layout("confess")
         repls = {"number": confession_id, "message": confession}

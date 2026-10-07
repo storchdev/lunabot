@@ -34,8 +34,11 @@ class AutoResponderCog(
             self.name_lookup[auto_responder.name] = auto_responder
 
     def _ar_check(self, msg: discord.Message) -> AutoResponder | None:
-        content_lower = msg.content.lower()
-        content_words = set(content_lower.split())  # Pre-split for word checks
+        if not self.auto_responders:
+            return None
+
+        content_lower = None
+        content_words = None
         author_id = msg.author.id
         channel_id = msg.channel.id
 
@@ -43,7 +46,24 @@ class AutoResponderCog(
         role_ids = {r.id for r in msg.author.roles}  # Use a Set for O(1) lookups
 
         for ar in self.auto_responders:
-            # 2. CHECK TEXT FIRST (The strongest filter)
+            # Check configured scope before reading the message text.
+            if ar.wl_users and author_id not in ar.wl_users:
+                continue
+            if ar.bl_users and author_id in ar.bl_users:
+                continue
+            if ar.wl_channels and channel_id not in ar.wl_channels:
+                continue
+            if ar.bl_channels and channel_id in ar.bl_channels:
+                continue
+            if ar.wl_roles and not ar.wl_roles_set.intersection(role_ids):
+                continue
+            if ar.bl_roles and ar.bl_roles_set.intersection(role_ids):
+                continue
+
+            if content_lower is None:
+                content_lower = msg.content.lower()
+                content_words = set(content_lower.split())
+
             matched = False
 
             # Optimize checks based on type
@@ -64,23 +84,6 @@ class AutoResponderCog(
                     matched = True
 
             if not matched:
-                continue
-
-            # 3. CHECK PERMISSIONS (Only runs if text matched)
-            # Fast integer comparisons
-            if ar.wl_users and author_id not in ar.wl_users:
-                continue
-            if ar.bl_users and author_id in ar.bl_users:
-                continue
-            if ar.wl_channels and channel_id not in ar.wl_channels:
-                continue
-            if ar.bl_channels and channel_id in ar.bl_channels:
-                continue
-
-            # Role checks (set lookups are O(1))
-            if ar.wl_roles and not ar.wl_roles_set.intersection(role_ids):
-                continue
-            if ar.bl_roles and ar.bl_roles_set.intersection(role_ids):
                 continue
 
             return ar  # Found it

@@ -30,10 +30,14 @@ DEFAULT_DISPLAY_WIDTH = 60
 
 class LunaBot(commands.Bot):
     def __init__(self, *args, **kwargs):
+        intents = discord.Intents.default()
+        intents.members = True  # join/leave events and role restoration
+        intents.presences = True  # custom-status vanity role and staff tools
+        intents.message_content = True  # server-message automations
         super().__init__(
             "!",
             *args,
-            intents=discord.Intents.all(),
+            intents=intents,
             status=discord.Status.idle,
             **kwargs,
         )
@@ -46,6 +50,8 @@ class LunaBot(commands.Bot):
         self.owner_ids = [self.STORCH_ID, self.NAOMI_ID]
 
         self.log_flags: list[str] = []
+        self.presence_opt_out_ids: set[int] = set()
+        self.message_stats_opt_out_ids: set[int] = set()
         self.views: set[View] = set()
         self.session = aiohttp.ClientSession()
         self.pdt = Calendar()
@@ -125,7 +131,13 @@ class LunaBot(commands.Bot):
         self.db = await init_db()
 
         await self.load_extension("jishaku")
-        priority = ["cogs.vars", "cogs.tools", "cogs.embeds", "cogs.layouts"]
+        priority = [
+            "cogs.vars",
+            "cogs.privacy",
+            "cogs.tools",
+            "cogs.embeds",
+            "cogs.layouts",
+        ]
         not_cogs = ["cogs.utils", "cogs.db", "cogs.activity_event", "cogs.summer_event"]
 
         for cog in priority:

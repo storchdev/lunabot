@@ -567,7 +567,7 @@ class CodeResponders(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author.bot:
+        if message.author.bot or message.guild is None or not self.code_responders:
             return
 
         item = await self.cr_check(message)

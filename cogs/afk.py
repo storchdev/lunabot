@@ -4,7 +4,9 @@ from typing import TYPE_CHECKING
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
+
+from .privacy import AFK_RETENTION_DAYS
 
 if TYPE_CHECKING:
     from bot import LunaBot
@@ -31,6 +33,7 @@ class AFK(commands.Cog):
         self.SET_AFK_DELAY = 15
 
     async def cog_load(self):
+        await self.prune_old_data()
         rows = await self.bot.db.fetch("SELECT * FROM afk")
         for row in rows:
             user_id = row["user_id"]
@@ -41,6 +44,23 @@ class AFK(commands.Cog):
                 message,
                 start_time,
             )
+        self.prune_data.start()
+
+    async def cog_unload(self):
+        self.prune_data.cancel()
+
+    async def prune_old_data(self):
+        cutoff = discord.utils.utcnow() - timedelta(days=AFK_RETENTION_DAYS)
+        await self.bot.db.execute("DELETE FROM afk WHERE start_time < $1", cutoff)
+        self.afk = {
+            user_id: entry
+            for user_id, entry in self.afk.items()
+            if entry.start_time >= cutoff
+        }
+
+    @tasks.loop(hours=24)
+    async def prune_data(self):
+        await self.prune_old_data()
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
