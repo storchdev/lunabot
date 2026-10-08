@@ -34,7 +34,7 @@ class AutoResponderCog(
             self.name_lookup[auto_responder.name] = auto_responder
 
     def _ar_check(self, msg: discord.Message) -> AutoResponder | None:
-        if not self.auto_responders:
+        if not self.auto_responders or not isinstance(msg.author, discord.Member):
             return None
 
         content_lower = None
